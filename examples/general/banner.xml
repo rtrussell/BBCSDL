@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss">
+  <channel>
+    <title>BBC BASIC for Windows</title>
+    <link>http://www.bb4w.com/</link>
+    <description>An implementation of the BBC BASIC Programming Language for Windows PCs</description>
+    <language>en-gb</language>
+    <lastBuildDate>Mon, 16 Nov 2009 17:35:20 GMT</lastBuildDate>
+    <copyright>Copyright: (C) Richard T. Russell 2009</copyright>
+    <ttl>15</ttl>
+    <image>
+      <title>R.T.Russell logo</title>
+      <url>http://www.bbcbasic.co.uk/rtrlogo.gif</url>
+      <link>http://www.rtrussell.co.uk/</link>
+    </image>
+    <item>
+      <title>Default text for BANNER.BBC</title>
+      <description>This program demonstrates a horizontally-scrolling banner across the bottom of the window</description>
+    </item>
+    <item>
+      <title>Default text for BANNER.BBC</title>
+      <description>You are seeing this message because the BBC's RSS feed could not be accessed</description>
+    </item>
+    <item>
+      <title>Default text for BANNER.BBC</title>
+      <description>This program demonstrates a horizontally-scrolling banner across the bottom of the window</description>
+    </item>
+    <item>
+      <title>Default text for BANNER.BBC</title>
+      <description>You are seeing this message because the BBC's RSS feed could not be accessed</description>
+    </item>
+    <item>
+      <title>Default text for BANNER.BBC</title>
+      <description>This program demonstrates a horizontally-scrolling banner across the bottom of the window</description>
+    </item>
+    <item>
+      <title>Default text for BANNER.BBC</title>
+      <description>You are seeing this message because the BBC's RSS feed could not be accessed</description>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,38 @@
+DIBLEY
+~~~~~~
+
+Dibley is cat who likes to explore! Unfortunately he sometimes gets trapped. The challenge is to clear a path so Dibley can escape.
+
+
+Playing the game
+~~~~~~~~~~~~~~~~~
+The object is to get our feline hero Dibley to the exit and hence move on to explore the next level. On the way he will meet obstacles, turnstiles, moveable blocks of various shapes and sizes and black holes.  The blocks can be pushed (one at a time) into the black holes, after which Dibley can pass over. Turnstiles can have one, two, three or four arms, and spin around if nothing blocks the way. 
+
+Click on the menu option 'Demo' to see Dibley in action.
+
+Move Dibley using the cursor keys or by clicking/tapping on the 'Paw-Pad'.
+
+'Save Game' makes the current game, and your position in it, the default when starting the program.
+
+In this release there are 27 levels. The first few may seem pretty easy but it does get more challenging. The difficulty is not in incremental order but try Level 8 for starters!
+
+
+Designing your own levels
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+Select an object to be placed by clicking with the mouse and click again on the square to place it in. Don't drag, unless you want to paint an area.
+For larger blocks (ie greater than 1 x 1) click on one of the red blocks and you will asked for a size. 
+Up to a massive 15 x 15 is allowed.
+
+Some hints when designing your own levels.
+  * Do not place a turnstile so that one of its arms may come to rest over a black hole.
+  * Save each level with an incremental number so one may link to the next automatically.
+  * Restrain Dibley's movements with scenery on the left and right sides (not needed top & bottom) otherwise Dibley will 'wrap around' - then again you could make use of this feature!
+  * The 'Lock' option allows you to enter a password so that your level may be locked to prevent alteration without the password.
+  * It's a good idea to save the game before playing. For the filename use a two-digit number less than 100. Ideally the numbers should be incremental but its not essential.
+  * After you've done some designing you will probably test it by clicking Play. 
+ You can play a while then re-enter the designer and make changes but click 'Restart' before you do so that your new level will return to it's starting point. Note however that if you test your game all the way to the exit any changes will be lost. So save first.
+
+
+ By Paul Marshall 2001  - revised January 2017   www.DarkwoodDesigns.co.uk
+ Modifications by R.T.Russell  richard@rtrussell.co.uk"       
+ Cat graphic used is from www.clipartsgram.com/cool-cat-clipart-24233

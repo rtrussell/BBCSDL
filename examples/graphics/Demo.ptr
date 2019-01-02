@@ -1,0 +1,72 @@
+TO SPIRAL
+BK A+N
+TN B
+PC RND(99)/99 RND(99)/99 RND(99)/99
+END
+REP SPIRAL 720 0 310
+NEW
+TO SIN
+FD SIN(RAD(N))*400
+HOME -620+(N*1.8) 0
+END
+HOME -600 0
+PC 1 0.3 0
+TN 60
+REP SIN 720 0 0
+TN -30
+NEW
+TO SHAPE
+FD A
+TN B
+END
+HOME
+TN -90
+FLY 360
+TN 90
+PC 1 0 0
+FD 180
+TN 90
+REP SHAPE 180 PI/2 1
+TN 180
+FLY 300
+TN -180
+PC 0 1 0
+REP SHAPE 180 PI/2 1
+TN 90
+FLY 90
+TN 90
+FD 90
+TN -90
+FLY 90
+TN -90
+FLY 200
+TN -90
+PC 0 0 1
+FD 180
+TN 90
+REP SHAPE 90 PI/2 1
+TN -180
+REP SHAPE 90 PI/2 1
+TN 90
+FD 180
+TN -90
+FLY 160
+PC 1 1 0
+TN 180
+REP SHAPE 360 PI/2 1
+HOME -230 -100
+PC 1 0.4 0
+TN 180
+WD 40
+FD 510
+BK 490
+PC 1 1 1
+HOME -210 -85
+PT !!!Pointer-demonstration-file!!!
+HOME
+TN -90
+FLY 100
+NEW
+Thank you for trying Pointer 0.1 demo
+I hope you have enjoyed our demo procedures
+You may enter commands at the prompt, see HELP
