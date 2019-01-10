@@ -535,3 +535,13 @@ _STBIMG_CreateSurface
 _STBIMG_CreateTexture
 _STBIMG_Load_RW_noSeek
 _stbi_set_flip_vertically_on_load
+_drmp3_init_file
+_drmp3_init_memory
+_drmp3_uninit
+_drmp3_read_pcm_frames_f32
+_drmp3_seek_to_pcm_frame
+_drmp3_get_pcm_frame_count
+_drmp3_open_memory_and_read_f32
+_drmp3_open_file_and_read_f32
+_drmp3_free
+_drmp3dec_f32_to_s16

@@ -40,6 +40,9 @@ Andreas Schiffler -- aschiffler at ferzkopp dot net
 #define SDL_STBIMG_DEF __attribute__ ((visibility ("default")))
 #include "SDL_stbimage.h"
 
+#define DR_MP3_IMPLEMENTATION
+#include "dr_mp3.h"
+
 /* ---- Internally used structures */
 
 /*!

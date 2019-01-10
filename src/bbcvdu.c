@@ -1,10 +1,10 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (c) 2017-1018  R.T.Russell, http://www.rtrussell.co.uk/   *
+*       (c) 2017-1019  R.T.Russell, http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       BBCVDU.C  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 0.28a, 14-Dec-2018                                *
+*       Version 0.29a, 08-Jan-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1704,6 +1704,13 @@ static void reswin (void)
 {
 	int w = 0, h = 0 ;
 	SDL_GL_GetDrawableSize (hwndProg, &w, &h) ;
+	if ((w != 0) && (h != 0))
+	    {
+		SDL_Texture *tex = SDL_GetRenderTarget (memhdc) ;
+		SDL_SetRenderTarget (memhdc, NULL) ;
+		SDL_SetWindowSize (hwndProg, w, h) ;
+		SDL_SetRenderTarget (memhdc, tex) ;
+	    }
 	sizex = w ;
 	sizey = h ;
 	zoom = 0x8000 ;

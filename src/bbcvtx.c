@@ -1,10 +1,10 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       Copyright (c) R. T. Russell, 2016-2018                    *
+*       Copyright (c) R. T. Russell, 2016-2019                    *
 *                                                                 *
 *       BBCVTX.C  MODE 7 (teletext / videotex) emulator           *
 *       This module runs in the context of the GUI thread         *
-*       Version 0.21b, 01-Jul-2018                                *
+*       Version 0.29a, 10-Jan-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -26,7 +26,7 @@ void charttf(unsigned short ax, int col, SDL_Rect rect) ;
 
 //Code conversion for special symbols:
 static unsigned char frigo[] = {0x23,0x5B,0x5C,0x5D,0x5E,0x5F,0x60,0x7B,0x7C,0x7D,0x7E,0x7F} ;
-static unsigned char frign[] = { 163, 130, 189, 131, 132,  35, 129, 188, 133, 190, 247, 134} ;
+static unsigned char frign[] = { 163, 143, 189, 144, 141,  35, 151, 188, 157, 190, 247, 129} ; // not 035
 static unsigned short frigw[] = {0xA3,0x2190,0xBD,0x2192,0x2191,0x23,0x2014,0xBC,0x2016,0xBE,0xF7,0x25A0} ;
 
 static int rgbtab[] = {
