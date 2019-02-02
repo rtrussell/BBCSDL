@@ -43,6 +43,13 @@ Andreas Schiffler -- aschiffler at ferzkopp dot net
 #define DR_MP3_IMPLEMENTATION
 #include "dr_mp3.h"
 
+int bezierColor(SDL_Renderer*, const Sint16*, const Sint16*, int, int, Uint32) ;
+SDL_STBIMG_DEF int GFX_bezierColor(SDL_Renderer* renderer, const Sint16* vx, const Sint16* vy,
+							int n, int s, Uint32 color)
+{
+	return bezierColor(renderer, vx, vy, n, s, color) ;
+}
+
 /* ---- Internally used structures */
 
 /*!

@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       32-bit BBC BASIC Interpreter                              *
-*       (c) 2017-2018  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbasmb.c: Simple ARM 4 assembler                          *
-*       Version 0.26a, 01-Nov-2018                                *
+*       Version 0.30a, 26-Jan-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -821,6 +821,15 @@ void assemble (void)
 
 					case ALIGN:
 						oldpc = align () ;
+						if ((nxt() >= '1') && (*esi <= '9'))
+						    {
+							int n = expri () ;
+							if ((n & (n - 1)) || (n & 0xFFFFFF03) || (n == 0))
+								error (16, NULL) ; // 'Syntax error'
+							instruction = 0xE1A00000 ;
+							while (stavar[16] & (n - 1))
+								poke (&instruction, 4) ; 
+						    }
 						continue ;
 
 					default:

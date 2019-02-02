@@ -545,3 +545,4 @@ _drmp3_open_memory_and_read_f32
 _drmp3_open_file_and_read_f32
 _drmp3_free
 _drmp3dec_f32_to_s16
+_GFX_bezierColor

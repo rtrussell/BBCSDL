@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCVDU.C  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 0.29a, 08-Jan-2019                                *
+*       Version 0.30a, 15-Jan-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1593,6 +1593,7 @@ static void modechg (char al)
 {
 	short wx, wy, cx, cy, nc ;
 
+	al &= 0x7F ;
 	if (al >= NUMMODES)
 		return ;
 

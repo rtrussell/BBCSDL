@@ -10,7 +10,7 @@ CXX = gcc -Wall -mmacosx-version-min=10.6 -I ../../include
 
 OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
       bbcvdu.o bbcvtx.o flood.o bbdata.o bbcsdl.o \
-      bbasmb.o SDL2_gfxPrimitives.o
+      bbasmb.o
 
 all: bbcsdl
 
@@ -53,9 +53,9 @@ flood.o: flood.c
 bbdata.o: ../../src/bbdata_x86_64.nas
 	nasm --prefix _ -f macho64 -s ../../src/bbdata_x86_64.nas -o bbdata.o
 
-libstb.dylib: SDL2_rotozoom.o
+libstb.dylib: SDL2_rotozoom.o SDL2_gfxPrimitives.o
 	$(CXX) -dynamiclib -F/Library/Frameworks -framework SDL2 \
-	-o libstb.dylib SDL2_rotozoom.o
+	-o libstb.dylib SDL2_rotozoom.o SDL2_gfxPrimitives.o
 
 bbcsdl: $(OBJ) libstb.dylib
 	$(CXX) $(OBJ) -lstb -F/Library/Frameworks -L . \
