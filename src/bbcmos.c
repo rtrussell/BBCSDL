@@ -1660,6 +1660,7 @@ void sound (short chan, signed char ampl, unsigned char pitch, unsigned char dur
 	unsigned char al ;
 	int index ;
 	int ch = chan & 3 ;
+	if (chan & 0xE000) return; // not internal sound channel
 	if (hwo == 0)
 	    {
 		pushev (WMU_WAVEOPEN, NULL, NULL) ;
