@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (c) 2017-2018  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 0.23a, 12-Sep-2018                                *
+*       Version 1.01a, 12-Feb-2019                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -572,7 +572,7 @@ void clear (void)
 	*(top+2) = 0xFF ;
 	lomem = top + 3 - (signed char *) zero ;
 	if (fastvars)
-		lomem = (lomem + 3) & -4 ; // align
+		lomem = (lomem + 7) & -8 ; // align
 	memset (lomem + zero, 0, 4 * fastvars) ;
 	pfree = lomem + 4 * fastvars ;
 	memset (dynvar, 0, 4 * (54 + 2)) ;

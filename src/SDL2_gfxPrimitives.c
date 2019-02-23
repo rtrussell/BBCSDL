@@ -3,7 +3,7 @@
 SDL2_gfxPrimitives.c: graphics primitives for SDL2 renderers
 
 Copyright (C) 2012  Andreas Schiffler
-Modifications for BBC BASIC (C) 2016  Richard Russell
+Modifications for BBC BASIC (C) 2016-2019  Richard Russell
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -83,7 +83,7 @@ int pixel(SDL_Renderer *renderer, Sint16 x, Sint16 y)
 \param renderer The renderer to draw on.
 \param x X (horizontal) coordinate of the pixel.
 \param y Y (vertical) coordinate of the pixel.
-\param color The color value of the pixel to draw (0xRRGGBBAA). 
+\param color The color value of the pixel to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -170,7 +170,7 @@ int hline(SDL_Renderer * renderer, Sint16 x1, Sint16 x2, Sint16 y)
 \param x1 X coordinate of the first point (i.e. left) of the line.
 \param x2 X coordinate of the second point (i.e. right) of the line.
 \param y Y coordinate of the points of the line.
-\param color The color value of the line to draw (0xRRGGBBAA). 
+\param color The color value of the line to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -212,7 +212,7 @@ int hlineRGBA(SDL_Renderer * renderer, Sint16 x1, Sint16 x2, Sint16 y, Uint8 r, 
 \param x X coordinate of the points of the line.
 \param y1 Y coordinate of the first point (i.e. top) of the line.
 \param y2 Y coordinate of the second point (i.e. bottom) of the line.
-\param color The color value of the line to draw (0xRRGGBBAA). 
+\param color The color value of the line to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -255,7 +255,7 @@ int vlineRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y1, Sint16 y2, Uint8 r, 
 \param y1 Y coordinate of the first point (i.e. top right) of the rectangle.
 \param x2 X coordinate of the second point (i.e. bottom left) of the rectangle.
 \param y2 Y coordinate of the second point (i.e. bottom left) of the rectangle.
-\param color The color value of the rectangle to draw (0xRRGGBBAA). 
+\param color The color value of the rectangle to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -348,7 +348,7 @@ int rectangleRGBA(SDL_Renderer * renderer, Sint16 x1, Sint16 y1, Sint16 x2, Sint
 \param x2 X coordinate of the second point (i.e. bottom left) of the rectangle.
 \param y2 Y coordinate of the second point (i.e. bottom left) of the rectangle.
 \param rad The radius of the corner arc.
-\param color The color value of the rectangle to draw (0xRRGGBBAA). 
+\param color The color value of the rectangle to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -493,7 +493,7 @@ int roundedRectangleRGBA(SDL_Renderer * renderer, Sint16 x1, Sint16 y1, Sint16 x
 \param x2 X coordinate of the second point (i.e. bottom left) of the box.
 \param y2 Y coordinate of the second point (i.e. bottom left) of the box.
 \param rad The radius of the corner arcs of the box.
-\param color The color value of the box to draw (0xRRGGBBAA). 
+\param color The color value of the box to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -690,7 +690,7 @@ int roundedBoxRGBA(SDL_Renderer * renderer, Sint16 x1, Sint16 y1, Sint16 x2,
 \param y1 Y coordinate of the first point (i.e. top right) of the box.
 \param x2 X coordinate of the second point (i.e. bottom left) of the box.
 \param y2 Y coordinate of the second point (i.e. bottom left) of the box.
-\param color The color value of the box to draw (0xRRGGBBAA). 
+\param color The color value of the box to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -801,7 +801,7 @@ int line(SDL_Renderer * renderer, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2)
 \param y1 Y coordinate of the first point of the line.
 \param x2 X coordinate of the second point of the line.
 \param y2 Y coordinate of the seond point of the line.
-\param color The color value of the line to draw (0xRRGGBBAA). 
+\param color The color value of the line to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -1071,7 +1071,7 @@ int _aalineRGBA(SDL_Renderer * renderer, Sint16 x1, Sint16 y1, Sint16 x2, Sint16
 \param y1 Y coordinate of the first point of the aa-line.
 \param x2 X coordinate of the second point of the aa-line.
 \param y2 Y coordinate of the second point of the aa-line.
-\param color The color value of the aa-line to draw (0xRRGGBBAA).
+\param color The color value of the aa-line to draw (0xAABBGGRR).
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -1110,7 +1110,7 @@ int aalineRGBA(SDL_Renderer * renderer, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 
 \param x X coordinate of the center of the circle.
 \param y Y coordinate of the center of the circle.
 \param rad Radius in pixels of the circle.
-\param color The color value of the circle to draw (0xRRGGBBAA). 
+\param color The color value of the circle to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -1148,9 +1148,9 @@ int circleRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Uint8 r,
 \param x X coordinate of the center of the arc.
 \param y Y coordinate of the center of the arc.
 \param rad Radius in pixels of the arc.
-\param start Starting radius in degrees of the arc. 0 degrees is down, increasing counterclockwise.
-\param end Ending radius in degrees of the arc. 0 degrees is down, increasing counterclockwise.
-\param color The color value of the arc to draw (0xRRGGBBAA). 
+\param start Starting radius in degrees of the arc. 0 degrees is right, increasing clockwise.
+\param end Ending radius in degrees of the arc. 0 degrees is right, increasing clockwise.
+\param color The color value of the arc to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -1167,8 +1167,8 @@ int arcColor(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Sint16 sta
 \param x X coordinate of the center of the arc.
 \param y Y coordinate of the center of the arc.
 \param rad Radius in pixels of the arc.
-\param start Starting radius in degrees of the arc. 0 degrees is down, increasing counterclockwise.
-\param end Ending radius in degrees of the arc. 0 degrees is down, increasing counterclockwise.
+\param start Starting radius in degrees of the arc. 0 degrees is right, increasing clockwise.
+\param end Ending radius in degrees of the arc. 0 degrees is right, increasing clockwise.
 \param r The red value of the arc to draw. 
 \param g The green value of the arc to draw. 
 \param b The blue value of the arc to draw. 
@@ -1406,7 +1406,7 @@ int arcRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Sint16 star
 \param x X coordinate of the center of the aa-circle.
 \param y Y coordinate of the center of the aa-circle.
 \param rad Radius in pixels of the aa-circle.
-\param color The color value of the aa-circle to draw (0xRRGGBBAA). 
+\param color The color value of the aa-circle to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -1447,7 +1447,7 @@ int aacircleRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Uint8 
 \param x X coordinate of the center of the filled circle.
 \param y Y coordinate of the center of the filled circle.
 \param rad Radius in pixels of the filled circle.
-\param color The color value of the filled circle to draw (0xRRGGBBAA). 
+\param color The color value of the filled circle to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -1473,88 +1473,7 @@ int filledCircleColor(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, U
 */
 int filledCircleRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
 {
-	int result;
-	Sint16 cx = 0;
-	Sint16 cy = rad;
-	Sint16 ocx = (Sint16) 0xffff;
-	Sint16 ocy = (Sint16) 0xffff;
-	Sint16 df = 1 - rad;
-	Sint16 d_e = 3;
-	Sint16 d_se = -2 * rad + 5;
-	Sint16 xpcx, xmcx, xpcy, xmcy;
-	Sint16 ypcy, ymcy, ypcx, ymcx;
-
-	/*
-	* Sanity check radius 
-	*/
-	if (rad < 0) {
-		return (-1);
-	}
-
-	/*
-	* Special case for rad=0 - draw a point 
-	*/
-	if (rad == 0) {
-		return (pixelRGBA(renderer, x, y, r, g, b, a));
-	}
-
-	/*
-	* Set color
-	*/
-	result = 0;
-	result |= SDL_SetRenderDrawBlendMode(renderer, (a == 255) ? SDL_BLENDMODE_NONE : SDL_BLENDMODE_BLEND);
-	result |= SDL_SetRenderDrawColor(renderer, r, g, b, a);
-
-	/*
-	* Draw 
-	*/
-	do {
-		xpcx = x + cx;
-		xmcx = x - cx;
-		xpcy = x + cy;
-		xmcy = x - cy;
-		if (ocy != cy) {
-			if (cy > 0) {
-				ypcy = y + cy;
-				ymcy = y - cy;
-				result |= hline(renderer, xmcx, xpcx, ypcy);
-				result |= hline(renderer, xmcx, xpcx, ymcy);
-			} else {
-				result |= hline(renderer, xmcx, xpcx, y);
-			}
-			ocy = cy;
-		}
-		if (ocx != cx) {
-			if (cx != cy) {
-				if (cx > 0) {
-					ypcx = y + cx;
-					ymcx = y - cx;
-					result |= hline(renderer, xmcy, xpcy, ymcx);
-					result |= hline(renderer, xmcy, xpcy, ypcx);
-				} else {
-					result |= hline(renderer, xmcy, xpcy, y);
-				}
-			}
-			ocx = cx;
-		}
-
-		/*
-		* Update 
-		*/
-		if (df < 0) {
-			df += d_e;
-			d_e += 2;
-			d_se += 2;
-		} else {
-			df += d_se;
-			d_e += 2;
-			d_se += 4;
-			cy--;
-		}
-		cx++;
-	} while (cx <= cy);
-
-	return (result);
+	return filledEllipseRGBA(renderer, x, y, rad, rad, r, g, b, a);
 }
 
 /* ----- Ellipse */
@@ -1567,7 +1486,7 @@ int filledCircleRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Ui
 \param y Y coordinate of the center of the ellipse.
 \param rx Horizontal radius in pixels of the ellipse.
 \param ry Vertical radius in pixels of the ellipse.
-\param color The color value of the ellipse to draw (0xRRGGBBAA). 
+\param color The color value of the ellipse to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -1783,7 +1702,7 @@ __declspec(naked) long int
 \param y Y coordinate of the center of the aa-ellipse.
 \param rx Horizontal radius in pixels of the aa-ellipse.
 \param ry Vertical radius in pixels of the aa-ellipse.
-\param color The color value of the aa-ellipse to draw (0xRRGGBBAA). 
+\param color The color value of the aa-ellipse to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -1997,7 +1916,7 @@ int aaellipseRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rx, Sint16
 \param y Y coordinate of the center of the filled ellipse.
 \param rx Horizontal radius in pixels of the filled ellipse.
 \param ry Vertical radius in pixels of the filled ellipse.
-\param color The color value of the filled ellipse to draw (0xRRGGBBAA). 
+\param color The color value of the filled ellipse to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -2280,7 +2199,7 @@ int _pieRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Sint16 sta
 \param rad Radius in pixels of the pie.
 \param start Starting radius in degrees of the pie.
 \param end Ending radius in degrees of the pie.
-\param color The color value of the pie to draw (0xRRGGBBAA). 
+\param color The color value of the pie to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -2322,7 +2241,7 @@ int pieRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad,
 \param rad Radius in pixels of the filled pie.
 \param start Starting radius in degrees of the filled pie.
 \param end Ending radius in degrees of the filled pie.
-\param color The color value of the filled pie to draw (0xRRGGBBAA). 
+\param color The color value of the filled pie to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -2368,7 +2287,7 @@ Note: Creates vertex array and uses polygon routine to render.
 \param y2 Y coordinate of the second point of the trigon.
 \param x3 X coordinate of the third point of the trigon.
 \param y3 Y coordinate of the third point of the trigon.
-\param color The color value of the trigon to draw (0xRRGGBBAA). 
+\param color The color value of the trigon to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -2434,7 +2353,7 @@ Note: Creates vertex array and uses aapolygon routine to render.
 \param y2 Y coordinate of the second point of the aa-trigon.
 \param x3 X coordinate of the third point of the aa-trigon.
 \param y3 Y coordinate of the third point of the aa-trigon.
-\param color The color value of the aa-trigon to draw (0xRRGGBBAA). 
+\param color The color value of the aa-trigon to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -2500,7 +2419,7 @@ Note: Creates vertex array and uses aapolygon routine to render.
 \param y2 Y coordinate of the second point of the filled trigon.
 \param x3 X coordinate of the third point of the filled trigon.
 \param y3 Y coordinate of the third point of the filled trigon.
-\param color The color value of the filled trigon to draw (0xRRGGBBAA). 
+\param color The color value of the filled trigon to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -2563,7 +2482,7 @@ int filledTrigonRGBA(SDL_Renderer * renderer, Sint16 x1, Sint16 y1, Sint16 x2, S
 \param vx Vertex array containing X coordinates of the points of the polygon.
 \param vy Vertex array containing Y coordinates of the points of the polygon.
 \param n Number of points in the vertex array. Minimum number is 3.
-\param color The color value of the polygon to draw (0xRRGGBBAA). 
+\param color The color value of the polygon to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -2697,7 +2616,7 @@ int polygonRGBA(SDL_Renderer * renderer, const Sint16 * vx, const Sint16 * vy, i
 \param vx Vertex array containing X coordinates of the points of the aa-polygon.
 \param vy Vertex array containing Y coordinates of the points of the aa-polygon.
 \param n Number of points in the vertex array. Minimum number is 3.
-\param color The color value of the aa-polygon to draw (0xRRGGBBAA). 
+\param color The color value of the aa-polygon to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -2980,7 +2899,7 @@ int filledPolygonRGBAMT(SDL_Renderer * renderer, const Sint16 * vx, const Sint16
 \param vx Vertex array containing X coordinates of the points of the filled polygon.
 \param vy Vertex array containing Y coordinates of the points of the filled polygon.
 \param n Number of points in the vertex array. Minimum number is 3.
-\param color The color value of the filled polygon to draw (0xRRGGBBAA). 
+\param color The color value of the filled polygon to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -3601,7 +3520,7 @@ int characterRGBA(SDL_Renderer *renderer, Sint16 x, Sint16 y, char c, Uint8 r, U
 \param x X (horizontal) coordinate of the upper left corner of the character.
 \param y Y (vertical) coordinate of the upper left corner of the character.
 \param c The character to draw.
-\param color The color value of the character to draw (0xRRGGBBAA). 
+\param color The color value of the character to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -3622,7 +3541,7 @@ of the character width of the current global font.
 \param x X (horizontal) coordinate of the upper left corner of the string.
 \param y Y (vertical) coordinate of the upper left corner of the string.
 \param s The string to draw.
-\param color The color value of the string to draw (0xRRGGBBAA). 
+\param color The color value of the string to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -3742,7 +3661,7 @@ double _evaluateBezier (double *data, int ndata, double t)
 \param vy Vertex array containing Y coordinates of the points of the bezier curve.
 \param n Number of points in the vertex array. Minimum number is 3.
 \param s Number of steps for the interpolation. Minimum number is 2.
-\param color The color value of the bezier curve to draw (0xRRGGBBAA). 
+\param color The color value of the bezier curve to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -3950,7 +3869,7 @@ int _bresenhamIterate(SDL2_gfxBresenhamIterator *b)
 	return ((b->count) ? 0 : 1);
 }
 
-static int LineStyle;
+static int LineStyle = -1;
 
 /*!
 \brief Internal function to to draw parallel lines with Murphy algorithm.
@@ -4310,7 +4229,7 @@ void _murphyWideline(SDL2_gfxMurphyIterator *m, Sint16 x1, Sint16 y1, Sint16 x2,
 \param x2 X coordinate of the second point of the line.
 \param y2 Y coordinate of the second point of the line.
 \param width Width of the line in pixels. Must be >0.
-\param color The color value of the line to draw (0xRRGGBBAA). 
+\param color The color value of the line to draw (0xAABBGGRR). 
 
 \returns Returns 0 on success, -1 on failure.
 */
@@ -4454,4 +4373,183 @@ int RedefineChar(SDL_Renderer *renderer, char c, unsigned char *charpos)
 		return (-1);
 	}
 	return 0 ;
+}
+
+// Extensions for thick outline ellipses and arcs by Richard Russell 19-Feb-2019
+
+static int hlinecliparc(SDL_Renderer *renderer, int x1, int x2, int y, int xc, int yc, double s, double f)
+{
+	int result = 0 ;
+	double a1, a2 ;
+	a1 = atan2(y, x1) ;
+	a2 = atan2(y, x2) ;
+	if (a1 > a2)
+	    {
+		double a = a1 ; a1 = a2 ; a2 = a ;
+		int x = x1 ; x1 = x2 ; x2 = x ;
+	    }
+	if (f < s)
+	    {
+		if ((a1 > f) && (a2 < s)) return result ;
+		if ((a1 < s) && (a1 > f)) x1 = y / tan(s) ;
+		if ((a2 > f) && (a2 < s)) x2 = y / tan(f) ;
+		if ((a1 < f) && (a2 > s))
+		    {
+			result |= SDL_RenderDrawLine(renderer, x1+xc, y+yc, y/tan(f)+xc, y+yc) ;
+			result |= SDL_RenderDrawLine(renderer, y/tan(s)+xc, y+yc, x2+xc, y+yc) ;
+			return result ;
+		    }
+	    }
+	else
+	    {
+		if ((a1 > f) || (a2 < s)) return result ;
+		if (a1 < s) x1 = y / tan(s) ;
+		if (a2 > f) x2 = y / tan(f) ;
+	    }
+	result |= SDL_RenderDrawLine(renderer, x1+xc, y+yc, x2+xc, y+yc) ;
+	return result ;
+}
+
+// returns Returns 0 on success, -1 on failure.
+int thickEllipseRGBA(SDL_Renderer * renderer, Sint16 xc, Sint16 yc, Sint16 xr, Sint16 yr, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 thick)
+{
+	int result = 0 ;
+	int xi, yi, xo, yo, x, y, z ;
+	double xi2, yi2, xo2, yo2 ;
+
+	if (thick <= 1)
+		return ellipseRGBA(renderer, xc, yc, xr, yr, r, g, b, a) ;
+
+	xi = xr - thick / 2 ;
+	xo = xi + thick - 1 ;
+	yi = yr - thick / 2 ;
+	yo = yi + thick - 1 ;
+
+	if ((xi <= 0) || (yi <= 0))
+		return -1 ;
+
+	xi2 = xi * xi ;
+	yi2 = yi * yi ;
+	xo2 = xo * xo ;
+	yo2 = yo * yo ;
+
+	result |= SDL_SetRenderDrawBlendMode(renderer, (a == 255) ? SDL_BLENDMODE_NONE : SDL_BLENDMODE_BLEND);
+	result |= SDL_SetRenderDrawColor(renderer, r, g, b, a);
+
+	if (xr < yr)
+	    {
+		for (x = -xo; x <= -xi; x++)
+		    {
+			y = sqrt(yo2 * (1.0 - x*x/xo2)) + 0.5 ;
+			result |= SDL_RenderDrawLine(renderer, xc+x, yc-y, xc+x, yc+y) ;
+		    }
+		for (x = -xi + 1; x <= xi - 1; x++)
+		    {
+			y = sqrt(yo2 * (1.0 - x*x/xo2)) + 0.5 ;
+			z = sqrt(yi2 * (1.0 - x*x/xi2)) + 0.5 ;
+			result |= SDL_RenderDrawLine(renderer, xc+x, yc+z, xc+x, yc+y) ;
+			result |= SDL_RenderDrawLine(renderer, xc+x, yc-z, xc+x, yc-y) ;
+		    }
+		for (x = xo; x >= xi; x--)
+		    {
+			y = sqrt(yo2 * (1.0 - x*x/xo2)) + 0.5 ;
+			result |= SDL_RenderDrawLine(renderer, xc+x, yc-y, xc+x, yc+y) ;
+		    }
+	    }
+	else
+	    {
+		for (y = -yo; y <= -yi; y++)
+		    {
+			x = sqrt(xo2 * (1.0 - y*y/yo2)) + 0.5 ;
+			result |= SDL_RenderDrawLine(renderer, xc-x, yc+y, xc+x, yc+y) ;
+		    }
+		for (y = -yi + 1; y <= yi - 1; y++)
+		    {
+			x = sqrt(xo2 * (1.0 - y*y/yo2)) + 0.5 ;
+			z = sqrt(xi2 * (1.0 - y*y/yi2)) + 0.5 ;
+			result |= SDL_RenderDrawLine(renderer, xc+z, yc+y, xc+x, yc+y) ;
+			result |= SDL_RenderDrawLine(renderer, xc-z, yc+y, xc-x, yc+y) ;
+		    }
+		for (y = yo; y >= yi; y--)
+		    {
+			x = sqrt(xo2 * (1.0 - y*y/yo2)) + 0.5 ;
+			result |= SDL_RenderDrawLine(renderer, xc-x, yc+y, xc+x, yc+y) ;
+		    }
+	    }
+	return result ;
+}
+
+// returns Returns 0 on success, -1 on failure.
+int thickArcRGBA(SDL_Renderer * renderer, Sint16 xc, Sint16 yc, Sint16 rad, Sint16 start, Sint16 end, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 thick)
+{
+	int result = 0 ;
+	int ri, ro, x, y, z ;
+	double ri2, ro2, s, f ;
+
+	if (thick <= 1)
+		return arcRGBA(renderer, xc, yc, rad, start, end, r, g, b, a) ;
+
+	while (start < -180) start += 360 ;
+	while (start >= 180) start -= 360 ;
+	while (end < -180) end += 360 ;
+	while (end >= 180) end -= 360 ;
+	s = M_PI * (double)start / 180.0 ;
+	f = M_PI * (double)end / 180.0 ;
+	if (start == end) return 0 ;
+
+	ri = rad - thick / 2 ;
+	ro = ri + thick - 1 ;
+	if (ri <= 0) return -1 ;
+
+	ri2 = ri * ri ;
+	ro2 = ro * ro ;
+
+	result |= SDL_SetRenderDrawBlendMode(renderer, (a == 255) ? SDL_BLENDMODE_NONE : SDL_BLENDMODE_BLEND);
+	result |= SDL_SetRenderDrawColor(renderer, r, g, b, a);
+
+	for (y = -ro; y <= -ri; y++)
+	    {
+		x = sqrt(ro2 * (1.0 - y*y/ro2)) + 0.5 ;
+		result |= hlinecliparc(renderer, -x, x, y, xc, yc, s, f) ;
+	    }
+	for (y = -ri + 1; y <= ri - 1; y++)
+	    {
+		x = sqrt(ro2 * (1.0 - y*y/ro2)) + 0.5 ;
+		z = sqrt(ri2 * (1.0 - y*y/ri2)) + 0.5 ;
+		result |= hlinecliparc(renderer, z, x, y, xc, yc, s, f) ;
+		result |= hlinecliparc(renderer, -z, -x, y, xc, yc, s, f) ;
+	    }
+	for (y = ro; y >= ri; y--)
+	    {
+		x = sqrt(ro2 * (1.0 - y*y/ro2)) + 0.5 ;
+		result |= hlinecliparc(renderer, -x, x, y, xc, yc, s, f) ;
+	    }
+	return result ;
+}
+
+// returns Returns 0 on success, -1 on failure.
+int thickCircleRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 thick)
+{
+	return thickEllipseRGBA(renderer, x, y, rad, rad, r, g, b, a, thick);
+}
+
+// returns Returns 0 on success, -1 on failure.
+int thickEllipseColor(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rx, Sint16 ry, Uint32 color, Uint8 thick)
+{
+	Uint8 *c = (Uint8 *)&color; 
+	return thickEllipseRGBA(renderer, x, y, rx, ry, c[0], c[1], c[2], c[3], thick);
+}
+
+// returns Returns 0 on success, -1 on failure.
+int thickArcColor(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Sint16 start, Sint16 end, Uint32 color, Uint8 thick)
+{
+	Uint8 *c = (Uint8 *)&color; 
+	return thickArcRGBA(renderer, x, y, rad, start, end, c[0], c[1], c[2], c[3], thick);
+}
+
+// returns Returns 0 on success, -1 on failure.
+int thickCircleColor(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Uint32 color, Uint8 thick)
+{
+	Uint8 *c = (Uint8 *)&color; 
+	return thickEllipseRGBA(renderer, x, y, rad, rad, c[0], c[1], c[2], c[3], thick);
 }

@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (32-bit or 64-bit)                   *
-*       Copyright (c) R. T. Russell, 2015-2018                     *
+*       Copyright (c) R. T. Russell, 2015-2019                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 0.28b, 22-Dec-2018                                 *
+*       Version 1.01a, 19-Feb-2019                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -154,6 +154,7 @@ static SDL_Window * window ;
 static SDL_Renderer *renderer ;
 static SDL_Thread *Thread ;
 static int blink = 0 ;
+static signed char oldscroln = 0 ;
 
 #if defined __WINDOWS__
 void *dlsym (void *handle, const char *symbol)
@@ -485,6 +486,9 @@ if (SDLNet_Init() == -1)
 	SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "nearest") ;
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES) ;
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 1) ;
+	SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 5) ;
+	SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 5) ;
+	SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 5) ;
 #else
 	SDL_SetHint (SDL_HINT_RENDER_DRIVER, "opengl") ;
 	SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "nearest") ;
@@ -544,22 +548,15 @@ SDL_GL_GetDrawableSize (window, &sizex, &sizey) ; // Window may not be the reque
 #if defined(__ANDROID__) || defined(__IPHONEOS__)
 {
 	int size = MAX (sizex, sizey) ;
-	if (size > XSCREEN)
-		SDL_SetRenderTarget(renderer, SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, 
-					SDL_TEXTUREACCESS_TARGET, size, size)) ;
-	else
-		SDL_SetRenderTarget(renderer, SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, 
-					SDL_TEXTUREACCESS_TARGET, XSCREEN, YSCREEN)) ;
+	SDL_SetRenderTarget(renderer, SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, 
+				SDL_TEXTUREACCESS_TARGET, MAX(size,XSCREEN), MAX(size,YSCREEN))) ;
 }
 #else
 {
-	int size = MAX (sizex, sizey) ;
-	if (size > XSCREEN)
-		SDL_SetRenderTarget(renderer, SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, 
-					SDL_TEXTUREACCESS_TARGET, size, size)) ;
-	else
-		SDL_SetRenderTarget(renderer, SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, 
-					SDL_TEXTUREACCESS_TARGET, XSCREEN, YSCREEN)) ;
+	SDL_DisplayMode dm ;
+	SDL_GetDesktopDisplayMode (0, &dm) ;
+	SDL_SetRenderTarget(renderer, SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, 
+				SDL_TEXTUREACCESS_TARGET, MAX(dm.w,XSCREEN), MAX(dm.h,YSCREEN))) ;
 }
 #endif
 
@@ -936,6 +933,14 @@ while (running)
 	    {
 		SDL_PumpEvents() ;
 		lastpump = SDL_GetTicks() ;
+	    }
+
+	if (scroln != oldscroln)
+	    {
+		oldscroln = scroln ;
+		if (*(keystate + SDL_SCANCODE_LSHIFT) || *(keystate + SDL_SCANCODE_RSHIFT) ||
+				SDL_GetMouseState (NULL,NULL))
+			SDL_Delay (10) ;
 	    }
 
 	if (scroln > 0)

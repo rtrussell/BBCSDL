@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (c) 2017-2018  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
-*       Version 0.28c, 31-Dec-2018                                *
+*       Version 1.01a, 19-Feb-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -28,6 +28,7 @@
 #define MAX_PATH 260
 
 // External routines:
+void trap (void) ;
 void error (int, const char *) ;
 void oswrch (unsigned char) ;
 void pushev (int code, void *data1, void *data2) ;
@@ -360,12 +361,11 @@ void oscli (char *cmd)
 
 		while (1)
 		{
-			if (flags & ESCFLG)
+			if (flags & (ESCFLG | KILL))
 			{
-				flags &= ~ESCFLG ;
 				closedir (d) ;
 				crlf () ;
-				error (17, NULL) ; // 'Escape'
+				trap () ;
 			}
 			struct dirent *r = readdir (d) ;
 			if (r == NULL)
@@ -621,12 +621,11 @@ void oscli (char *cmd)
 		while (1)
 		    {
 			unsigned char al ;
-			if (flags & ESCFLG)
+			if (flags & (ESCFLG | KILL))
 			    {
-				flags &= ~ESCFLG ;
 				SDL_RWclose (srcfile) ;
 				crlf () ;
-				error (17, NULL) ; // 'Escape'
+				trap () ;
 			    }
 			n = SDL_RWread (srcfile, &al, 1, 1) ;
 			if (n && al)
@@ -885,12 +884,11 @@ void oscli (char *cmd)
 		do
 		    {
 			char ch ;
-			if (flags & ESCFLG)
+			if (flags & (ESCFLG | KILL))
 			    {
-				flags &= ~ESCFLG ;
 				SDL_RWclose (srcfile) ;
 				crlf () ;
-				error (17, NULL) ; // 'Escape'
+				trap () ;
 			    }
 			n = SDL_RWread (srcfile, &ch, 1, 1) ;
 			oswrch (ch) ;

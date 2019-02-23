@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (c) 2017-2018  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 0.28b, 21-Dec-2018                                *
+*       Version 1.01a, 22-Feb-2019                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -288,6 +288,8 @@ VAR con (void)
 			esi++ ;
 			neg = 1 ;
 		    }
+		else if (*esi == '+')
+			esi++ ;
 		e = number (&ne, &nt) ;
 		if (neg)
 			e = -e ;

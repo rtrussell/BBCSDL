@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCVTX.C  MODE 7 (teletext / videotex) emulator           *
 *       This module runs in the context of the GUI thread         *
-*       Version 0.29a, 10-Jan-2019                                *
+*       Version 1.01a, 14-Feb-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -20,8 +20,6 @@
 #define	THIRD	7       // Height of a 'sixel'
 #define	SEPSIZ	4       // Width/height of separated
 
-int BBC_RenderReadPixels (SDL_Renderer* renderer, const SDL_Rect* rect,
-                          Uint32 format, void* pixels, int pitch) ;
 void charttf(unsigned short ax, int col, SDL_Rect rect) ;
 
 //Code conversion for special symbols:
@@ -207,19 +205,18 @@ static void outch7 (unsigned char al, unsigned char ah, unsigned char mode, int 
 	chout7 (al, ah, xpos, ypos) ;
 	if ((mode & BIT5) && (al & 0x5F))
 	{
-		int pitch ;
-		void *bufptr ;
 		SDL_Rect src = {xpos, ypos, CHARX, CHARY/2} ;
 		SDL_Rect dst = {xpos, ypos, CHARX, CHARY} ;
-		SDL_Texture *tex ;
+		SDL_Texture *tex, *target ;
 
 		if (mode & BIT3)
 			src.y += CHARY/2 ;	// bottom half
 		tex = SDL_CreateTexture (memhdc, SDL_PIXELFORMAT_ABGR8888,
-			SDL_TEXTUREACCESS_STREAMING, CHARX, CHARY/2) ;
-		SDL_LockTexture (tex, NULL, &bufptr, &pitch) ;
-		BBC_RenderReadPixels (memhdc, &src, SDL_PIXELFORMAT_ABGR8888, bufptr, pitch) ;
-		SDL_UnlockTexture (tex) ;
+			SDL_TEXTUREACCESS_TARGET, CHARX, CHARY/2) ;
+		target = SDL_GetRenderTarget (memhdc) ;
+		SDL_SetRenderTarget (memhdc, tex) ;
+		SDL_RenderCopy (memhdc, target, &src, NULL) ;
+		SDL_SetRenderTarget (memhdc, target) ;
 		SDL_RenderCopy (memhdc, tex, NULL, &dst) ;
 		SDL_DestroyTexture (tex) ;
 	}

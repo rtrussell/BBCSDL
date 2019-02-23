@@ -1,10 +1,10 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (c) 2017-1019  R.T.Russell, http://www.rtrussell.co.uk/   *
+*       (c) 2017-2019  R.T.Russell, http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       BBCVDU.C  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 0.30a, 15-Jan-2019                                *
+*       Version 1.01a, 19-Feb-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -30,6 +30,9 @@
 #define CANCEL_COPY 155
 
 // Functions in SDL_gfxPrimitives.c:
+int thickEllipseColor(SDL_Renderer*, Sint16, Sint16, Sint16, Sint16, Uint32, Uint8) ;
+int thickArcColor(SDL_Renderer*, Sint16, Sint16, Sint16, Sint16, Sint16, Uint32, Uint8) ;
+int thickCircleColor(SDL_Renderer*, Sint16, Sint16, Sint16, Uint32, Uint8) ;
 int thickLineColorStyle (SDL_Renderer*, Sint16, Sint16, Sint16, Sint16, Uint8, Uint32, int) ;
 int RedefineChar (SDL_Renderer*, char, unsigned char*) ;
 
@@ -266,7 +269,7 @@ static void ascale (int *x, int *y)
 // calculate radius:
 static int radius (int cx, int cy, int rx, int ry)
 {
-	return sqrt ((rx - cx) * (rx - cx) + (ry - cy) * (ry - cy)) ;
+	return (int)(sqrt ((rx - cx) * (rx - cx) + (ry - cy) * (ry - cy))) & -2 ;
 }
 
 // calculate arctangent (degrees 0-360):
@@ -329,23 +332,34 @@ static int arctan (int dx, int dy)
 // Blit a rectangular region (source and destination may overlap):
 static void blit (int dstx, int dsty, int srcx, int srcy, int w, int h, int bg)
 {
-	int pitch ;
-	void *pixels ;
 	SDL_Rect dst = {dstx, dsty, w, h} ;
 	SDL_Rect src = {srcx, srcy, w, h} ;
-	SDL_Texture *tex ;
+	SDL_Texture *tex, *tex2, *target ;
 
 	tex = SDL_CreateTexture (memhdc, SDL_PIXELFORMAT_ABGR8888,
-                                 SDL_TEXTUREACCESS_STREAMING, w, h) ;
-	SDL_LockTexture (tex, NULL, &pixels, &pitch) ;
-	BBC_RenderReadPixels (memhdc, &src, SDL_PIXELFORMAT_ABGR8888, pixels, pitch) ;
-	SDL_UnlockTexture (tex) ;
-	if (bg != 0)
+                                 SDL_TEXTUREACCESS_TARGET, w, h) ;
+	target = SDL_GetRenderTarget (memhdc) ;
+	SDL_SetRenderTarget (memhdc, tex) ;
+	SDL_RenderCopy (memhdc, target, &src, NULL) ;
+	if (bg == 1)
+	{
+		tex2 = SDL_CreateTexture (memhdc, SDL_PIXELFORMAT_ABGR8888,
+					  SDL_TEXTUREACCESS_TARGET, w, h) ;
+		SDL_SetRenderTarget (memhdc, tex2) ;
+		SDL_RenderCopy (memhdc, target, &dst, NULL) ;
+	}
+	SDL_SetRenderTarget (memhdc, target) ;
+	if (bg < 0)
 	{
 		setcol (bg & 0xFF) ;
 		SDL_RenderFillRect (memhdc, &src) ;
 	}
 	SDL_RenderCopy (memhdc, tex, NULL, &dst) ;
+	if (bg == 1)
+	{
+		SDL_RenderCopy (memhdc, tex2, NULL, &src) ;
+		SDL_DestroyTexture (tex2) ;
+	}
 	SDL_DestroyTexture (tex) ;
 }
 
@@ -1288,6 +1302,7 @@ static void qmove (char code)
 //187/191: copy a rectangular block
 //192-199: draw an outline axis-aligned ellipse
 //200-207: plot & fill a solid axis-aligned ellipse
+//249/253: swap a rectangular block
 //
 // Plot (absolute pixel coordinates, no scaling)
 static void plotns (unsigned char al, int cx, int cy)
@@ -1454,7 +1469,7 @@ static void plotns (unsigned char al, int cx, int cy)
 		break ;
 
 	case 18:	// PLOT 144-151, Draw outline circle
-		circleColor (memhdc, lx, ly, radius (lx, ly, cx, cy), palette[(int) col]) ;
+		thickCircleColor (memhdc, lx, ly, radius (lx, ly, cx, cy), palette[(int) col], lthick) ;
 		break ;
 
 	case 19:	// PLOT 152-159, Draw filled disc
@@ -1462,8 +1477,8 @@ static void plotns (unsigned char al, int cx, int cy)
 		break ;
 
 	case 20:	// PLOT 160-167, Draw circular arc
-		arcColor (memhdc, px, py, radius (px, py, lx, ly),
-			  arctan (cx-px, cy-py), arctan (lx-px, ly-py), palette[(int) col]) ;
+		thickArcColor (memhdc, px, py, radius (px, py, lx, ly),
+			  arctan (cx-px, cy-py), arctan (lx-px, ly-py), palette[(int) col], lthick) ;
 		break ;
 
 	case 21:	// PLOT 168-175, Plot filled segment (NOT CURRENTLY IMPLEMENTED)
@@ -1495,7 +1510,7 @@ static void plotns (unsigned char al, int cx, int cy)
 		break ;
 
 	case 24:	// PLOT 192-199, Draw outline ellipse
-		ellipseColor (memhdc, px, py, abs(lx - px), abs(cy - py), palette[(int) col]) ;
+		thickEllipseColor (memhdc, px, py, abs(lx - px), abs(cy - py), palette[(int) col], lthick) ;
 		break ;
 
 	case 25:	// PLOT 200-207, Plot filled ellipse
@@ -1503,6 +1518,22 @@ static void plotns (unsigned char al, int cx, int cy)
 				    palette[(int) col]) ;
 		break ;
 
+	case 31:	// PLOT 248-255, Block swap
+		if (lx < px)
+		{
+			int tmp = lx ;
+			lx = px ;
+			px = tmp ;
+		}
+		if (ly < py)
+		{
+			int tmp = ly ;
+			ly = py ;
+			py = tmp ;
+		}
+		glDisableBBC (GL_COLOR_LOGIC_OP) ;
+		blit (cx, cy-ly+py, px, py, lx-px+1, ly-py+1, 1) ; // Swap
+		break ;
 	}
 
 	SDL_RenderSetClipRect (memhdc, NULL) ;
