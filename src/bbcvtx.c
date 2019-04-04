@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCVTX.C  MODE 7 (teletext / videotex) emulator           *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.01a, 14-Feb-2019                                *
+*       Version 1.02a, 03-Apr-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -215,6 +215,7 @@ static void outch7 (unsigned char al, unsigned char ah, unsigned char mode, int 
 			SDL_TEXTUREACCESS_TARGET, CHARX, CHARY/2) ;
 		target = SDL_GetRenderTarget (memhdc) ;
 		SDL_SetRenderTarget (memhdc, tex) ;
+		SDL_RenderClear (memhdc) ;
 		SDL_RenderCopy (memhdc, target, &src, NULL) ;
 		SDL_SetRenderTarget (memhdc, target) ;
 		SDL_RenderCopy (memhdc, tex, NULL, &dst) ;

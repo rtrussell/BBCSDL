@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCVDU.C  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.01a, 19-Feb-2019                                *
+*       Version 1.02a, 09-Mar-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -340,6 +340,7 @@ static void blit (int dstx, int dsty, int srcx, int srcy, int w, int h, int bg)
                                  SDL_TEXTUREACCESS_TARGET, w, h) ;
 	target = SDL_GetRenderTarget (memhdc) ;
 	SDL_SetRenderTarget (memhdc, tex) ;
+	SDL_RenderClear (memhdc) ; // important
 	SDL_RenderCopy (memhdc, target, &src, NULL) ;
 	if (bg == 1)
 	{

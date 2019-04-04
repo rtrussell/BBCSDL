@@ -3,7 +3,7 @@
 ;*       Copyright (c) R. T. Russell, 2000-2019                    *
 ;*                                                                 *
 ;*       BBCDATA.NAS RAM data definitions                          *
-;*       Version 0.29a, 10-Jan-2019                                *
+;*       Version 1.02a, 26-Mar-2019                                *
 ;\*****************************************************************/
 ;
 MAX_PORTS       EQU     4       ; Maximum number of i/o ports
@@ -17,7 +17,7 @@ SOUNDQL         EQU     5*SOUNDQE ; Number of bytes per channel
 	GLOBAL	tracen,random,count,vwidth,errnum,liston,tmps
 ;
 	GLOBAL	path,keystr,keybdq,keyptr,spchan,exchan,tweak
-	GLOBAL	chntab,timoff,usrchr,soundq,envels,waves,libase
+	GLOBAL	fcbtab,timoff,usrchr,soundq,envels,waves,libase
 	GLOBAL	eventq,timtrp,clotrp,siztrp,systrp,moutrp
 	GLOBAL	alltrp,iMsg,wParam,lParam,filbuf,portab,fvtab
 ;
@@ -107,7 +107,7 @@ fasize:	dd	0		; Number of elements = 13   |
 filbuf:	dd	0		; Pointer to file buffers   | hfile%()
 portab:	times MAX_PORTS dd 0	; Table of port handles     |
 chntab:	times MAX_FILES dd 0	; Table of file handles     |
-fcbtab:	times MAX_FILES dd 0	; Tables of FCBs (must follow chntab)
+fcbtab:	times MAX_FILES dd 0	; Table of FCBs (must follow chntab)
 ;
 spchan:	dd	0		; Channel for *SPOOL/*SPOOLON
 exchan:	dd	0		; Channel for *EXEC

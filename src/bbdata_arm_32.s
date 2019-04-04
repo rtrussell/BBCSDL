@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2018-2019                    *
 *                                                                 *
 *       BBCDAT.S RAM data definitions                             *
-*       Version 0.29a, 10-Jan-2019                                *
+*       Version 1.02a, 26-Mar-2019                                *
 \*****************************************************************/
 
 .equ	MAX_PORTS,4
@@ -45,7 +45,7 @@
 .global spchan
 .global exchan
 .global tweak
-.global chntab
+.global fcbtab
 .global timoff
 .global usrchr
 .global soundq
@@ -228,7 +228,7 @@ fasize:	.long	0	/* Number of elements = 13   | */
 filbuf:	.long	0	/* Pointer to file buffers   | */
 portab:	.fill	MAX_PORTS,4,0	/* Table of port handles     | */
 chntab:	.fill	MAX_FILES,4,0	/* Table of file handles     | */
-fcbtab:	.fill	MAX_FILES,4,0	/* Tables of FCBs (must follow chntab) */
+fcbtab:	.fill	MAX_FILES,4,0	/* Table of FCBs (must follow chntab) */
 
 spchan:	.long	0	/* Channel for *SPOOL/*SPOOLON */
 exchan:	.long	0	/* Channel for *EXEC */

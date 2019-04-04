@@ -3,7 +3,7 @@
 *       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.01a, 22-Feb-2019                                *
+*       Version 1.02a, 26-Mar-2019                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -79,6 +79,7 @@ void *osopen (int, char *) ;	// Open a file
 unsigned char osbget (void*, int*) ; // Get a byte from a file
 long long getptr (void*) ;	// Get file pointer
 long long getext (void*) ;	// Get file length
+long long geteof (void*) ;	// Get EOF status
 
 // Global jump buffer:
 extern jmp_buf env ;
@@ -1081,7 +1082,7 @@ VAR item (void)
 			{
 			void *n = channel () ;
 			v.i.t = 0 ;
-			v.i.n = -(getptr (n) >= getext (n)) ;
+			v.i.n = geteof (n) ;
 			}
 			return v ;
 

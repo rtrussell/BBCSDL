@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (64-bit)                             *
-*       Copyright (c) R. T. Russell, 2000-2018                     *
+*       Copyright (c) R. T. Russell, 2000-2019                     *
 *                                                                  *
 *       BBCSDL.H constant definitions                              *
-*       Version 0.27a 14-Nov-2018                                  *
+*       Version 1.02a 26-Mar-2019                                  *
 \******************************************************************/
 
 // System constants :
@@ -133,6 +133,14 @@ typedef struct tagPARM
 	double f[8] ;
 } PARM, *LPPARM ;
 
+typedef struct tagFCB
+{
+	unsigned char p ; // pointer
+	unsigned char o ; // offset  (0-256)
+	unsigned char w ; // written (0-256)
+	signed char f ;   // bit0: offset<>0, bit7: written<>0
+} FCB, *LPFCB ;
+
 // Variables declared in bbcsdl.c:
 extern SDL_Renderer *memhdc ;
 extern SDL_Window *hwndProg ;
@@ -214,6 +222,7 @@ extern char* path ;		// File path buffer
 extern signed char *envels ;	// Envelope storage (16 x 16)
 extern short* waves ;
 extern void* filbuf[] ;
+extern FCB fcbtab[MAX_FILES] ;  // Table of FCBs
 extern unsigned char *keyptr ;	// Pointer to *KEY string
 extern char* usrchr ;		// User-defined characters (indirect)
 extern char* keybdq ;		// Keyboard queue (indirect) 

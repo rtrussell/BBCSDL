@@ -3,7 +3,7 @@
 *   Copyright (c) R. T. Russell, 2000-2019                        *
 *                                                                 *
 *   BBCDAT.S RAM data definitions                                 *
-*   Version 0.29a, 10-Jan-2019                                    *
+*   Version 1.02a, 26-Mar-2019                                    *
 \*****************************************************************/
 
 .equ	MAX_PORTS,4
@@ -45,7 +45,7 @@
 .global _spchan
 .global _exchan
 .global _tweak
-.global _chntab
+.global _fcbtab
 .global _timoff
 .global _usrchr
 .global _soundq
@@ -241,6 +241,7 @@ _exchan:.quad	0		/* Handle for *EXEC   @hfile%%(13) */
 _spchan:.quad	0		/* Handle for *SPOOL  @hfile%%(14) */
 _ptchan:.quad	0		/* Handle for printer @hfile%%(15) */
 
+_fcbtab:.fill	MAX_FILES,4,0	/* Table of FCBs */
 _voices:.long	0		/* Voices (waveforms) for sound channels */
 
 _flist:	.fill	33,8,0		/* Pointers to string free lists */

@@ -1,10 +1,10 @@
 /*****************************************************************\
 *       BBC BASIC for SDL 2.0 (32-bit or 64-bit)                  *
-*       Copyright (c) R. T. Russell, 2016-2018                    *
+*       Copyright (c) R. T. Russell, 2016-2019                    *
 *                                                                 *
 *       BBCMOS.C  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 0.25a, 13-Oct-2018                                *
+*       Version 1.02a, 29-Mar-2019                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -873,6 +873,7 @@ void reset (void)
 	vduq[10] = 0 ;	// Flush VDU queue
 	keyexp = 0 ;	// Cancel *KEY expansion
 	optval = 0 ;	// Cancel I/O redirection
+	reflag = 0 ;	// *REFRESH ON
 	quiet () ;
  }
 
@@ -1960,7 +1961,7 @@ void osload (char *p, void *addr, int max)
 	n = SDL_RWread(file, addr, 1, max) ;
 	SDL_RWclose (file) ;
 	if (n == 0)
-		error (189, (const char *)SDL_GetError) ;
+		error (189, SDL_GetError()) ;
 }
 
 // Open a file:
@@ -1995,6 +1996,8 @@ void *osopen (int type, char *p)
 		if (filbuf[chan] == 0)
 		    {
 			filbuf[chan] = file ;
+			if (chan > MAX_PORTS)
+				*(int *)&fcbtab[chan - MAX_PORTS - 1] = 0 ;
 			return (void *)(size_t)chan ;
 		    }
 	    }
@@ -2003,20 +2006,114 @@ void *osopen (int type, char *p)
 	return NULL ; // never happens
 }
 
-// Read a byte (n.b. unbuffered):
+// Read file to 256-byte buffer:
+static void readb (SDL_RWops *context, unsigned char *buffer, FCB *pfcb)
+{
+	int amount ;
+	if (context == NULL)
+		error (222, "Invalid channel") ;
+	if (pfcb->p != pfcb->o)
+		SDL_RWseek (context, (pfcb->p - pfcb->o) & 0xFF, RW_SEEK_CUR) ;
+	amount = SDL_RWread (context, buffer, 1, 256) ;
+	pfcb->p = 0 ;
+	pfcb->o = amount & 0xFF ;
+	pfcb->w = 0 ;
+	pfcb->f = (amount != 0) ;
+	while (amount < 256)
+		buffer[amount++] = 0 ;
+	return ;
+}
+
+// Write 256-byte buffer to file:
+static int writeb (SDL_RWops *context, unsigned char *buffer, FCB *pfcb)
+{
+	int amount ;
+	if (pfcb->f >= 0)
+	    {
+		pfcb->f = 0 ;
+		return 0 ;
+	    }
+	if (context == NULL)
+		error (222, "Invalid channel") ;
+	if (pfcb->f & 1)
+		SDL_RWseek (context, pfcb->o ? -pfcb->o : -256, RW_SEEK_CUR) ;
+	amount = SDL_RWwrite (context, buffer, 1, pfcb->w ? pfcb->w : 256) ;
+	pfcb->o = amount & 0xFF ;
+	pfcb->w = 0 ;
+	pfcb->f = 1 ;
+	return (amount == 0) ;
+}
+
+// Close a single file:
+static int closeb (void *chan)
+{
+	int result ;
+	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
+	    {
+		int index = (size_t) chan - MAX_PORTS - 1 ;
+		unsigned char *buffer = (unsigned char *) filbuf[0] + index * 0x100 ;
+		FCB *pfcb = &fcbtab[index] ;
+		SDL_RWops *handle = (SDL_RWops *) filbuf[(size_t) chan] ;
+		if (writeb (handle, buffer, pfcb))
+			return 1 ;
+	    }
+	result = SDL_RWclose (lookup (chan)) ;
+	if ((chan >= (void *)1) && (chan <= (void *)(MAX_PORTS + MAX_FILES)))
+		filbuf[(size_t)chan] = 0 ;
+	return result ;
+}
+
+// Read a byte:
 unsigned char osbget (void *chan, int *peof)
 {
 	unsigned char byte = 0 ;
 	if (peof != NULL)
 		*peof = 0 ;
+	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
+	    {
+		int index = (size_t) chan - MAX_PORTS - 1 ;
+		unsigned char *buffer = (unsigned char *) filbuf[0] + index * 0x100 ;
+		FCB *pfcb = &fcbtab[index] ;
+		if (pfcb->p == pfcb->o)
+		    {
+			SDL_RWops *handle = (SDL_RWops *) filbuf[(size_t) chan] ;
+			if (writeb (handle, buffer, pfcb))
+				error (189, SDL_GetError ()) ;
+			readb (handle, buffer, pfcb) ;
+			if ((pfcb->f & 1) == 0)
+			    {
+				if (peof != NULL)
+					*peof = 1 ;
+				return 0 ;
+			    } 
+		    }
+		return buffer[pfcb->p++] ;
+	    }
 	if ((0 == SDL_RWread (lookup (chan), &byte, 1, 1)) && (peof != NULL))
 		*peof = 1 ;
 	return byte ;
 }
 
-// Write a byte (n.b. unbuffered):
+// Write a byte:
 void osbput (void *chan, unsigned char byte)
 {
+	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
+	    {
+		int index = (size_t) chan - MAX_PORTS - 1 ;
+		unsigned char *buffer = (unsigned char *) filbuf[0] + index * 0x100 ;
+		FCB *pfcb = &fcbtab[index] ;
+		if (pfcb->p == pfcb->o)
+		    {
+			SDL_RWops *handle = (SDL_RWops *) filbuf[(size_t) chan] ;
+			if (writeb (handle, buffer, pfcb))
+				error (189, SDL_GetError ()) ;
+			readb (handle, buffer, pfcb) ;
+		    }
+		buffer[pfcb->p++] = byte ;
+		pfcb->w = pfcb->p ;
+		pfcb->f |= 0x80 ;
+		return ;
+	    }
 	if (0 == SDL_RWwrite (lookup (chan), &byte, 1, 1))
 		error (189, SDL_GetError ()) ;
 }
@@ -2027,12 +2124,34 @@ long long getptr (void *chan)
 	long long ptr = SDL_RWseek (lookup (chan), 0, RW_SEEK_CUR) ;
 	if (ptr == -1)
 		error (189, SDL_GetError ()) ;
+	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
+	    {
+		FCB *pfcb = &fcbtab[(size_t) chan - MAX_PORTS - 1] ;
+		if (pfcb->o)
+			ptr -= pfcb->o ;
+		else if (pfcb->f & 1)
+			ptr -= 256 ;
+		if (pfcb->p)
+			ptr += pfcb->p ;
+		else if (pfcb->f & 0x81)
+			ptr += 256 ;
+	    }
 	return ptr ;
 }
 
 // Set file pointer:
 void setptr (void *chan, long long ptr)
 {
+	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
+	    {
+		int index = (size_t) chan - MAX_PORTS - 1 ;
+		unsigned char *buffer = (unsigned char *) filbuf[0] + index * 0x100 ;
+		FCB *pfcb = &fcbtab[index] ;
+		SDL_RWops *handle = (SDL_RWops *) filbuf[(size_t) chan] ;
+		if (writeb (handle, buffer, pfcb))
+			error (189, SDL_GetError ()) ;
+		*(int *)pfcb = 0 ;
+	    }
 	if (-1 == SDL_RWseek (lookup (chan), ptr, RW_SEEK_SET))
 		error (189, SDL_GetError ()) ;
 }
@@ -2040,16 +2159,31 @@ void setptr (void *chan, long long ptr)
 // Get file size:
 long long getext (void *chan)
 {
+	long long newptr = getptr (chan) ;
 	SDL_RWops *file = lookup (chan) ;
 	long long ptr = SDL_RWseek (file, 0, RW_SEEK_CUR) ;
 	long long size = SDL_RWseek (file, 0, RW_SEEK_END) ;
 	if ((ptr == -1) || (size == -1))
 		error (189, SDL_GetError ()) ;
 	SDL_RWseek (file, ptr, RW_SEEK_SET) ;
+	if (newptr > size)
+		return newptr ;
 	return size ;
 }
 
-// Close file:
+// Get EOF status:
+long long geteof (void *chan)
+{
+	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
+	    {
+		FCB *pfcb = &fcbtab[(size_t) chan - MAX_PORTS - 1] ;
+		if ((pfcb->p != 0) && (pfcb->o == 0) && ((pfcb->f) & 1))
+			return 0 ;
+	    }
+	return -(getptr (chan) >= getext (chan)) ;
+}
+
+// Close file (if chan = 0 all open files closed and errors ignored):
 void osshut (void *chan)
 {
 	if (chan == NULL)
@@ -2058,14 +2192,12 @@ void osshut (void *chan)
 		for (chan = MAX_PORTS + MAX_FILES; chan > 0; chan--)
 		    {
 			if (filbuf[chan])
-				osshut ((void *)(size_t)chan) ;
+				closeb ((void *)(size_t)chan) ; // ignore errors
 		    }
 		return ;
 	    }
-
-	SDL_RWclose (lookup (chan)) ;
-	if ((chan >= (void *)1) && (chan <= (void *)(MAX_PORTS + MAX_FILES)))
-		filbuf[(size_t)chan] = 0 ;
+	if (closeb (chan))
+		error (189, SDL_GetError()) ;
 }
 
 // Start interpreter:

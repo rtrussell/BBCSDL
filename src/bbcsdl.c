@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2019                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.01a, 19-Feb-2019                                 *
+*       Version 1.02a, 03-Apr-2019                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -25,27 +25,22 @@
 #endif
 #define realpath(N,R) _fullpath((R),(N),_MAX_PATH)
 BOOL WINAPI K32EnumProcessModules (HANDLE, HMODULE*, DWORD, LPDWORD) ;
-int DIRoff = 12 ;
 #endif
 #ifdef __LINUX__
 #include <sys/mman.h>
 #define PLATFORM "Linux"
-int DIRoff = 11 ;
 #endif
 #ifdef __MACOSX__
 #include <sys/mman.h>
 #define PLATFORM "MacOS"
-int DIRoff = 8 ;
 #endif
 #ifdef __ANDROID__
 #include <sys/mman.h>
 #define PLATFORM "Android"
-int DIRoff = 19 ;
 #endif
 #ifdef __IPHONEOS__
 #include <sys/mman.h>
 #define PLATFORM "iOS"
-int DIRoff = 8 ;
 #endif
 
 #undef MAX_PATH
@@ -1120,7 +1115,8 @@ while (running)
 				break ;
 
 				case WMU_TIMER :
-				flip7 () ;
+				if (nUserEv <= 0)
+					flip7 () ;
 				if (timtrp)
 				{
 					putevt (timtrp, WM_TIMER, 0, 0) ;
