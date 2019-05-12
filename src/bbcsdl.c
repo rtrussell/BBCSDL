@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2019                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.02a, 03-Apr-2019                                 *
+*       Version 1.03a, 27-Apr-2019                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -334,7 +334,11 @@ static void SetDir (char *path)
 	    {
 		getcwd (szLoadDir, MAX_PATH) ;
 	    }
+#ifdef __WINDOWS__
+	strcat (szLoadDir, "\\") ;
+#else
 	strcat (szLoadDir, "/") ;
+#endif
 	chdir (szLoadDir) ;
 }
 
@@ -706,7 +710,11 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 	if (p) *(p + 1) = '\0' ;
 	p = strrchr (szLibrary, '/') ;
 	if (p == NULL) p = strrchr (szLibrary, '\\') ;
+#ifdef __WINDOWS__
+	if (p) strcpy (p + 1, "lib\\") ;
+#else
 	if (p) strcpy (p + 1, "lib/") ;
+#endif
 
 	if (argc >= 2)
 		strcpy (szAutoRun, argv[1]) ;

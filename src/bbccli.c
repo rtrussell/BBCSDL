@@ -3,7 +3,7 @@
 *       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
-*       Version 1.01a, 19-Feb-2019                                *
+*       Version 1.03a, 12-May-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -345,7 +345,11 @@ void oscli (char *cmd)
 		else
 		{
 			getcwd (path2, MAX_PATH) ;
+#ifdef __WINDOWS__
+			dd = '\\' ;
+#else
 			dd = '/' ;
+#endif
 			p = path ;
 			q = path2 ;
 		}

@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCMOS.C  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.02a, 29-Mar-2019                                *
+*       Version 1.03a, 12-May-2019                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -1361,6 +1361,10 @@ void osline (char *buffer)
 					    }
 					SDL_free (t) ;
 				    }
+				break ;
+
+			case 140:
+			case 141:
 				break ;
 
 			default:
