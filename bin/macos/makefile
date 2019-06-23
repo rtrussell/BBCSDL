@@ -10,7 +10,7 @@ CXX = gcc -Wall -mmacosx-version-min=10.6 -I ../../include
 
 OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
       bbcvdu.o bbcvtx.o flood.o bbdata.o bbcsdl.o \
-      bbasmb.o
+      bbasmb.o bbctmp.o
 
 all: bbcsdl
 
@@ -41,6 +41,9 @@ bbcvtx.o: bbcvtx.c bbcsdl.h
 bbcsdl.o: bbcsdl.c bbcsdl.h version.h
 	$(CXX) -Wno-unused-result -c -O2 $< -o $@
 
+bbctmp.o: bbctmp.m
+	$(CXX) -c -Os $< -o $@
+
 SDL2_gfxPrimitives.o: SDL2_gfxPrimitives.c
 	$(CXX) -c -O2 $< -o $@
 
@@ -60,6 +63,7 @@ libstb.dylib: SDL2_rotozoom.o SDL2_gfxPrimitives.o
 bbcsdl: $(OBJ) libstb.dylib
 	$(CXX) $(OBJ) -lstb -F/Library/Frameworks -L . \
 	-framework SDL2 -framework SDL2_ttf -framework SDL2_net \
+	-framework Foundation \
 	-o bbcsdl $(SDL_LIB)
 	cp bbcsdl ../../
 	cp libstb.dylib ../../

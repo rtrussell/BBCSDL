@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2019                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.03a, 27-Apr-2019                                 *
+*       Version 1.04a, 12-Jun-2019                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -28,11 +28,13 @@ BOOL WINAPI K32EnumProcessModules (HANDLE, HMODULE*, DWORD, LPDWORD) ;
 #endif
 #ifdef __LINUX__
 #include <sys/mman.h>
+#include <sys/stat.h>
 #define PLATFORM "Linux"
 #endif
 #ifdef __MACOSX__
 #include <sys/mman.h>
 #define PLATFORM "MacOS"
+int GetTempPath(size_t, char *) ;
 #endif
 #ifdef __ANDROID__
 #include <sys/mman.h>
@@ -667,13 +669,42 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 	return 10 ;
 }
 
+#ifdef __WINDOWS__
+	GetTempPath (MAX_PATH, szTempDir) ;
+	mkdir (szTempDir) ;
+#endif
+
+#ifdef __LINUX__
+	strcpy (szTempDir, SDL_GetPrefPath("tmp", "")) ;
+	*(szTempDir + strlen(szTempDir) - 1) = 0 ;
+	mkdir (szTempDir, 0777) ;
+#endif
+
+#ifdef __MACOSX__
+	GetTempPath (MAX_PATH, szTempDir) ;
+	mkdir (szTempDir, 0777) ;
+#endif
+
+#ifdef __ANDROID__
+	strcpy (szTempDir, (char *) SDL_AndroidGetInternalStoragePath ()) ;
+	strcat (szTempDir, "/tmp/") ;
+	mkdir (szTempDir, 0777) ;
+#endif
+
+#ifdef __IPHONEOS__
+	strcpy (szTempDir, SDL_GetPrefPath("BBCBasic", "tmp")) ;
+	char *p = strstr (szTempDir, "/Library/") ;
+	if (p)
+	    {
+		strcpy (p, "/tmp/") ;
+		mkdir (szTempDir, 0777) ;
+	    }
+#endif
+
 #ifdef __ANDROID__
 	useGPA = 1 ;
 	strcpy (szUserDir, (char *) SDL_AndroidGetExternalStoragePath ()) ;
 	strcat (szUserDir, "/") ;
-	strcpy (szTempDir, (char *) SDL_AndroidGetInternalStoragePath ()) ;
-	strcat (szTempDir, "/tmp/") ;
-	mkdir (szTempDir, 0777) ;
 	strcpy (szLibrary, (char *) SDL_AndroidGetInternalStoragePath ()) ;
 	strcat (szLibrary, "/lib/") ;
 	mkdir (szLibrary, 0777) ;
@@ -681,33 +712,22 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 #ifdef __IPHONEOS__
 	useGPA = 1 ;
 	strcpy (szUserDir, SDL_GetPrefPath("BBCBasic", "usr")) ;
-	strcpy (szTempDir, SDL_GetPrefPath("BBCBasic", "tmp")) ;
 	strcpy (szLibrary, SDL_GetBasePath()) ;
 	strcat (szLibrary, "lib/") ;
 
-	char *p ;
 	p = strstr (szUserDir, "/Library/") ;
 	if (p)
 	    {
 		strcpy (p, "/Documents/") ;
 		mkdir (szUserDir, 0777) ;
 	    }
-	p = strstr (szTempDir, "/Library/") ;
-	if (p)
-	    {
-		strcpy (p, "/tmp/") ;
-		mkdir (szTempDir, 0777) ;
-	    }
 #else
 	strcpy (szUserDir, SDL_GetPrefPath("BBCBasic", "")) ;
-	strcpy (szTempDir, tempnam (NULL, "")) ;
 	strcpy (szLibrary, SDL_GetBasePath()) ;
 
 	char *p ;
 	*(szUserDir + strlen(szUserDir) - 1) = 0 ;
-	p = strrchr (szTempDir, '/') ;
-	if (p == NULL) p = strrchr (szTempDir, '\\') ;
-	if (p) *(p + 1) = '\0' ;
+
 	p = strrchr (szLibrary, '/') ;
 	if (p == NULL) p = strrchr (szLibrary, '\\') ;
 #ifdef __WINDOWS__

@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCVDU.C  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.02a, 09-Mar-2019                                *
+*       Version 1.04a, 12-Jun-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1692,6 +1692,10 @@ static void defchr (unsigned char n, unsigned char a, unsigned char b,
 
 	case 23:	// line thickness
 		lthick = a ;
+		break ;
+
+	case 24:	// character spacing adjustment
+		tweak = (signed char) a ;
 		break ;
 
 	case 31:	// initialise VDU system
