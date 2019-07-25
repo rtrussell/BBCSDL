@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2019                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.04a, 12-Jun-2019                                 *
+*       Version 1.05a, 19-Jul-2019                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -886,10 +886,6 @@ while (running)
 	float scale = (float)(zoom) / 32768.0 ; // must be float
 	SDL_GetWindowSize (window, &ptsx, &ptsy) ;
 	SDL_GL_GetDrawableSize (window, &winx, &winy) ;
-
-#if !defined(__ANDROID__) && !defined(__IPHONEOS__) 
-	int sizex = winx, sizey = winy ; // for multiwin
-#endif
 
 #define PAINT1 ((now >= (lastpaint + PACER)) && (nUserEv < MAXEV)) // Time window
 #define PAINT2 (reflag & 1) // Interpreter thread is waiting for refresh (vSync)

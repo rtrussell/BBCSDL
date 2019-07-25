@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCMOS.C  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.03a, 12-May-2019                                *
+*       Version 1.05a, 25-Jul-2019                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -1665,6 +1665,7 @@ void sound (short chan, signed char ampl, unsigned char pitch, unsigned char dur
 	unsigned char al ;
 	int index ;
 	int ch = chan & 3 ;
+	if (chan & 0xE000) return ;
 	if (hwo == 0)
 	    {
 		pushev (WMU_WAVEOPEN, NULL, NULL) ;
@@ -1704,7 +1705,8 @@ void quiet (void)
 		eenvel[i] = 0 ;
 		sacc[i] = 0 ;
 	    }
-	SDL_CloseAudioDevice (hwo) ;
+	if (hwo)
+		SDL_CloseAudioDevice (hwo) ;
 	hwo = 0 ;
 }
 
