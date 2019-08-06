@@ -3,7 +3,7 @@
 *       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbasmb.c: Simple ARM 4 assembler                          *
-*       Version 0.30a, 26-Jan-2019                                *
+*       Version 1.05b, 03-Aug-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -38,6 +38,7 @@ void spaces (int) ;
 int range0 (char) ;
 signed char nxt (void) ;
 
+long long itemi (void) ;
 long long expri (void) ;
 VAR expr (void) ;
 VAR exprs (void) ;
@@ -131,7 +132,12 @@ unsigned char reg (void)
 	nxt () ;
 	i = lookup (registers, sizeof(registers) / sizeof(registers[0])) ;
 	if (i < 0)
-		error (16, NULL) ; // 'Syntax error'
+	    {
+		i = itemi() ;
+		if ((i < 0) || (i > 15))
+			error (16, NULL) ; // 'Syntax error'
+		return i ;
+	    }
 	return regno[i] ;
 }
 
@@ -641,8 +647,8 @@ void assemble (void)
 						int dest ;
 						instruction = (ccode << 28) | (opcodes[mnemonic] << 20) ;
 						dest = ((void *) (size_t) expri () - PC - 8) >> 2 ;
-						if (dest != (dest << 8 >> 8))
-							error (1, NULL) ; // 'Jump out pf range'
+						if ((dest != (dest << 8 >> 8)) && ((liston & BIT5) != 0))
+							error (1, NULL) ; // 'Jump out of range'
 						instruction |= (dest & 0xFFFFFF) ;
 						}
 						break ;

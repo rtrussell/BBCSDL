@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       64-bit BBC BASIC Interpreter                              *
-*       Copyright (c) 2018 R.T.Russell http://www.rtrussell.co.uk *
+*       Copyright (c) 2019 R.T.Russell http://www.rtrussell.co.uk *
 *                                                                 *
 *       bbasmb_x86_64.c: x86-64 assembler                         *
-*       Version 0.28a, 05-Dec-2018                                *
+*       Version 1.06a, 03-Aug-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -2022,7 +2022,7 @@ static char *encode (int mnemonic, int operand1, int operand2, int operand3, int
 			if (override & 0b10000000)
 				error (6, NULL) ; // 'Type mismatch'
 			immediate -= (long long) PC + 1 ;
-			if ((immediate < -128) || (immediate > 127))
+			if (((immediate < -128) || (immediate > 127)) && ((liston & BIT5) != 0))
 				error (1, NULL) ; // 'Jump out of range' 
 			poke (&immediate, 1) ;
 			break ;
