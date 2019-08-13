@@ -3,7 +3,7 @@
 *       Copyright (c) 2019 R.T.Russell http://www.rtrussell.co.uk *
 *                                                                 *
 *       bbasmb_x86_64.c: x86-64 assembler                         *
-*       Version 1.06a, 03-Aug-2019                                *
+*       Version 1.05c, 11-Aug-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -2073,10 +2073,7 @@ void assemble (void)
 {
 	signed char al ; 
 	signed char *oldesi = esi ; 
-	void *oldpc ; 
-
-	liston = (liston & 0x0F) | 0x30 ; 
-	oldpc = PC ; 
+	void *oldpc = PC ; 
 
 	while (1)
 	    {
@@ -2097,9 +2094,11 @@ void assemble (void)
 		    {
 			case 0:
 				esi-- ;
+				liston = (liston & 0x0F) | 0x30 ; 
 				return ;
 
 			case ']':
+				liston = (liston & 0x0F) | 0x30 ; 
 				return ;
 
 			case 0x0D:
