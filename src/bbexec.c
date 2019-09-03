@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (c) 2017-2018  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 0.28a, 13-Dec-2018                                *
+*       Version 1.06a, 16-Aug-2019                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -2149,6 +2149,7 @@ VAR xeq (void)
 					    }
 					else if (al == ',')
 					    {
+						mode &= ~2 ;
 						field = stavar[0] & 0xFF ;
 						if (field == 0) field = 10 ;
 						while (count % field)
@@ -3323,7 +3324,7 @@ VAR xeq (void)
 					else
 					    {
 						parm.f[nf++] = (double) v.f ;
-#if defined(__x86_64__) || defined(__aarch64__)
+#if defined(__x86_64__) || defined(__aarch64__) || defined(ARMHF)
 #ifdef _WIN32
 						union { double f ; long long i ; } u ;
 						u.f = v.f ;

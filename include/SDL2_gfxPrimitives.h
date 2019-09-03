@@ -2,7 +2,8 @@
 
 SDL2_gfxPrimitives.h: graphics primitives for SDL
 
-Copyright (C) 2012  Andreas Schiffler
+Copyright (C) 2012-2014  Andreas Schiffler
+Additions for BBC BASIC (C) 2016-2019 Richard Russell
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -24,6 +25,7 @@ misrepresented as being the original software.
 distribution.
 
 Andreas Schiffler -- aschiffler at ferzkopp dot net
+Richard Russell -- richard at rtrussell dot co dot uk
 
 */
 
@@ -64,7 +66,8 @@ extern "C" {
 #  define SDL2_GFXPRIMITIVES_SCOPE extern
 #endif
 
-	/* Note: all ___Color routines expect the color to be in format 0xRRGGBBAA */
+	/* Note: all ___Color routines expect the color to be in format 0xAABBGGRR */
+	/*       assuming a little-endian CPU (or 0xRRGGBBAA for a big-endian CPU) */
 
 	/* Pixel */
 
@@ -233,6 +236,31 @@ extern "C" {
 	SDL2_GFXPRIMITIVES_SCOPE int characterRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, char c, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
 	SDL2_GFXPRIMITIVES_SCOPE int stringColor(SDL_Renderer * renderer, Sint16 x, Sint16 y, const char *s, Uint32 color);
 	SDL2_GFXPRIMITIVES_SCOPE int stringRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, const char *s, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+
+	/* Richard Russell's additions */
+
+	SDL2_GFXPRIMITIVES_SCOPE int thickEllipseColor(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rx, Sint16 ry, Uint32 color, Uint8 thick);
+	SDL2_GFXPRIMITIVES_SCOPE int thickEllipseRGBA(SDL_Renderer * renderer, Sint16 xc, Sint16 yc, Sint16 xr, Sint16 yr, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 thick);
+	SDL2_GFXPRIMITIVES_SCOPE int thickArcColor(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Sint16 start, Sint16 end, Uint32 color, Uint8 thick);
+	SDL2_GFXPRIMITIVES_SCOPE int thickArcRGBA(SDL_Renderer * renderer, Sint16 xc, Sint16 yc, Sint16 rad, Sint16 start, Sint16 end, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 thick);
+	SDL2_GFXPRIMITIVES_SCOPE int thickCircleColor(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Uint32 color, Uint8 thick);
+	SDL2_GFXPRIMITIVES_SCOPE int thickCircleRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 thick);
+
+	SDL2_GFXPRIMITIVES_SCOPE int aaFilledEllipseColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, Uint32 color);
+	SDL2_GFXPRIMITIVES_SCOPE int aaFilledEllipseRGBA(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, Uint8 r, Uint8 g, Uint8 b, Uint8 a); 
+	SDL2_GFXPRIMITIVES_SCOPE int aaFilledPolygonColor(SDL_Renderer * renderer, const double * vx, const double * vy, int n, Uint32 color);
+	SDL2_GFXPRIMITIVES_SCOPE int aaFilledPolygonRGBA(SDL_Renderer * renderer, const double * vx, const double * vy, int n, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+	SDL2_GFXPRIMITIVES_SCOPE int aaFilledPieColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, float start, float end, Uint32 chord, Uint32 color);
+	SDL2_GFXPRIMITIVES_SCOPE int aaFilledPieRGBA(SDL_Renderer * renderer, float cx, float cy, float rx, float ry,
+		float start, float end, Uint32 chord, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+
+	SDL2_GFXPRIMITIVES_SCOPE int aaArcColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, float start, float end, float thick, Uint32 color);
+	SDL2_GFXPRIMITIVES_SCOPE int aaArcRGBA(SDL_Renderer * renderer, float cx, float cy, float rx, float ry,
+		float start, float end, float thick, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+	SDL2_GFXPRIMITIVES_SCOPE int aaBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, float thick, int color);
+	SDL2_GFXPRIMITIVES_SCOPE int aaBezierRGBA(SDL_Renderer * renderer, double *x, double *y, int n, int s, float thick, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+	SDL2_GFXPRIMITIVES_SCOPE int aaFilledPolyBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, int color);
+	SDL2_GFXPRIMITIVES_SCOPE int aaFilledPolyBezierRGBA(SDL_Renderer * renderer, double *x, double *y, int n, int s, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
 
 	/* Ends C function definitions when using C++ */
 #ifdef __cplusplus

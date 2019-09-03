@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCVDU.C  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.04a, 12-Jun-2019                                *
+*       Version 1.06a, 31-Aug-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -2180,20 +2180,20 @@ void vduchr_ (short ucs2)
 // APICALL
 #ifdef __llvm__
 long long apicall_ (long long (*APIfunc) (size_t, size_t, size_t, size_t, size_t, size_t,
-				    size_t, size_t, size_t, size_t, size_t, size_t,
-				    double, double, double, double, double, double), PARM *p)
+			size_t, size_t, size_t, size_t, size_t, size_t,
+			double, double, double, double, double, double, double, double), PARM *p)
 {
 		return APIfunc (p->i[0], p->i[1], p->i[2], p->i[3], p->i[4], p->i[5],
 				p->i[6], p->i[7], p->i[8], p->i[9], p->i[10], p->i[11],
-				p->f[0], p->f[1], p->f[2], p->f[3], p->f[4], p->f[5]) ;
+			p->f[0], p->f[1], p->f[2], p->f[3], p->f[4], p->f[5], p->f[6], p->f[7]) ;
 }
 double fltcall_ (double (*APIfunc) (size_t, size_t, size_t, size_t, size_t, size_t,
-				    size_t, size_t, size_t, size_t, size_t, size_t,
-				    double, double, double, double, double, double), PARM *p)
+			size_t, size_t, size_t, size_t, size_t, size_t,
+			double, double, double, double, double, double, double, double), PARM *p)
 {
 		return APIfunc (p->i[0], p->i[1], p->i[2], p->i[3], p->i[4], p->i[5],
 				p->i[6], p->i[7], p->i[8], p->i[9], p->i[10], p->i[11],
-				p->f[0], p->f[1], p->f[2], p->f[3], p->f[4], p->f[5]) ;
+			p->f[0], p->f[1], p->f[2], p->f[3], p->f[4], p->f[5], p->f[6], p->f[7]) ;
 }
 #else
 #pragma GCC optimize ("O0")
@@ -2209,8 +2209,8 @@ long long apicall_ (long long (*APIfunc) (size_t, size_t, size_t, size_t, size_t
 		memcpy (&p->i[4], &p->i[6], 24) ;
 	    }
 #endif
-	long long wrapper (volatile double a, volatile double b, volatile double c,
-			volatile double d, volatile double e, volatile double f)
+	long long wrapper (volatile double a, volatile double b, volatile double c, volatile double d,
+			volatile double e, volatile double f, volatile double g, volatile double h)
 	{
 		long long result ;
 #ifdef __WIN32__
@@ -2225,7 +2225,7 @@ long long apicall_ (long long (*APIfunc) (size_t, size_t, size_t, size_t, size_t
 		return result ;
 	}
 
-	return wrapper (p->f[0], p->f[1], p->f[2], p->f[3], p->f[4], p->f[5]) ;
+	return wrapper (p->f[0], p->f[1], p->f[2], p->f[3], p->f[4], p->f[5], p->f[6], p->f[7]) ;
 }
 double fltcall_ (double (*APIfunc) (size_t, size_t, size_t, size_t, size_t, size_t,
 			      size_t, size_t, size_t, size_t, size_t, size_t), PARM *p)
@@ -2239,8 +2239,8 @@ double fltcall_ (double (*APIfunc) (size_t, size_t, size_t, size_t, size_t, size
 		memcpy (&p->i[4], &p->i[6], 24) ;
 	    }
 #endif
-	double wrapper (volatile double a, volatile double b, volatile double c,
-			volatile double d, volatile double e, volatile double f)
+	double wrapper (volatile double a, volatile double b, volatile double c, volatile double d,
+			volatile double e, volatile double f, volatile double g, volatile double h)
 	{
 		double result ;
 #ifdef __WIN32__
@@ -2255,7 +2255,7 @@ double fltcall_ (double (*APIfunc) (size_t, size_t, size_t, size_t, size_t, size
 		return result ;
 	}
 
-	return wrapper (p->f[0], p->f[1], p->f[2], p->f[3], p->f[4], p->f[5]) ;
+	return wrapper (p->f[0], p->f[1], p->f[2], p->f[3], p->f[4], p->f[5], p->f[6], p->f[7]) ;
 }
 #pragma GCC reset_options
 #endif

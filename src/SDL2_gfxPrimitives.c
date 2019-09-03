@@ -2,8 +2,8 @@
 
 SDL2_gfxPrimitives.c: graphics primitives for SDL2 renderers
 
-Copyright (C) 2012  Andreas Schiffler
-Modifications for BBC BASIC (C) 2016-2019  Richard Russell
+Copyright (C) 2012-2014  Andreas Schiffler
+Modifications and additions for BBC BASIC (C) 2016-2019 Richard Russell
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -204,6 +204,21 @@ int hlineRGBA(SDL_Renderer * renderer, Sint16 x1, Sint16 x2, Sint16 y, Uint8 r, 
 }
 
 /* ---- Vline */
+
+/*!
+\brief Draw vertical line in currently set color
+
+\param renderer The renderer to draw on.
+\param x X coordinate of points of the line.
+\param y1 Y coordinate of the first point (i.e. top) of the line.
+\param y2 Y coordinate of the second point (i.e. bottom) of the line.
+
+\returns Returns 0 on success, -1 on failure.
+*/
+int vline(SDL_Renderer * renderer, Sint16 x, Sint16 y1, Sint16 y2)
+{
+	return SDL_RenderDrawLine(renderer, x, y1, x, y2);;
+}
 
 /*!
 \brief Draw vertical line with blending.
@@ -554,7 +569,7 @@ int roundedBoxRGBA(SDL_Renderer * renderer, Sint16 x1, Sint16 y1, Sint16 x2,
 	* Special case - no rounding
 	*/
 	if (rad <= 1) {
-		return rectangleRGBA(renderer, x1, y1, x2, y2, r, g, b, a);
+		return boxRGBA(renderer, x1, y1, x2, y2, r, g, b, a);
 	}
 
 	/*
@@ -936,7 +951,7 @@ int _aalineRGBA(SDL_Renderer * renderer, Sint16 x1, Sint16 y1, Sint16 x2, Sint16
 			return (hlineRGBA(renderer, x1, x2, y1, r, g, b, a));
 		} else {
 			if (dx > 0) {
-				return (hlineRGBA(renderer, xx0, xx0+dx, y1, r, g, b, a));
+				return (hlineRGBA(renderer, xx0, xx0+(xdir*dx), y1, r, g, b, a));
 			} else {
 				return (pixelRGBA(renderer, x1, y1, r, g, b, a));
 			}
@@ -1205,22 +1220,24 @@ int arcRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Sint16 star
 		return (pixelRGBA(renderer, x, y, r, g, b, a));
 	}
 
-	// Octant labelling
-	//      
-	//  \ 5 | 6 /
-	//   \  |  /
-	//  4 \ | / 7
-	//     \|/
-	//------+------ +x
-	//     /|
-	//  3 / | \ 0
-	//   /  |  
-	//  / 2 | 1 
-	//      +y
+	/*
+	 Octant labelling
+	      
+	  \ 5 | 6 /
+	   \  |  /
+	  4 \ | / 7
+	     \|/
+	------+------ +x
+	     /|\
+	  3 / | \ 0
+	   /  |  \
+	  / 2 | 1 \
+	      +y
 
-	// Initially reset bitmask to 0x00000000
-	// the set whether or not to keep drawing a given octant.
-	// For example: 0x00111100 means we're drawing in octants 2-5
+	 Initially reset bitmask to 0x00000000
+	 the set whether or not to keep drawing a given octant.
+	 For example: 0x00111100 means we're drawing in octants 2-5
+	*/
 	drawoct = 0; 
 
 	/*
@@ -1228,24 +1245,23 @@ int arcRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Sint16 star
 	*/
 	start %= 360;
 	end %= 360;
-	// 0 <= start & end < 360; note that sometimes start > end - if so, arc goes back through 0.
+	/* 0 <= start & end < 360; note that sometimes start > end - if so, arc goes back through 0. */
 	while (start < 0) start += 360;
 	while (end < 0) end += 360;
 	start %= 360;
 	end %= 360;
 
-	// now, we find which octants we're drawing in.
+	/* now, we find which octants we're drawing in. */
 	startoct = start / 45;
 	endoct = end / 45;
-	oct = startoct - 1; // we increment as first step in loop
+	oct = startoct - 1;
 
-	// stopval_start, stopval_end; 
-	// what values of cx to stop at.
+	/* stopval_start, stopval_end; what values of cx to stop at. */
 	do {
 		oct = (oct + 1) % 8;
 
 		if (oct == startoct) {
-			// need to compute stopval_start for this octant.  Look at picture above if this is unclear
+			/* need to compute stopval_start for this octant.  Look at picture above if this is unclear */
 			dstart = (double)start;
 			switch (oct) 
 			{
@@ -1267,18 +1283,19 @@ int arcRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Sint16 star
 				break;
 			}
 			temp *= rad;
-			stopval_start = (int)temp; // always round down
+			stopval_start = (int)temp;
 
-			// This isn't arbitrary, but requires graph paper to explain well.
-			// The basic idea is that we're always changing drawoct after we draw, so we
-			// stop immediately after we render the last sensible pixel at x = ((int)temp).
-
-			// and whether to draw in this octant initially
-			if (oct % 2) drawoct |= (1 << oct); // this is basically like saying drawoct[oct] = true, if drawoct were a bool array
-			else		 drawoct &= 255 - (1 << oct); // this is basically like saying drawoct[oct] = false
+			/*
+			This isn't arbitrary, but requires graph paper to explain well.
+			The basic idea is that we're always changing drawoct after we draw, so we
+			stop immediately after we render the last sensible pixel at x = ((int)temp).
+			and whether to draw in this octant initially
+			*/
+			if (oct % 2) drawoct |= (1 << oct); /* this is basically like saying drawoct[oct] = true, if drawoct were a bool array */
+			else		 drawoct &= 255 - (1 << oct); /* this is basically like saying drawoct[oct] = false */
 		}
 		if (oct == endoct) {
-			// need to compute stopval_end for this octant
+			/* need to compute stopval_end for this octant */
 			dend = (double)end;
 			switch (oct)
 			{
@@ -1302,13 +1319,13 @@ int arcRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Sint16 star
 			temp *= rad;
 			stopval_end = (int)temp;
 
-			// and whether to draw in this octant initially
+			/* and whether to draw in this octant initially */
 			if (startoct == endoct)	{
-				// note:      we start drawing, stop, then start again in this case
-				// otherwise: we only draw in this octant, so initialize it to false, it will get set back to true
+				/* note:      we start drawing, stop, then start again in this case */
+				/* otherwise: we only draw in this octant, so initialize it to false, it will get set back to true */
 				if (start > end) {
-					// unfortunately, if we're in the same octant and need to draw over the whole circle, 
-					// we need to set the rest to true, because the while loop will end at the bottom.
+					/* unfortunately, if we're in the same octant and need to draw over the whole circle, */
+					/* we need to set the rest to true, because the while loop will end at the bottom. */
 					drawoct = 255;
 				} else {
 					drawoct &= 255 - (1 << oct);
@@ -1316,12 +1333,12 @@ int arcRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Sint16 star
 			} 
 			else if (oct % 2) drawoct &= 255 - (1 << oct);
 			else			  drawoct |= (1 << oct);
-		} else if (oct != startoct) { // already verified that it's != endoct
-			drawoct |= (1 << oct); // draw this entire segment
+		} else if (oct != startoct) { /* already verified that it's != endoct */
+			drawoct |= (1 << oct); /* draw this entire segment */
 		}
 	} while (oct != endoct);
 
-	// so now we have what octants to draw and when to draw them. all that's left is the actual raster code.
+	/* so now we have what octants to draw and when to draw them. all that's left is the actual raster code. */
 
 	/*
 	* Set color 
@@ -1340,7 +1357,7 @@ int arcRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Sint16 star
 			xpcx = x + cx;
 			xmcx = x - cx;
 
-			// always check if we're drawing a certain octant before adding a pixel to that octant.
+			/* always check if we're drawing a certain octant before adding a pixel to that octant. */
 			if (drawoct & 4)  result |= pixel(renderer, xmcx, ypcy);
 			if (drawoct & 2)  result |= pixel(renderer, xpcx, ypcy);
 			if (drawoct & 32) result |= pixel(renderer, xmcx, ymcy);
@@ -1368,8 +1385,8 @@ int arcRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Sint16 star
 		* Update whether we're drawing an octant
 		*/
 		if (stopval_start == cx) {
-			// works like an on-off switch.  
-			// This is just in case start & end are in the same octant.
+			/* works like an on-off switch. */ 
+			/* This is just in case start & end are in the same octant. */
 			if (drawoct & (1 << startoct)) drawoct &= 255 - (1 << startoct);		
 			else						   drawoct |= (1 << startoct);
 		}
@@ -1745,16 +1762,18 @@ int aaellipseRGBA(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rx, Sint16
 	}
 
 	/*
-	* Special case for rx=0 - draw a vline 
+	* Special cases for rx=0 and/or ry=0: draw a hline/vline/pixel 
 	*/
 	if (rx == 0) {
-		return (vlineRGBA(renderer, x, y - ry, y + ry, r, g, b, a));
+		if (ry == 0) {
+			return (pixel(renderer, x, y));
+		} else {
+			return (vline(renderer, x, y - ry, y + ry));
 	}
-	/*
-	* Special case for ry=0 - draw an hline 
-	*/
-	if (ry == 0) {
-		return (hlineRGBA(renderer, x - rx, x + rx, y, r, g, b, a));
+	} else {
+		if (ry == 0) {
+			return (hline(renderer, x - rx, x + rx, y));
+		}
 	}
 
 	/* Variable setup */
@@ -2982,17 +3001,17 @@ int _HLineTextured(SDL_Renderer *renderer, Sint16 x1, Sint16 x2, Sint16 y, SDL_T
 		texture_y_start = texture_h + texture_y_start;
 	}
 
-	// setup the source rectangle; we are only drawing one horizontal line
+	/* setup the source rectangle; we are only drawing one horizontal line */
 	source_rect.y = texture_y_start;
 	source_rect.x = texture_x_walker;
 	source_rect.h = 1;
 
-	// we will draw to the current y
+	/* we will draw to the current y */
 	dst_rect.y = y;
 	dst_rect.h = 1;
 
-	// if there are enough pixels left in the current row of the texture
-	// draw it all at once
+	/* if there are enough pixels left in the current row of the texture */
+	/* draw it all at once */
 	if (w <= texture_w -texture_x_walker){
 		source_rect.w = w;
 		source_rect.x = texture_x_walker;
@@ -3000,8 +3019,8 @@ int _HLineTextured(SDL_Renderer *renderer, Sint16 x1, Sint16 x2, Sint16 y, SDL_T
 		dst_rect.w = source_rect.w;
 		result = (SDL_RenderCopy(renderer, texture, &source_rect, &dst_rect) == 0);
 	} else { 
-		// we need to draw multiple times
-		// draw the first segment
+		/* we need to draw multiple times */
+		/* draw the first segment */
 		pixels_written = texture_w  - texture_x_walker;
 		source_rect.w = pixels_written;
 		source_rect.x = texture_x_walker;
@@ -3010,8 +3029,8 @@ int _HLineTextured(SDL_Renderer *renderer, Sint16 x1, Sint16 x2, Sint16 y, SDL_T
 		result |= (SDL_RenderCopy(renderer, texture, &source_rect, &dst_rect) == 0);
 		write_width = texture_w;
 
-		// now draw the rest
-		// set the source x to 0
+		/* now draw the rest */
+		/* set the source x to 0 */
 		source_rect.x = 0;
 		while (pixels_written < w){
 			if (write_width >= w - pixels_written) {
@@ -3056,6 +3075,7 @@ int texturedPolygonMT(SDL_Renderer *renderer, const Sint16 * vx, const Sint16 * 
 	int ind1, ind2;
 	int ints;
 	int *gfxPrimitivesPolyInts = NULL;
+	int *gfxPrimitivesPolyIntsTemp = NULL;
 	int gfxPrimitivesPolyAllocated = 0;
 	SDL_Texture *textureAsTexture = NULL;
 
@@ -3087,7 +3107,12 @@ int texturedPolygonMT(SDL_Renderer *renderer, const Sint16 * vx, const Sint16 * 
 		gfxPrimitivesPolyAllocated = n;
 	} else {
 		if (gfxPrimitivesPolyAllocated < n) {
-			gfxPrimitivesPolyInts = (int *) realloc(gfxPrimitivesPolyInts, sizeof(int) * n);
+			gfxPrimitivesPolyIntsTemp = (int *) realloc(gfxPrimitivesPolyInts, sizeof(int) * n);
+			if (gfxPrimitivesPolyIntsTemp == NULL) {
+				/* Realloc failed - keeps original memory block, but fails this operation */
+				return(-1);
+			}
+			gfxPrimitivesPolyInts = gfxPrimitivesPolyIntsTemp;
 			gfxPrimitivesPolyAllocated = n;
 		}
 	}
@@ -4294,7 +4319,6 @@ int thickLineRGBA(SDL_Renderer *renderer, Sint16 x1, Sint16 y1, Sint16 x2, Sint1
 	* Draw
 	*/
 	m.renderer = renderer;
-	// _murphyWideline(&m, x1, y1, x2, y2, width, 0);
 	_murphyWideline(&m, x1, y1, x2, y2, width, 1);
 
 	return(result);
@@ -4377,6 +4401,44 @@ int RedefineChar(SDL_Renderer *renderer, char c, unsigned char *charpos)
 
 // Extensions for thick outline ellipses and arcs by Richard Russell 19-Feb-2019
 
+// SDL_RenderDrawLine() is documented as including both end points, but this isn't
+// reliable in Linux so use SDL_RenderDrawPoints() instead, despite being slower.
+static int renderdrawline(SDL_Renderer *renderer, int x1, int y1, int x2, int y2)
+{
+	int result ;
+#ifdef __LINUX__
+	if ((y1 == y2) && (x2 >= x1))
+	    {
+		int x ;
+		SDL_Point *points = (SDL_Point*) malloc ((x2 - x1 + 1) * sizeof(SDL_Point)) ;
+		if (points == NULL) return -1 ;
+		for (x = x1; x <= x2; x++)
+		    {
+			points[x - x1].x = x ;
+			points[x - x1].y = y1 ;
+		    }
+		result = SDL_RenderDrawPoints (renderer, points, x2 - x1 + 1) ;
+		free (points) ;
+	    }
+	else if ((x1 == x2) && (y2 >= y1))
+	    {
+		int y ;
+		SDL_Point *points = (SDL_Point*) malloc ((y2 - y1 + 1) * sizeof(SDL_Point)) ;
+		if (points == NULL) return -1 ;
+		for (y = y1; y <= y2; y++)
+		    {
+			points[y - y1].x = x1 ;
+			points[y - y1].y = y ;
+		    }
+		result = SDL_RenderDrawPoints (renderer, points, y2 - y1 + 1) ;
+		free (points) ;
+	    }
+	else
+#endif
+		result = SDL_RenderDrawLine (renderer, x1, y1, x2, y2) ;
+	return result ;
+}
+
 static int hlinecliparc(SDL_Renderer *renderer, int x1, int x2, int y, int xc, int yc, double s, double f)
 {
 	int result = 0 ;
@@ -4395,8 +4457,8 @@ static int hlinecliparc(SDL_Renderer *renderer, int x1, int x2, int y, int xc, i
 		if ((a2 > f) && (a2 < s)) x2 = y / tan(f) ;
 		if ((a1 < f) && (a2 > s))
 		    {
-			result |= SDL_RenderDrawLine(renderer, x1+xc, y+yc, y/tan(f)+xc, y+yc) ;
-			result |= SDL_RenderDrawLine(renderer, y/tan(s)+xc, y+yc, x2+xc, y+yc) ;
+			result |= renderdrawline(renderer, x1+xc, y+yc, y/tan(f)+xc, y+yc) ;
+			result |= renderdrawline(renderer, y/tan(s)+xc, y+yc, x2+xc, y+yc) ;
 			return result ;
 		    }
 	    }
@@ -4406,11 +4468,26 @@ static int hlinecliparc(SDL_Renderer *renderer, int x1, int x2, int y, int xc, i
 		if (a1 < s) x1 = y / tan(s) ;
 		if (a2 > f) x2 = y / tan(f) ;
 	    }
-	result |= SDL_RenderDrawLine(renderer, x1+xc, y+yc, x2+xc, y+yc) ;
+	result |= renderdrawline(renderer, x1+xc, y+yc, x2+xc, y+yc) ;
 	return result ;
 }
 
-// returns Returns 0 on success, -1 on failure.
+/*!
+\brief Draw thick ellipse with blending.
+
+\param renderer The renderer to draw on.
+\param xc X coordinate of the center of the ellipse.
+\param yc Y coordinate of the center of the ellipse.
+\param xr Horizontal radius in pixels of the ellipse.
+\param yr Vertical radius in pixels of the ellipse.
+\param r The red value of the ellipse to draw. 
+\param g The green value of the ellipse to draw. 
+\param b The blue value of the ellipse to draw. 
+\param a The alpha value of the ellipse to draw.
+\param thick The line thickness in pixels
+
+\returns Returns 0 on success, -1 on failure.
+*/
 int thickEllipseRGBA(SDL_Renderer * renderer, Sint16 xc, Sint16 yc, Sint16 xr, Sint16 yr, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 thick)
 {
 	int result = 0 ;
@@ -4441,19 +4518,19 @@ int thickEllipseRGBA(SDL_Renderer * renderer, Sint16 xc, Sint16 yc, Sint16 xr, S
 		for (x = -xo; x <= -xi; x++)
 		    {
 			y = sqrt(yo2 * (1.0 - x*x/xo2)) + 0.5 ;
-			result |= SDL_RenderDrawLine(renderer, xc+x, yc-y, xc+x, yc+y) ;
+			result |= renderdrawline(renderer, xc+x, yc-y, xc+x, yc+y) ;
 		    }
 		for (x = -xi + 1; x <= xi - 1; x++)
 		    {
 			y = sqrt(yo2 * (1.0 - x*x/xo2)) + 0.5 ;
 			z = sqrt(yi2 * (1.0 - x*x/xi2)) + 0.5 ;
-			result |= SDL_RenderDrawLine(renderer, xc+x, yc+z, xc+x, yc+y) ;
-			result |= SDL_RenderDrawLine(renderer, xc+x, yc-z, xc+x, yc-y) ;
+			result |= renderdrawline(renderer, xc+x, yc+z, xc+x, yc+y) ;
+			result |= renderdrawline(renderer, xc+x, yc-z, xc+x, yc-y) ;
 		    }
 		for (x = xo; x >= xi; x--)
 		    {
 			y = sqrt(yo2 * (1.0 - x*x/xo2)) + 0.5 ;
-			result |= SDL_RenderDrawLine(renderer, xc+x, yc-y, xc+x, yc+y) ;
+			result |= renderdrawline(renderer, xc+x, yc-y, xc+x, yc+y) ;
 		    }
 	    }
 	else
@@ -4461,25 +4538,41 @@ int thickEllipseRGBA(SDL_Renderer * renderer, Sint16 xc, Sint16 yc, Sint16 xr, S
 		for (y = -yo; y <= -yi; y++)
 		    {
 			x = sqrt(xo2 * (1.0 - y*y/yo2)) + 0.5 ;
-			result |= SDL_RenderDrawLine(renderer, xc-x, yc+y, xc+x, yc+y) ;
+			result |= renderdrawline(renderer, xc-x, yc+y, xc+x, yc+y) ;
 		    }
 		for (y = -yi + 1; y <= yi - 1; y++)
 		    {
 			x = sqrt(xo2 * (1.0 - y*y/yo2)) + 0.5 ;
 			z = sqrt(xi2 * (1.0 - y*y/yi2)) + 0.5 ;
-			result |= SDL_RenderDrawLine(renderer, xc+z, yc+y, xc+x, yc+y) ;
-			result |= SDL_RenderDrawLine(renderer, xc-z, yc+y, xc-x, yc+y) ;
+			result |= renderdrawline(renderer, xc+z, yc+y, xc+x, yc+y) ;
+			result |= renderdrawline(renderer, xc-z, yc+y, xc-x, yc+y) ;
 		    }
 		for (y = yo; y >= yi; y--)
 		    {
 			x = sqrt(xo2 * (1.0 - y*y/yo2)) + 0.5 ;
-			result |= SDL_RenderDrawLine(renderer, xc-x, yc+y, xc+x, yc+y) ;
+			result |= renderdrawline(renderer, xc-x, yc+y, xc+x, yc+y) ;
 		    }
 	    }
 	return result ;
 }
 
-// returns Returns 0 on success, -1 on failure.
+/*!
+\brief thick Arc with blending.
+
+\param renderer The renderer to draw on.
+\param xc X coordinate of the center of the arc.
+\param yc Y coordinate of the center of the arc.
+\param rad Radius in pixels of the arc.
+\param start Starting radius in degrees of the arc. 0 degrees is right, increasing clockwise.
+\param end Ending radius in degrees of the arc. 0 degrees is right, increasing clockwise.
+\param r The red value of the arc to draw. 
+\param g The green value of the arc to draw. 
+\param b The blue value of the arc to draw. 
+\param a The alpha value of the arc to draw.
+\param thick The line thickness in pixels.
+
+\returns Returns 0 on success, -1 on failure.
+*/
 int thickArcRGBA(SDL_Renderer * renderer, Sint16 xc, Sint16 yc, Sint16 rad, Sint16 start, Sint16 end, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 thick)
 {
 	int result = 0 ;
@@ -4552,4 +4645,674 @@ int thickCircleColor(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Ui
 {
 	Uint8 *c = (Uint8 *)&color; 
 	return thickEllipseRGBA(renderer, x, y, rad, rad, c[0], c[1], c[2], c[3], thick);
+}
+
+// Extensions for anti-aliased filled ellipses and polygons by Richard Russell 20-Aug-2019
+
+/*!
+\brief Draw anti-aliased filled ellipse with blending.
+
+\param renderer The renderer to draw on.
+\param cx X coordinate of the center of the filled ellipse.
+\param cy Y coordinate of the center of the filled ellipse.
+\param rx Horizontal radius in pixels of the filled ellipse.
+\param ry Vertical radius in pixels of the filled ellipse.
+\param r The red value of the filled ellipse to draw. 
+\param g The green value of the filled ellipse to draw. 
+\param b The blue value of the filled ellipse to draw. 
+\param a The alpha value of the filled ellipse to draw.
+
+\returns Returns 0 on success, -1 on failure.
+*/
+int aaFilledEllipseRGBA(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+{
+	int n, xi, yi, result = 0 ;
+	double s, v, x, y, dx, dy ;
+
+	if ((rx <= 0.0) || (ry <= 0.0))
+		return -1 ;
+
+	result |= SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND) ;
+	if (rx >= ry)
+	    {
+		n = ry + 1 ;
+		for (yi = cy - n - 1; yi <= cy + n + 1; yi++)
+		    {
+			if (yi < (cy - 0.5))
+				y = yi ;
+			else
+				y = yi + 1 ;
+			s = (y - cy) / ry ;
+			s = s * s ;
+			x = 0.5 ;
+			if (s < 1.0)
+			    {
+				x = rx * sqrt(1.0 - s) ;
+				if (x >= 0.5)
+				    {
+					result |= SDL_SetRenderDrawColor (renderer, r, g, b, a ) ;
+					result |= renderdrawline (renderer, cx - x + 1, yi, cx + x - 1, yi) ;
+				    }
+			    }
+			s = 8 * ry * ry ;
+			dy = fabs(y - cy) - 1.0 ;
+			xi = cx - x ; // left
+			while (1)
+			    {
+				dx = (cx - xi - 1) * ry / rx ;
+				v = s - 4 * (dx - dy) * (dx - dy) ;
+				if (v < 0) break ;
+				v = (sqrt(v) - 2 * (dx + dy)) / 4 ;
+				if (v < 0) break ;
+				if (v > 1.0) v = 1.0 ;
+				result |= SDL_SetRenderDrawColor (renderer, r, g, b, (double)a * v) ;
+				result |= SDL_RenderDrawPoint (renderer, xi, yi) ;
+				xi -= 1 ;
+			    }
+			xi = cx + x ; // right
+			while (1)
+			    {
+				dx = (xi - cx) * ry / rx ;
+				v = s - 4 * (dx - dy) * (dx - dy) ;
+				if (v < 0) break ;
+				v = (sqrt(v) - 2 * (dx + dy)) / 4 ;
+				if (v < 0) break ;
+				if (v > 1.0) v = 1.0 ;
+				result |= SDL_SetRenderDrawColor (renderer, r, g, b, (double)a * v) ;
+				result |= SDL_RenderDrawPoint (renderer, xi, yi) ;
+				xi += 1 ;
+			    }
+		    }
+	    }
+	else
+	    {
+		n = rx + 1 ;
+		for (xi = cx - n - 1; xi <= cx + n + 1; xi++)
+		    {
+			if (xi < (cx - 0.5))
+				x = xi ;
+			else
+				x = xi + 1 ;
+			s = (x - cx) / rx ;
+			s = s * s ;
+			y = 0.5 ;
+			if (s < 1.0)
+			    {
+				y = ry * sqrt(1.0 - s) ;
+				if (y >= 0.5)
+				    {
+					result |= SDL_SetRenderDrawColor (renderer, r, g, b, a ) ;
+					result |= renderdrawline (renderer, xi, cy - y + 1, xi, cy + y - 1) ;
+				    }
+			    }
+			s = 8 * rx * rx ;
+			dx = fabs(x - cx) - 1.0 ;
+			yi = cy - y ; // top
+			while (1)
+			    {
+				dy = (cy - yi - 1) * rx / ry ;
+				v = s - 4 * (dy - dx) * (dy - dx) ;
+				if (v < 0) break ;
+				v = (sqrt(v) - 2 * (dy + dx)) / 4 ;
+				if (v < 0) break ;
+				if (v > 1.0) v = 1.0 ;
+				result |= SDL_SetRenderDrawColor (renderer, r, g, b, (double)a * v) ;
+				result |= SDL_RenderDrawPoint (renderer, xi, yi) ;
+				yi -= 1 ;
+			    }
+			yi = cy + y ; // bottom
+			while (1)
+			    {
+				dy = (yi - cy) * rx / ry ;
+				v = s - 4 * (dy - dx) * (dy - dx) ;
+				if (v < 0) break ;
+				v = (sqrt(v) - 2 * (dy + dx)) / 4 ;
+				if (v < 0) break ;
+				if (v > 1.0) v = 1.0 ;
+				result |= SDL_SetRenderDrawColor (renderer, r, g, b, (double)a * v) ;
+				result |= SDL_RenderDrawPoint (renderer, xi, yi) ;
+				yi += 1 ;
+			    }
+		    }
+	    }
+	return result ;
+}
+
+// returns Returns 0 on success, -1 on failure.
+int aaFilledEllipseColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, Uint32 color)
+{
+	Uint8 *c = (Uint8 *)&color; 
+	return aaFilledEllipseRGBA(renderer, cx, cy, rx, ry, c[0], c[1], c[2], c[3]);
+}
+
+static int _gfxPrimitivesCompareFloat2(const void *a, const void *b)
+{
+	float diff = *(float *)(a + sizeof(float)) - *(float *)(b + sizeof(float)) ;
+	if (diff != 0.0) return (diff > 0) - (diff < 0) ;
+	diff = *(float *)a - *(float *)b ;
+	return (diff > 0) - (diff < 0) ;
+}
+
+#define POLYSIZE 16380
+
+/*!
+\brief Draw anti-aliased filled polygon with alpha blending.
+
+\param renderer The renderer to draw on.
+\param vx Vertex array containing X coordinates of the points of the filled polygon.
+\param vy Vertex array containing Y coordinates of the points of the filled polygon.
+\param n Number of points in the vertex array. Minimum number is 3.
+\param r The red value of the filled polygon to draw. 
+\param g The green value of the filled polygon to draw. 
+\param b The blue value of the filed polygon to draw. 
+\param a The alpha value of the filled polygon to draw.
+
+\returns Returns 0 on success, -1 on failure, or -2 if the polygon is too large and/or complex.
+*/
+int aaFilledPolygonRGBA(SDL_Renderer * renderer, const double * vx, const double * vy, int n, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+{
+	int i, j, xi, yi, result ;
+	double x1, x2, y0, y1, y2, minx, maxx, prec ;
+	float *list, *strip ;
+
+	if (n < 3)
+		return -1 ;
+
+	result = SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND) ;
+
+	// Find extrema:
+	minx = 99999.0 ;
+	maxx = -99999.0 ;
+	prec = -99999.0 ;
+	for (i = 0; i < n; i++)
+	    {
+		double x = vx[i] ;
+		double y = vy[i] ;
+		if (x < minx) minx = x ;
+		if (x > maxx) maxx = x ;
+		if (y > prec) prec = y ;
+	    }
+	minx = floor (minx) ;
+	maxx = floor (maxx) ;
+	prec = floor (pow(2,19) / prec) ;
+
+	// Allocate main array, this determines the maximum polygon size and comoplexity:
+	list = (float *) malloc (POLYSIZE * sizeof(float)) ;
+	if (list == NULL)
+		return -2 ;
+
+	// Build vertex list.  Special x-values used to indicate vertex type:
+	// x = -100001.0 indicates /\, x = -100003.0 indicates \/, x = -100002.0 neither
+	yi = 0 ;
+	y0 = floor(vy[n - 1] * prec) / prec ;
+	y1 = floor(vy[0] * prec) / prec ;
+	for (i = 1; i <= n; i++)
+	    {
+		y2 = floor(vy[i % n] * prec) / prec ;
+		if (((y1 < y2) - (y1 > y2)) == ((y0 < y1) - (y0 > y1)))
+		    {
+			list[yi++] = -100002.0 ;
+			list[yi++] = y1 ;
+			list[yi++] = -100002.0 ;
+			list[yi++] = y1 ;
+		    }
+		else
+		    {
+			if (y0 != y1)
+			    {
+				list[yi++] = (y1 < y0) - (y1 > y0) - 100002.0 ;
+				list[yi++] = y1 ;
+			    }
+			if (y1 != y2)
+			    {
+				list[yi++] = (y1 < y2) - (y1 > y2) - 100002.0 ;
+				list[yi++] = y1 ;
+			    }
+		    }
+		y0 = y1 ;
+		y1 = y2 ;
+	    }
+	xi = yi ;
+
+	// Sort vertex list:
+	qsort (list, yi / 2, sizeof(float) * 2, _gfxPrimitivesCompareFloat2) ;
+
+	// Append line list to vertex list:
+	for (i = 1; i <= n; i++)
+	    {
+		double x, y ;
+		double d = 0.5 / prec ;
+
+		x1 = vx[i - 1] ;
+		y1 = floor(vy[i - 1] * prec) / prec ;
+		x2 = vx[i % n] ;
+		y2 = floor(vy[i % n] * prec) / prec ;
+
+		if (y2 < y1) 
+		    {
+			double tmp ;
+			tmp = x1 ; x1 = x2 ; x2 = tmp ;
+			tmp = y1 ; y1 = y2 ; y2 = tmp ;
+		    }
+		if (y2 != y1)
+			y0 = (x2 - x1) / (y2 - y1) ;
+
+		for (j = 1; j < xi; j += 4)
+		    {
+			y = list[j] ;
+			if (((y + d) <= y1) || (y == list[j + 4]))
+				continue ;
+			if ((y -= d) >= y2)
+				break ;
+			if (yi > POLYSIZE - 4)
+			    {
+				free (list) ;
+				return -2 ;
+			    }
+			if (y > y1)
+			    {
+				list[yi++] = x1 + y0 * (y - y1) ;
+				list[yi++] = y ;
+			    }
+			y += d * 2.0 ;
+			if (y < y2)
+			    {
+				list[yi++] = x1 + y0 * (y - y1) ;
+				list[yi++] = y ;
+			    }
+		    }
+
+		y = floor(y1) + 1.0 ;
+		while (y <= y2)
+		    {
+			x = x1 + y0 * (y - y1) ;
+			if (yi > POLYSIZE - 2)
+			    {
+				free (list) ;
+				return -2 ;
+			    }
+			list[yi++] = x ;
+			list[yi++] = y ;
+			y += 1.0 ;
+		    }
+	    }
+
+	// Sort combined list:
+	qsort (list, yi / 2, sizeof(float) * 2, _gfxPrimitivesCompareFloat2) ;
+
+	// Plot lines:
+	strip = (float *) malloc ((maxx - minx + 2) * sizeof(float)) ;
+	if (strip == NULL)
+	    {
+		free (list) ;
+		return -1 ;
+	    }
+	memset (strip, 0, (maxx - minx + 1) * sizeof(float)) ;
+	n = yi ;
+	yi = list[1] ;
+	j = 0 ;
+
+	for (i = 0; i < n - 7; i += 4)
+	    {
+		float x1 = list[i + 0] ;
+		float y1 = list[i + 1] ;
+		float x3 = list[i + 2] ;
+		float x2 = list[i + j + 0] ;
+		float y2 = list[i + j + 1] ;
+		float x4 = list[i + j + 2] ;
+
+		if (x1 + x3 == -200002.0)
+			j += 4 ;
+		else if (x1 + x3 == -200006.0)
+			j -= 4 ;
+		else if ((x1 >= minx) && (x2 >= minx))
+		    {			
+			if (x1 > x2) { float tmp = x1 ; x1 = x2 ; x2 = tmp ; }
+			if (x3 > x4) { float tmp = x3 ; x3 = x4 ; x4 = tmp ; }
+
+			for ( xi = x1 - minx; xi <= x4 - minx; xi++ )
+			    {
+				float u, v ;
+				float x = minx + xi ;
+				if (x < x2)  u = (x - x1 + 1) / (x2 - x1 + 1) ; else u = 1.0 ;
+				if (x >= x3 - 1) v = (x4 - x) / (x4 - x3 + 1) ; else v = 1.0 ;
+				if ((u > 0.0) && (v > 0.0))
+					strip[xi] += (y2 - y1) * u * v ;
+			    }
+		    }
+
+		if ((yi == (list[i + 5] - 1.0)) || (i == n - 8))
+		    {
+			for (xi = 0; xi <= maxx - minx; xi++)
+			    {
+				if (strip[xi] != 0.0)
+				    {
+					if (strip[xi] >= 0.996)
+					    {
+						int x0 = xi ;
+						while (strip[++xi] >= 0.996) ;
+						xi-- ;
+						result |= SDL_SetRenderDrawColor (renderer, r, g, b, a) ;
+						result |= renderdrawline (renderer, minx + x0, yi, minx + xi, yi) ;
+					    }
+					else
+					    {
+						result |= SDL_SetRenderDrawColor (renderer, r, g, b, a * strip[xi]) ;
+						result |= SDL_RenderDrawPoint (renderer, minx + xi, yi) ;
+					    }
+				    }
+			    }
+			memset (strip, 0, (maxx - minx + 1) * sizeof(float)) ;
+			yi++ ;
+
+		    }
+	    }
+
+	// Free arrays:
+	free (list) ;
+	free (strip) ;
+	return result ;
+}
+
+// returns Returns 0 on success, -1 on failure.
+int aaFilledPolygonColor(SDL_Renderer * renderer, const double * vx, const double * vy, int n, Uint32 color)
+{
+	Uint8 *c = (Uint8 *)&color; 
+	return aaFilledPolygonRGBA(renderer, vx, vy, n, c[0], c[1], c[2], c[3]);
+}
+
+/*!
+\brief Draw anti-aliased filled ellipical pie (or chord) with alpha blending.
+
+\param renderer The renderer to draw on.
+\param cx X coordinate of the center of the filled pie.
+\param cy Y coordinate of the center of the filled pie.
+\param rx Horizontal radius in pixels of the filled pie.
+\param ry Vertical radius in pixels of the filled pie.
+\param start Starting angle in degrees of the filled pie; zero is right, increasing clockwise.
+\param end Ending angle in degrees of the filled pie; zero is right, increasing clockwise.
+\param chord Set to 0 for a pie (sector) or 1 for a chord (segment).
+\param r The red value of the filled pie to draw. 
+\param g The green value of the filled pie to draw. 
+\param b The blue value of the filled pie to draw. 
+\param a The alpha value of the filled pie to draw.
+/
+\returns Returns 0 on success, -1 on failure.
+*/
+int aaFilledPieRGBA(SDL_Renderer * renderer, float cx, float cy, float rx, float ry,
+	float start, float end, Uint32 chord, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+{
+	int nverts, i, result;
+	double *vx, *vy;
+
+	// Sanity check radii 
+	if ((rx <= 0) || (ry <= 0) || (start == end))
+		return -1;
+
+	// Convert degrees to radians
+	start = fmod(start, 360.0) * 2.0 * M_PI / 360.0 ;
+	end = fmod(end, 360.0) * 2.0 * M_PI / 360.0 ;
+	while (start >= end)
+		end += 2.0 * M_PI ;
+
+	// Calculate number of vertices on perimeter
+	nverts = (end - start) * sqrt(rx * ry) / M_PI ;
+	if (nverts < 2)
+		nverts = 2 ;
+
+	// Allocate combined vertex array 
+	vx = vy = (double *) malloc(2 * sizeof(double) * (nverts + 1));
+	if (vx == NULL)
+		return (-1);
+
+	// Update pointer to start of vy
+	vy += nverts + 1 ;
+
+	// Calculate vertices:
+	for (i = 0; i < nverts; i++)
+	    {
+		double angle = start + (end - start) * (double) i / (double) (nverts - 1) ; 
+		vx[i] = cx + rx * cos(angle);
+		vy[i] = cy + ry * sin(angle);
+	    }
+
+	// Center:
+	vx[i] = cx ;
+	vy[i] = cy ;
+
+	result = aaFilledPolygonRGBA(renderer, vx, vy, nverts + 1 - (chord != 0), r, g, b, a);
+
+	// Free combined vertex array
+	free(vx);
+
+	return (result);
+}
+
+// returns Returns 0 on success, -1 on failure.
+int aaFilledPieColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, float start, float end, Uint32 chord, Uint32 color)
+{
+	Uint8 *c = (Uint8 *)&color; 
+	return aaFilledPieRGBA(renderer, cx, cy, rx, ry, start, end, chord, c[0], c[1], c[2], c[3]);
+}
+
+/*!
+\brief Draw anti-aliased ellipical arc with alpha blending.
+
+\param renderer The renderer to draw on.
+\param cx X coordinate of the center of the filled pie.
+\param cy Y coordinate of the center of the filled pie.
+\param rx Horizontal radius in pixels of the filled pie.
+\param ry Vertical radius in pixels of the filled pie.
+\param start Starting angle in degrees of the filled pie; zero is right, increasing clockwise.
+\param end Ending angle in degrees of the filled pie; zero is right, increasing clockwise.
+\param thick The thickness of the line in pixels.
+\param r The red value of the filled pie to draw. 
+\param g The green value of the filled pie to draw. 
+\param b The blue value of the filled pie to draw. 
+\param a The alpha value of the filled pie to draw.
+/
+\returns Returns 0 on success, -1 on failure.
+*/
+int aaArcRGBA(SDL_Renderer * renderer, float cx, float cy, float rx, float ry,
+	float start, float end, float thick, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+{
+	int nverts, i, result;
+	double *vx, *vy;
+
+	// Sanity check radii and thickness
+	if ((rx <= 0) || (ry <= 0) || (start == end) || (thick <= 0))
+		return -1;
+
+	// Convert degrees to radians
+	start = fmod(start, 360.0) * 2.0 * M_PI / 360.0 ;
+	end = fmod(end, 360.0) * 2.0 * M_PI / 360.0 ;
+	while (start >= end)
+		end += 2.0 * M_PI ;
+
+	// Calculate number of vertices
+	nverts = 2 * floor((end - start) * sqrt(rx * ry) / M_PI) ;
+	if (nverts < 2)
+		nverts = 2 ;
+
+	// Allocate combined vertex array 
+	vx = vy = (double *) malloc(2 * sizeof(double) * nverts);
+	if (vx == NULL)
+		return (-1);
+
+	// Update pointer to start of vy
+	vy += nverts ;
+
+	// Calculate vertices:
+	for (i = 0; i < nverts / 2; i++)
+	    {
+		double angle = start + (end - start) * (double) i / (double) (nverts / 2 - 1) ; 
+		vx[i] = cx + (rx + thick/2) * cos(angle);
+		vy[i] = cy + (ry + thick/2) * sin(angle);
+		vx[nverts - 1 - i] = cx + (rx - thick/2) * cos(angle);
+		vy[nverts - 1 - i] = cy + (ry - thick/2) * sin(angle);
+
+	    }
+
+	result = aaFilledPolygonRGBA(renderer, vx, vy, nverts, r, g, b, a);
+
+	// Free combined vertex array
+	free(vx);
+
+	return (result);
+}
+
+// returns Returns 0 on success, -1 on failure.
+int aaArcColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, float start, float end, float thick, Uint32 color)
+{
+	Uint8 *c = (Uint8 *)&color; 
+	return aaArcRGBA(renderer, cx, cy, rx, ry, start, end, thick, c[0], c[1], c[2], c[3]);
+}
+
+/*!
+\brief Draw an anti-aliased bezier curve with alpha blending.
+
+\param renderer The renderer to draw on.
+\param vx Vertex array containing X coordinates of the points of the bezier curve.
+\param vy Vertex array containing Y coordinates of the points of the bezier curve.
+\param n Number of points in the vertex array. Minimum number is 3.
+\param s Number of steps for the interpolation. Minimum number is 2.
+\param thick Thickness of line in pixels.
+\param r The red value of the bezier curve to draw. 
+\param g The green value of the bezier curve to draw. 
+\param b The blue value of the bezier curve to draw. 
+\param a The alpha value of the bezier curve to draw.
+
+\returns Returns 0 on success, -1 on failure.
+*/
+int aaBezierRGBA(SDL_Renderer * renderer, double *x, double *y, int n, int s, float thick, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+{
+	int i, nverts, result;
+	double d, t, stepsize;
+	double x1, y1, x2, y2, dx = 0.0, dy = 0.0 ;
+	double *vx, *vy ;
+
+	// Sanity check 
+	if ((n < 3) || (s < 2))
+		return -1 ;
+
+	// Create combined vertex array:
+	nverts = n * s * 2 + 2 ;
+	vx = (double *) malloc (nverts * 2 * sizeof(double)) ;
+	if (vx == NULL)
+		return -1 ;
+	vy = vx + nverts ;
+
+	// Draw Bezier
+	t = 0.0 ;
+	stepsize = 1.0 / (double)s ;
+	x1 = _evaluateBezier(x, n, t) ;
+	y1 = _evaluateBezier(y, n, t) ;
+	for (i = 0; i < n*s; i++)
+	    {
+		t += stepsize ;
+		x2 = _evaluateBezier(x, n, t) ;
+		y2 = _evaluateBezier(y, n, t) ;
+
+		dx = x2 - x1 ;
+		dy = y2 - y1 ;
+		d = thick * 0.5L / sqrt(dx*dx + dy*dy) ;
+		dx *= d ;
+		dy *= d ;
+
+		vx[i] = x1 + dy ;
+		vy[i] = y1 - dx ;
+		vx[nverts-1-i] = x1 - dy ;
+		vy[nverts-1-i] = y1 + dx ;
+
+		x1 = x2 ;
+		y1 = y2 ;
+	    }
+
+	vx[i] = x1 + dy ;
+	vy[i] = y1 - dx ;
+	vx[nverts-1-i] = x1 - dy ;
+	vy[nverts-1-i] = y1 + dx ;
+
+	result = aaFilledPolygonRGBA(renderer, vx, vy, nverts, r, g, b, a);
+
+	free (vx) ;
+	return (result);
+}
+
+// returns Returns 0 on success, -1 on failure.
+int aaBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, float thick, int color)
+{
+	Uint8 *c = (Uint8 *)&color; 
+	return aaBezierRGBA(renderer, x, y, n, s, thick, c[0], c[1], c[2], c[3]);
+}
+
+/*!
+\brief Fill a region bounded by cubic Bezier curves, with alpha blending.
+
+\param renderer The renderer to draw on.
+\param vx Vertex array containing X coordinates of the points of the bezier curves.
+\param vy Vertex array containing Y coordinates of the points of the bezier curves.
+\param n Number of points in the vertex array. Should be 3n + 1 for n bezier curves.
+\param s Number of steps for the interpolation. Minimum number is 2.
+\param r The red value of the bezier curve to draw. 
+\param g The green value of the bezier curve to draw. 
+\param b The blue value of the bezier curve to draw. 
+\param a The alpha value of the bezier curve to draw.
+
+\returns Returns 0 on success, -1 on failure.
+*/
+int aaFilledPolyBezierRGBA(SDL_Renderer * renderer, double *x, double *y, int n, int s, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+{
+	int i, j, nbeziers, nverts, result;
+	double t, stepsize;
+	double x1, y1, x2, y2 ;
+	double *vx, *vy ;
+
+	// Sanity check 
+	if ((n < 7) || (s < 2))
+		return -1 ;
+
+	// Create combined vertex array:
+	nbeziers = (n - 1) / 3 ;
+	nverts = nbeziers * 4 * s + 1 ;
+	vx = (double *) malloc (nverts * 2 * sizeof(double)) ;
+	if (vx == NULL)
+		return -1 ;
+	vy = vx + nverts ;
+
+	// Draw Beziers
+	stepsize = 1.0 / (double)s ;
+	for (j = 0; j < nbeziers; j++)
+	    {
+		t = 0.0 ;
+		x1 = _evaluateBezier(x + j * 3, 4, t) ;
+		y1 = _evaluateBezier(y + j * 3, 4, t) ;
+		for (i = 0; i < 4*s; i++)
+		    {
+			t += stepsize ;
+			x2 = _evaluateBezier(x + j * 3, 4, t) ;
+			y2 = _evaluateBezier(y + j * 3, 4, t) ;
+
+			vx[i + j * s * 4] = x1 ;
+			vy[i + j * s * 4] = y1 ;
+
+			x1 = x2 ;
+			y1 = y2 ;
+	    }
+	}
+
+	vx[j * s * 4] = x1 ;
+	vy[j * s * 4] = y1 ;
+
+	result = aaFilledPolygonRGBA(renderer, vx, vy, nverts, r, g, b, a);
+
+	free (vx) ;
+	return (result);
+}
+
+// returns Returns 0 on success, -1 on failure.
+int aaFilledPolyBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, int color)
+{
+	Uint8 *c = (Uint8 *)&color; 
+	return aaFilledPolyBezierRGBA(renderer, x, y, n, s, c[0], c[1], c[2], c[3]);
 }

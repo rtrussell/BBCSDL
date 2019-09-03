@@ -46,7 +46,7 @@ SDL2_gfxPrimitives.o: SDL2_gfxPrimitives.c
 	$(CXX) -c -O2 $< -o $@
 
 SDL2_rotozoom.o: SDL2_rotozoom.c SDL_stbimage.h stb_image.h dr_mp3.h
-	$(CXX) -c -O2 -fPIC $< -o $@
+	$(CXX) -c -Os -fPIC $< -o $@
 
 flood.o: flood.c
 	$(CXX) -c -O3 $< -o $@

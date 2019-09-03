@@ -23,7 +23,7 @@ bbmain.o: bbmain.c BBC.h
 	$(CXX) -Wno-attributes $(CXXFLAGS) -O2 $< -o $@
 
 bbexec.o: bbexec.c BBC.h
-	$(CXX) $(CXXFLAGS) -O2 $< -o $@
+	$(CXX) $(CXXFLAGS) -DARMHF -O2 $< -o $@
 
 bbeval.o: bbeval.c BBC.h
 	$(CXX) $(CXXFLAGS) -O2 $< -o $@
@@ -50,7 +50,7 @@ SDL2_gfxPrimitives.o: SDL2_gfxPrimitives.c
 	$(CXX) $(CXXFLAGS) -O2 $< -o $@
 
 SDL2_rotozoom.o: SDL2_rotozoom.c SDL_stbimage.h stb_image.h dr_mp3.h
-	$(CXX) $(CXXFLAGS) -O2 -fPIC $< -o $@
+	$(CXX) $(CXXFLAGS) -Os -fPIC $< -o $@
 
 flood.o: flood.c
 	$(CXX) $(CXXFLAGS) -O3 $< -o $@

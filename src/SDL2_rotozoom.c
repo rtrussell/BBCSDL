@@ -35,6 +35,7 @@ Andreas Schiffler -- aschiffler at ferzkopp dot net
 #include <string.h>
 
 #include "SDL2_rotozoom.h"
+#include "SDL2_gfxPrimitives.h"
 
 #define SDL_STBIMAGE_IMPLEMENTATION
 #define SDL_STBIMG_DEF __attribute__ ((visibility ("default")))
@@ -43,12 +44,27 @@ Andreas Schiffler -- aschiffler at ferzkopp dot net
 #define DR_MP3_IMPLEMENTATION
 #include "dr_mp3.h"
 
-int bezierColor(SDL_Renderer*, const Sint16*, const Sint16*, int, int, Uint32) ;
 SDL_STBIMG_DEF int GFX_bezierColor(SDL_Renderer* renderer, const Sint16* vx, const Sint16* vy,
 							int n, int s, Uint32 color)
-{
-	return bezierColor(renderer, vx, vy, n, s, color) ;
-}
+{	return bezierColor(renderer, vx, vy, n, s, color) ; }
+
+SDL_STBIMG_DEF int GFX_aaFilledEllipseColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, Uint32 color)
+{	return aaFilledEllipseColor(renderer, cx, cy, rx, ry, color) ; }
+
+SDL_STBIMG_DEF int GFX_aaFilledPolygonColor(SDL_Renderer * renderer, const double * vx, const double * vy, int n, Uint32 color)
+{	return aaFilledPolygonColor(renderer, vx, vy, n, color) ; }
+
+SDL_STBIMG_DEF int GFX_aaFilledPieColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, float start, float end, Uint32 chord, Uint32 color)
+{	return aaFilledPieColor(renderer, cx, cy, rx, ry, start, end, chord, color) ; }
+
+SDL_STBIMG_DEF int GFX_aaArcColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, float start, float end, float thick, Uint32 color)
+{	return aaArcColor(renderer, cx, cy, rx, ry, start, end, thick, color) ; }
+
+SDL_STBIMG_DEF int GFX_aaBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, float thick, int color)
+{	return aaBezierColor(renderer, x, y, n, s, thick, color) ; }
+
+SDL_STBIMG_DEF int GFX_aaFilledPolyBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, int color)
+{	return aaFilledPolyBezierColor(renderer, x, y, n, s, color) ; }
 
 /* ---- Internally used structures */
 
