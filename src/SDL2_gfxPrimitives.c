@@ -4823,11 +4823,11 @@ int aaFilledPolygonRGBA(SDL_Renderer * renderer, const double * vx, const double
 	// Find extrema:
 	minx = 99999.0 ;
 	maxx = -99999.0 ;
-	prec = -99999.0 ;
+	prec = 0.00001 ;
 	for (i = 0; i < n; i++)
 	    {
 		double x = vx[i] ;
-		double y = vy[i] ;
+		double y = fabs(vy[i]) ;
 		if (x < minx) minx = x ;
 		if (x > maxx) maxx = x ;
 		if (y > prec) prec = y ;
@@ -4977,7 +4977,7 @@ int aaFilledPolygonRGBA(SDL_Renderer * renderer, const double * vx, const double
 				if (x < x2)  u = (x - x1 + 1) / (x2 - x1 + 1) ; else u = 1.0 ;
 				if (x >= x3 - 1) v = (x4 - x) / (x4 - x3 + 1) ; else v = 1.0 ;
 				if ((u > 0.0) && (v > 0.0))
-					strip[xi] += (y2 - y1) * u * v ;
+					strip[xi] += (y2 - y1) * (u + v - 1.0) ;
 			    }
 		    }
 
