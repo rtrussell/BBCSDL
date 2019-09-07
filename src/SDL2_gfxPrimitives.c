@@ -4793,6 +4793,8 @@ static int _gfxPrimitivesCompareFloat2(const void *a, const void *b)
 	return (diff > 0) - (diff < 0) ;
 }
 
+// This constant determines the maximum size and/or complexity of polygon that can be
+// drawn. Set to just under 16K the maximum aaArc height is approximately 1100 lines.
 #define POLYSIZE 16380
 
 /*!
@@ -4848,6 +4850,11 @@ int aaFilledPolygonRGBA(SDL_Renderer * renderer, const double * vx, const double
 	y1 = floor(vy[0] * prec) / prec ;
 	for (i = 1; i <= n; i++)
 	    {
+		if (yi > POLYSIZE - 4)
+		    {
+			free (list) ;
+			return -2 ;
+		    }
 		y2 = floor(vy[i % n] * prec) / prec ;
 		if (((y1 < y2) - (y1 > y2)) == ((y0 < y1) - (y0 > y1)))
 		    {
@@ -5059,6 +5066,8 @@ int aaFilledPieRGBA(SDL_Renderer * renderer, float cx, float cy, float rx, float
 	nverts = (end - start) * sqrt(rx * ry) / M_PI ;
 	if (nverts < 2)
 		nverts = 2 ;
+	if (nverts > 180)
+		nverts = 180 ;
 
 	// Allocate combined vertex array 
 	vx = vy = (double *) malloc(2 * sizeof(double) * (nverts + 1));
@@ -5133,6 +5142,8 @@ int aaArcRGBA(SDL_Renderer * renderer, float cx, float cy, float rx, float ry,
 	nverts = 2 * floor((end - start) * sqrt(rx * ry) / M_PI) ;
 	if (nverts < 2)
 		nverts = 2 ;
+	if (nverts > 360)
+		nverts = 360 ;
 
 	// Allocate combined vertex array 
 	vx = vy = (double *) malloc(2 * sizeof(double) * nverts);
