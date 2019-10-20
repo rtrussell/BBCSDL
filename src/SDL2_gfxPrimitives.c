@@ -4406,7 +4406,6 @@ int RedefineChar(SDL_Renderer *renderer, char c, unsigned char *charpos)
 static int renderdrawline(SDL_Renderer *renderer, int x1, int y1, int x2, int y2)
 {
 	int result ;
-#ifdef __LINUX__
 	if ((y1 == y2) && (x2 >= x1))
 	    {
 		int x ;
@@ -4434,7 +4433,6 @@ static int renderdrawline(SDL_Renderer *renderer, int x1, int y1, int x2, int y2
 		free (points) ;
 	    }
 	else
-#endif
 		result = SDL_RenderDrawLine (renderer, x1, y1, x2, y2) ;
 	return result ;
 }

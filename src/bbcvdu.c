@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCVDU.C  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.06a, 31-Aug-2019                                *
+*       Version 1.07a, 12-Oct-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -923,7 +923,7 @@ static void charout(unsigned short ax, unsigned char fg, unsigned char bg,
 		SDL_RenderFillRect (memhdc, &rect) ;
 	}
 
-	if (vflags & UFONT)
+	if ((vflags & UFONT) && ((ax >= 0x100) || (usrchr[ax] == 0)))
 		charttf (ax, col, rect) ;
 	else
 		characterColor (memhdc, cx, cy, ax, col) ;
@@ -1231,6 +1231,7 @@ static void newmode (short wx, short wy, short cx, short cy, short nc, signed ch
 		gfxPrimitivesSetFontZoom (cx / 8, cy / 8) ;
 	}
 
+	memset (usrchr, 0, 256) ;
 	rescol () ;
 	minit (bc) ;
 }
@@ -1247,7 +1248,6 @@ static void vduinit (void)
 	lthick = 1 ;
 	cursx = 0 ;
 	tweak = 0 ;
-	memset (usrchr, 0, 256) ;
 #ifdef __IPHONEOS__
 	rescol () ;
 	minit (0) ;
@@ -1387,11 +1387,7 @@ static void plotns (unsigned char al, int cx, int cy)
 		{
 			setcol (col) ;
 			SDL_RenderDrawLine (memhdc, lx, ly, cx, cy) ;
-#ifdef __LINUX__
-			if ((al & BIT3) == 0)
-#else
 			if ((al & BIT3) != 0)
-#endif
 				SDL_RenderDrawPoint (memhdc, cx, cy) ;
 		}
 		break ;
@@ -1715,6 +1711,7 @@ static void defchr (unsigned char n, unsigned char a, unsigned char b,
 			pattern[6] = g ;
 			pattern[7] = h ;
 			RedefineChar (memhdc, n, pattern) ;
+			usrchr[n] = 1 ;
 		}
 	}
 }

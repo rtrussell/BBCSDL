@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2019                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.05a, 19-Jul-2019                                 *
+*       Version 1.07a, 10-Oct-2019                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -887,12 +887,11 @@ while (running)
 	SDL_GetWindowSize (window, &ptsx, &ptsy) ;
 	SDL_GL_GetDrawableSize (window, &winx, &winy) ;
 
-#define PAINT1 ((now >= (lastpaint + PACER)) && (nUserEv < MAXEV)) // Time window
+#define PAINT1 (((unsigned int)(now - lastpaint) >= PACER) && (nUserEv < MAXEV)) // Time window
 #define PAINT2 (reflag & 1) // Interpreter thread is waiting for refresh (vSync)
-#define PAINT3 (now >= (lastpaint + MAXFP)) // Fallback minimum frame rate
-#define PAINT4 (now < lastpaint) // SDL_GetTicks wrapped round after 49 days!
+#define PAINT3 ((unsigned int)(now - lastpaint) >= MAXFP) // Fallback minimum frame rate
 
-	if ((PAINT1 || PAINT2 || PAINT3 || PAINT4) && (reflag != 2) && 
+	if ((PAINT1 || PAINT2 || PAINT3) && (reflag != 2) && 
 	    (bChanged || (reflag & 1) || (textx != oldtextx) || (texty != oldtexty)))
 	    {
 		SDL_Rect SrcRect ;
@@ -948,7 +947,7 @@ while (running)
 	// every PUMPT milliseconds.  Note that, contrary to what the SDL docs imply, we
 	// do not need to call SDL_PumpEvents to put SDL_USEREVENTs in the queue.
 
-	if ((now >= lastpump + PUMPT) || (now < lastpump))
+	if ((unsigned int)(now - lastpump) >= PUMPT)
 	    {
 		SDL_PumpEvents() ;
 		lastpump = SDL_GetTicks() ;
@@ -1411,7 +1410,7 @@ while (running)
 	}
 	else
 	{
-		if ((now >= (lastusrev + BUSYT)) || (now < lastusrev))
+		if ((unsigned int)(now - lastusrev) >= BUSYT)
 			SDL_SemWait (Idler) ;
 	}
 }

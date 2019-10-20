@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCMOS.C  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.05a, 25-Jul-2019                                *
+*       Version 1.07a, 10-Oct-2019                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -1139,7 +1139,7 @@ int oskey (int wait)
 			unsigned char key ;
 			if (rdkey (&key))
 				return (int) key ;
-			if ((SDL_GetTicks () - start) >= wait * 10)
+			if ((unsigned int)(SDL_GetTicks () - start) >= wait * 10)
 				return -1 ;
 			SDL_Delay (5) ;
 			trap () ;
@@ -1482,7 +1482,7 @@ void oswait (int cs)
 		trap () ;
 		SDL_Delay (1) ;
 	    }
-	while ((SDL_GetTicks () - start) < cs) ;
+	while ((unsigned int)(SDL_GetTicks () - start) < cs) ;
 }
 
 
