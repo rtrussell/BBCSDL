@@ -3,7 +3,7 @@
 *       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.01a, 12-Feb-2019                                *
+*       Version 1.07a, 03-Nov-2019                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -329,7 +329,7 @@ signed char *search (signed char *edx, signed char token)
 	int ll ;
 	while (((ll = (int)*(unsigned char *)edx) != 0) && (*((signed char *)edx+3) != token))
 		edx += ll ;
-	if (*((signed char *)edx+3) == token)
+	if (ll)
 		return edx + 3 ;
 	return NULL ; 
 }
