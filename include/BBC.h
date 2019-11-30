@@ -1,9 +1,9 @@
 /******************************************************************\
-*       BBC BASIC for SDL 2.0 (64-bit)                             *
-*       Copyright (c) R. T. Russell, 2000-2018                     *
+*       BBC BASIC for SDL 2.0 (32-bits or 64-bits)                 *
+*       Copyright (c) R. T. Russell, 2000-2019                     *
 *                                                                  *
-*       BBC.h constant and variable declarations                   *
-*       Version 0.24a, 13-Dec-2018                                 *
+*       BBC.h constant, variable and structure declarations        *
+*       Version 1.08a, 21-Nov-2019                                 *
 \******************************************************************/
 
 // Constants:
@@ -291,12 +291,12 @@ register signed char *esi asm ("r12") ;	// Program pointer
 register heapptr *esp asm ("r13") ;	// Stack pointer
 #endif
 #ifdef __aarch64__
-register signed char *esi asm ("r10") ;	// Program pointer
-register heapptr *esp asm ("r11") ;	// Stack pointer
+register signed char *esi asm ("x28") ;	// Program pointer
+register heapptr *esp asm ("x29") ;	// Stack pointer
 #endif
 #endif
 
-// Data locations (defined in bbcdata):
+// Data locations (defined in bbdata_xxx_xx.nas):
 extern unsigned char errnum ;	// Error code number
 extern char *accs ;		// String accumulator
 extern char *buffer ;		// Temporary line buffer

@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2019                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.07a, 10-Oct-2019                                 *
+*       Version 1.08a, 30-Nov-2019                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -38,6 +38,7 @@ int GetTempPath(size_t, char *) ;
 #endif
 #ifdef __ANDROID__
 #include <sys/mman.h>
+unsigned int DIRoff = 19 ;
 #define PLATFORM "Android"
 #endif
 #ifdef __IPHONEOS__
@@ -409,7 +410,7 @@ const SDL_version *TTFversion ;
 SDL_version SDLversion ;
 const Uint8* keystate ;
 
-SDL_Rect backbutton ;
+SDL_Rect backbutton = {0} ;
 SDL_Texture *buttexture ;
 unsigned int *pixels ;
 int pitch ;
@@ -485,6 +486,7 @@ if (SDLNet_Init() == -1)
 #if defined (__ANDROID__) || defined(__IPHONEOS__)
 	SDL_SetHint (SDL_HINT_RENDER_DRIVER, "opengles") ;
 	SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "nearest") ;
+	SDL_SetHint ("SDL_TV_REMOTE_AS_JOYSTICK", "0") ;
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES) ;
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 1) ;
 	SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 5) ;
@@ -1087,6 +1089,8 @@ while (running)
 						* DestRect.w / sizex) + DestRect.x ;
 				y = ((~((((size_t)ev.user.data2 + origy) >> 1) - sizey) - offsety)
 						* DestRect.h / sizey) + DestRect.y ;
+				x = (x * ptsx) / winx ;
+				y = (y * ptsy) / winy ;
 				SDL_WarpMouseInWindow (hwndProg, x, y) ;
 				}
 				SDL_SemPost (Sema4) ;
@@ -1276,7 +1280,7 @@ while (running)
 		case SDL_MOUSEBUTTONUP:
 			if ((flags & ESCDIS) == 0)
 			    {
-				SDL_Point pt = {ev.button.x, ev.button.y} ;
+				SDL_Point pt = {ev.button.x * winx / ptsx, ev.button.y * winy / ptsy} ;
 				if (SDL_PointInRect (&pt, &backbutton))
 					flags |= ESCFLG ;
 			    }
@@ -1286,8 +1290,10 @@ while (running)
 		case SDL_MOUSEBUTTONDOWN:
 			if (moutrp)
 			    {
-				int x = (ev.button.x - DestRect.x) * sizex / DestRect.w ;
-				int y = (ev.button.y - DestRect.y) * sizey / DestRect.h ;
+				int x = (ev.button.x * winx) / ptsx ; // SDL 2.0.8 and later
+				int y = (ev.button.y * winy) / ptsy ;
+				x = (x - DestRect.x) * sizex / DestRect.w ;
+				y = (y - DestRect.y) * sizey / DestRect.h ;
 
 				switch (ev.button.button)
 				    {
@@ -1312,8 +1318,8 @@ while (running)
 		case SDL_FINGERMOTION:
 			if (moutrp && (sysflg & 2))
 			{
-				int x = (ev.tfinger.x * ptsx - DestRect.x) * sizex / DestRect.w ;
-				int y = (ev.tfinger.y * ptsy - DestRect.y) * sizey / DestRect.h ;
+				int x = (ev.tfinger.x * winx - DestRect.x) * sizex / DestRect.w ;
+				int y = (ev.tfinger.y * winy - DestRect.y) * sizey / DestRect.h ;
 
 				putevt (moutrp, ev.type, ev.tfinger.fingerId, y << 16 | x) ;
 				flags |= ALERT ;

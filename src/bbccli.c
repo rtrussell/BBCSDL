@@ -3,7 +3,7 @@
 *       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
-*       Version 1.08a, 22-Oct-2019                                *
+*       Version 1.08a, 26-Nov-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>

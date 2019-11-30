@@ -362,6 +362,16 @@ _SDL_RenderDrawRect
 _SDL_RenderDrawRects
 _SDL_RenderFillRect
 _SDL_RenderFillRects
+_SDL_RenderCopyF
+_SDL_RenderCopyExF
+_SDL_RenderDrawLineF
+_SDL_RenderDrawLinesF
+_SDL_RenderDrawPointF
+_SDL_RenderDrawPointsF
+_SDL_RenderDrawRectF
+_SDL_RenderDrawRectsF
+_SDL_RenderFillRectF
+_SDL_RenderFillRectsF
 _SDL_RenderGetClipRect
 _SDL_RenderGetIntegerScale
 _SDL_RenderGetLogicalSize
