@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.02a, 26-Mar-2019                                *
+*       Version 1.09a, 11-Jan-2020                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -29,6 +29,7 @@
 #define expl exp
 #define logl log
 #define fabsl fabs
+#define truncl trunc
 #endif
 
 // Routines in bbmain:
@@ -86,8 +87,8 @@ extern jmp_buf env ;
 
 #if defined __arm__ || defined __aarch64__
 void setfpu(void) {}
-static long double xpower[9] = {1.0e1L, 1.0e2L, 1.0e4L, 1.0e8L, 1.0e16L, 1.0e32L, 1.0e64L,
-				1.0e128L, 1.0e256L} ;
+static double xpower[9] = {1.0e1, 1.0e2, 1.0e4, 1.0e8, 1.0e16, 1.0e32, 1.0e64,
+			   1.0e128, 1.0e256} ;
 #else
 void setfpu(void) { unsigned int mode = 0x37F; asm ("fldcw %0" : : "m" (*&mode)); } 
 static long double xpower[13] = {1.0e1L, 1.0e2L, 1.0e4L, 1.0e8L, 1.0e16L, 1.0e32L, 1.0e64L,
@@ -178,10 +179,10 @@ int strhex (VAR v, char *dst, int field)
 
 	if (v.i.t)
 	    {
-		long double t = truncl (v.f) ;
-		v.i.n = v.f ;
-		if (v.i.n != t)
+		long long t = v.f ;
+		if (t != truncl (v.f))
 			error (20, NULL) ; // 'Number too big'
+		v.i.n = t ;
 	    }
 
 	n = v.i.n ; // copy because v is effectively passed-by-reference
@@ -191,17 +192,21 @@ int strhex (VAR v, char *dst, int field)
 }
 
 // Multiply by an integer-power of 10:
-static long double xpow10 (long double n, int p)
+#if defined __arm__ || defined __aarch64__
+static double xpow10 (double n, int p)
 {
 	int f = 0, i = 0 ;
-	setfpu () ;
 
-#if defined __arm__ || defined __aarch64__
 	if (p >= 512)
 		error (20, NULL) ; // 'Number too big'
 	if (p <= -512)
 		return 0.0L ;
 #else
+static long double xpow10 (long double n, int p)
+{
+	int f = 0, i = 0 ;
+	setfpu () ;
+
 	if (p >= 8192)
 		error (20, NULL) ; // 'Number too big'
 	if (p <= -8192)
@@ -383,23 +388,26 @@ VAR loadn (void *ptr, unsigned char type)
 				break ;
 			    }
 			{
-			v.s.p = *(heapptr*)ptr ;
-			v.s.l = *(int *)((char *)ptr + 4) ;
+			// v.s.p = *(heapptr*)ptr ;
+			// v.s.l = *(int *)((char *)ptr + 4) ;
+			memcpy (&v.s.p, ptr, 8) ; // may be unaligned
 			v.i.t = 1 ; // ARM
 			v.f = v.d.d ;
 			}
 			break ;
 
 		case 10:
-			v.s.p = *(heapptr*)ptr ;
-			v.s.l = *(int *)((char *)ptr + 4) ;
-			v.i.t = *(short *)((char *)ptr + 8) ;
+			// v.s.p = *(heapptr*)ptr ;
+			// v.s.l = *(int *)((char *)ptr + 4) ;
+			// v.i.t = *(short *)((char *)ptr + 8) ;
+			memcpy (&v.s.p, ptr, 10) ; // may be unaligned
 			break ;
 
 		case 40:
 			v.i.t = 0 ;
-			v.s.p = *(heapptr*)ptr ;
-			v.s.l = *(int *)((char *)ptr + 4) ;
+			// v.s.p = *(heapptr*)ptr ;
+			// v.s.l = *(int *)((char *)ptr + 4) ;
+			memcpy (&v.s.p, ptr, 8) ; // may be unaligned
 			break ;
 
 		case 36:
@@ -464,10 +472,10 @@ long long loadi (void *ptr, unsigned char type)
 	VAR v = loadn (ptr, type) ;
 	if (v.i.t != 0)
 	    {
-		long double t = truncl (v.f) ;
-		v.i.n = v.f ;
-		if (v.i.n != t)
+		long long t = v.f ;
+		if (t != truncl (v.f))
 			error (20, NULL) ; // 'Number too big'
+		v.i.n = t ;
 	    }
 	return v.i.n ;
 }
@@ -476,10 +484,10 @@ void xfix (VAR *px)
 {
 	if (px->i.t)
 	    {
-		long double t = truncl (px->f) ;
-		px->i.n = px->f ;
-		if (px->i.n != t)
+		long long t = px->f ;
+		if (t != truncl (px->f))
 			error (20, NULL) ; // 'Number too big'
+		px->i.n = t ;
 		px->i.t = 0 ;
 	    }
 }
@@ -488,18 +496,18 @@ static void fix2 (VAR *px, VAR *py)
 {
 	if (px->i.t)
 	    {
-		long double t = truncl (px->f) ;
-		px->i.n = px->f ;
-		if (px->i.n != t)
+		long long t = px->f ;
+		if (t != truncl (px->f))
 			error (20, NULL) ; // 'Number too big'
+		px->i.n = t ;
 		px->i.t = 0 ;
 	    }
 	if (py->i.t)
 	    {
-		long double t = truncl (py->f) ;
-		py->i.n = py->f ; 
-		if (py->i.n != t)
-			error (20, NULL) ; // 'Number too big' 
+		long long t = py->f ;
+		if (t != truncl (py->f))
+			error (20, NULL) ; // 'Number too big'
+		py->i.n = t ; 
 		py->i.t = 0 ;
 	    }
 }
@@ -551,8 +559,13 @@ VAR math (VAR x, signed char op, VAR y)
 		case '+':
 			if ((x.i.t == 0) && (y.i.t == 0))
 			    {
+#if defined __GNUC__ && __GNUC__ < 5
+				long long sum = x.i.n + y.i.n ;
+				if (((int)(x.s.l ^ y.s.l) < 0) || ((sum ^ x.i.n) >= 0))
+#else
 				long long sum ;
 				if (! __builtin_saddll_overflow (x.i.n, y.i.n, &sum))
+#endif
 				    {
 					x.i.n = sum ;
 					return x ;
@@ -565,8 +578,13 @@ VAR math (VAR x, signed char op, VAR y)
 		case '-':
 			if ((x.i.t == 0) && (y.i.t == 0))
 			    {
+#if defined __GNUC__  && __GNUC__ < 5
+				long long dif = x.i.n - y.i.n ;
+				if (((int)(x.s.l ^ y.s.l) >= 0) || ((dif ^ x.i.n) >= 0))
+#else
 				long long dif ;
 				if (! __builtin_ssubll_overflow (x.i.n, y.i.n, &dif))
+#endif
 				    {
 					x.i.n = dif ;
 					return x ;
@@ -583,8 +601,15 @@ VAR math (VAR x, signed char op, VAR y)
 				return y ;
 			if ((x.i.t == 0) && (y.i.t == 0))
 			    {
+#if defined __GNUC__  && __GNUC__ < 5
+				long long prod = x.i.n * y.i.n ;
+				if ((x.i.n != 0x8000000000000000) && (y.i.n != 0x8000000000000000) &&
+					((__builtin_clzll(x.i.n) + __builtin_clzll(~x.i.n) +
+					  __builtin_clzll(y.i.n) + __builtin_clzll(~y.i.n)) > 63))
+#else
 				long long prod ;
 				if (! __builtin_smulll_overflow (x.i.n, y.i.n, &prod))
+#endif
 				    {
 					x.i.n = prod ;
 					return x ;
@@ -852,10 +877,10 @@ long long itemi (void)
 		error (6, NULL) ; // 'Type mismatch'
 	if (v.i.t != 0)
 	    {
-		long double t = truncl (v.f) ;
-		v.i.n = v.f ;
-		if (v.i.n != t)
+		long long t = v.f ;
+		if (t != truncl (v.f))
 			error (20, NULL) ; // 'Number too big'
+		v.i.n = t ;
 	    }
 	return v.i.n ;
 }
@@ -882,7 +907,12 @@ long long expri (void)
 	if (v.s.t == -1)
 		error (6, NULL) ; // 'Type mismatch'
 	if (v.i.t != 0)
-		v.i.n = v.f ;
+	    {
+		long long t = v.f ;
+		if (t != truncl (v.f))
+			error (20, NULL) ; // 'Number too big'
+		v.i.n = t ;
+	    }
 	return v.i.n ;
 }
 
@@ -2507,7 +2537,7 @@ int expra (void *ebp, int ecx, unsigned char type)
 			op = nxt () ;
 			switch (op)
 			    {
-				/// enforce left-to-right priority
+				// TODO enforce left-to-right priority
 				case TOR:
 				case TAND:
 				case TEOR:

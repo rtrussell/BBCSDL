@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.06a, 16-Aug-2019                                *
+*       Version 1.09a, 11-Jan-2020                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -211,15 +211,17 @@ void storen (VAR v, void *ptr, unsigned char type)
 			if (v.i.t == 0)
 				v.f = v.i.n ;
 			v.d.d = v.f ;
-			*(int *)ptr = (int) v.s.p ;
-			*(int *)((char *)ptr + 4) = v.s.l ;
+			// *(int *)ptr = (int) v.s.p ;
+			// *(int *)((char *)ptr + 4) = v.s.l ;
+			memcpy (ptr, &v.s.p, 8) ; // may be unaligned
 			}
 			break ;
 
 		case 10:
-			*(int *)ptr = (int) v.s.p ;
-			*(int *)((char *)ptr + 4) = v.s.l ;
-			*(short *)((char *)ptr + 8) = v.s.t ;
+			// *(int *)ptr = (int) v.s.p ;
+			// *(int *)((char *)ptr + 4) = v.s.l ;
+			// *(short *)((char *)ptr + 8) = v.s.t ;
+			memcpy (ptr, &v.s.p, 10) ; // may be unaligned
 			break ;
 
 		case 40:
@@ -230,8 +232,9 @@ void storen (VAR v, void *ptr, unsigned char type)
 				if (v.i.n != t)
 					error (20, NULL) ; // 'Number too big'
 			    }
-			*(int *)ptr = (int) v.s.p ;
-			*(int *)((char *)ptr + 4) = v.s.l ;
+			// *(int *)ptr = (int) v.s.p ;
+			// *(int *)((char *)ptr + 4) = v.s.l ;
+			memcpy (ptr, &v.s.p, 8) ; // may be unaligned
 			break ;
 
 		case 36:
@@ -1228,6 +1231,7 @@ void newlin (void)
 VAR xeq (void)
 {
 	signed char al ;
+	void *tmpesi ;
 	while (1) // for each statement
 	    {
 	 	if (flags & (KILL + PAUSE + ALERT + ESCFLG))
@@ -1243,6 +1247,7 @@ VAR xeq (void)
 		    }
 	xeq1:
 		al = nxt () ;
+		tmpesi = esi ;
 		curlin = esi - (signed char *) zero ;
 		while (*++esi == ' ') ;
 
@@ -1303,7 +1308,7 @@ VAR xeq (void)
 /************************************ GOSUB ************************************/
 
 			case TLINO:
-				esi = curlin + zero ;
+				esi = tmpesi ;
 			case TGOTO:
 			case TGOSUB:
 				{
@@ -3736,7 +3741,7 @@ VAR xeq (void)
 /******************************** End of Line **********************************/
 
 			case 0x0D:
-				esi = curlin + 1 + zero ;
+				esi = tmpesi + 1 ;
 				newlin () ;
 				al = *esi ;
 				if (al == TELSE)
@@ -3832,7 +3837,7 @@ VAR xeq (void)
 /************************************* LET *************************************/
 
 			default:
-				esi = curlin + zero ;
+				esi = tmpesi ;
 			case TLET:
 				{
 				void *ptr, *ebp ;

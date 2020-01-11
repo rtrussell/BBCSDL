@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.07a, 03-Nov-2019                                *
+*       Version 1.09a, 11-Jan-2020                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -679,12 +679,12 @@ char * allocs (unsigned int *ps, int len)
 		new = 32 - __builtin_clz (len) ;
 	if (*(ps+1))
 		old = 32 - __builtin_clz (*(ps+1)) ;
+	*(ps+1) = len ;
 
 // if old and new strings have the same allocation, just change the length:
 
 	if (old == new)
 	    {
-		*(ps+1) = len ;
 		return *ps + (char *) zero ; 
 	    }
 
@@ -702,7 +702,6 @@ char * allocs (unsigned int *ps, int len)
 		addr = head->data ;
 		head->data = *ps + (char *) zero ; 
 		*ps = addr - (char *) zero ;
-		*(ps+1) = len ;
 		return addr ;
 	    }
 
@@ -716,7 +715,6 @@ char * allocs (unsigned int *ps, int len)
 		if (size > ((char *)esp - addr - STACK_NEEDED))
 			error (0, NULL) ; // 'No room'
 		pfree = addr + size - (char *) zero ;
-		*(ps+1) = len ;
 		return addr ;
 	    }
 
@@ -746,7 +744,6 @@ char * allocs (unsigned int *ps, int len)
 	if (size > ((char *)esp - addr - STACK_NEEDED))
 		error (0, NULL) ; // 'No room'
 	pfree = addr + size - (char *) zero ;
-	*(ps+1) = len ;
 	*ps = addr - (char *) zero ;
 	return addr ;
 }

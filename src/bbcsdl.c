@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (32-bit or 64-bit)                   *
-*       Copyright (c) R. T. Russell, 2015-2019                     *
+*       Copyright (c) R. T. Russell, 2015-2020                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.08a, 30-Nov-2019                                 *
+*       Version 1.09a, 09-Jan-2020                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -1259,9 +1259,9 @@ while (running)
 				else if ((c >= SDLK_a) && (c <= SDLK_z) &&
 					 (ev.key.keysym.mod & KMOD_CTRL))
 					c = c - SDLK_a + 1 ;
-				else if (ev.key.keysym.scancode == SDL_SCANCODE_APP1)
+				else if (ev.key.keysym.scancode == SDL_SCANCODE_AUDIOREWIND)
 					c = 128 ;
-				else if (ev.key.keysym.scancode == SDL_SCANCODE_APP2)
+				else if (ev.key.keysym.scancode == SDL_SCANCODE_AUDIOFASTFORWARD)
 					c = 129 ;
 				else
 					c = 0 ;

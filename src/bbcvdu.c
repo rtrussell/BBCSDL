@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCVDU.C  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.07a, 12-Oct-2019                                *
+*       Version 1.09a, 14-Dec-2019                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1386,7 +1386,10 @@ static void plotns (unsigned char al, int cx, int cy)
 		else
 		{
 			setcol (col) ;
-			SDL_RenderDrawLine (memhdc, lx, ly, cx, cy) ;
+			if ((lx != cx) || (ly != cy))
+				SDL_RenderDrawLine (memhdc, lx, ly, cx, cy) ;
+			else
+				al |= BIT3 ;
 			if ((al & BIT3) != 0)
 				SDL_RenderDrawPoint (memhdc, cx, cy) ;
 		}
