@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2020                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.09a, 09-Jan-2020                                 *
+*       Version 1.10a, 29-Jan-2020                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -446,6 +446,7 @@ if (platform < 0x2000200)
 #endif
 #ifdef __ANDROID__
 	platform |= 3 ;
+	fullscreen = 1 ;
 #endif
 #ifdef __IPHONEOS__
 	platform |= 4 ;
@@ -490,7 +491,7 @@ if (SDLNet_Init() == -1)
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES) ;
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 1) ;
 	SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 5) ;
-	SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 5) ;
+	SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 6) ;
 	SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 5) ;
 #else
 	SDL_SetHint (SDL_HINT_RENDER_DRIVER, "opengl") ;
@@ -509,6 +510,9 @@ window = SDL_CreateWindow("BBCSDL",  SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENT
 				SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | 
 #ifdef __IPHONEOS__
 				SDL_WINDOW_ALLOW_HIGHDPI |
+#endif
+#ifdef __ANDROID__
+				SDL_WINDOW_BORDERLESS |
 #endif
 				(fixedsize ? 0 : SDL_WINDOW_RESIZABLE) | 
 				(fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) | 
@@ -747,7 +751,10 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 		p = strrchr (argv[0], '/') ;
 		if (p == NULL) p = strrchr (argv[0], '\\') ;
 		if (p)
+		    {
 			strcat (szAutoRun, p + 1) ;
+			p += szAutoRun - argv[0] ;
+		    }
 		else
 			strcat (szAutoRun, argv[0]) ;
 		q = strrchr (szAutoRun, '.') ;

@@ -1,10 +1,10 @@
 /*****************************************************************\
 *       BBC BASIC for SDL 2.0 (32-bit or 64-bit)                  *
-*       Copyright (c) R. T. Russell, 2016-2019                    *
+*       Copyright (c) R. T. Russell, 2016-2020                    *
 *                                                                 *
 *       BBCMOS.C  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.07a, 10-Oct-2019                                *
+*       Version 1.10a, 08-Feb-2020                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -2228,7 +2228,7 @@ int entry (void *immediate)
 	farray = 1 ;				// @hfile%() number of dimensions
 	fasize = MAX_PORTS + MAX_FILES + 4 ;	// @hfile%() number of elements
 
-	prand = (unsigned int) time (NULL) ;	// Seed PRNG
+	prand = (unsigned int) SDL_GetPerformanceCounter() ;	// Seed PRNG
 	rnd () ;				// Randomise !
 
 	table = waves ;

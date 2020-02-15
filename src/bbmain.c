@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.09a, 11-Jan-2020                                *
+*       Version 1.10a, 09-Feb-2020                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -411,6 +411,7 @@ char *lexan (char *esi, char *ebx, unsigned char mode)
 				esi += n ;
 				if (lino)
 				    {
+					mode |= BIT4 ;
 					encode (lino, ebx) ;
 					ebx += 4 ;
 				    }

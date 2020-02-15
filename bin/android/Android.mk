@@ -47,6 +47,6 @@ LOCAL_CFLAGS := -munaligned-access -fsigned-char
 
 endif
 
-LOCAL_SHARED_LIBRARIES := SDL2 SDL2_ttf SDL2_net
+LOCAL_SHARED_LIBRARIES := SDL2 SDL2_ttf SDL2_net Box2D
 
 include $(BUILD_SHARED_LIBRARY)
