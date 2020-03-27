@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCMOS.C  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.10a, 08-Feb-2020                                *
+*       Version 1.11a, 05-Mar-2020                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -907,7 +907,7 @@ int putevt (heapptr handler, int msg, int wparam, int lparam)
 	unsigned char bl = evtqw ;
 	unsigned char al = bl + 8 ;
 	int index = bl >> 2 ;
-	if (al == evtqr)
+	if ((al == evtqr) || (eventq == NULL))
 		return 0 ;
 	eventq[index] = lparam ;
 	eventq[index + 1] = msg ;
@@ -924,7 +924,7 @@ static heapptr getevt (void)
 	unsigned char al = evtqr ;
 	int index = al >> 2 ;
 	flags &= ~ALERT ;
-	if (al == evtqw)
+	if ((al == evtqw) || (eventq == NULL))
 		return 0 ;
 	lParam = eventq[index] ;
 	iMsg = eventq[index + 1] ;
@@ -2229,6 +2229,7 @@ int entry (void *immediate)
 	fasize = MAX_PORTS + MAX_FILES + 4 ;	// @hfile%() number of elements
 
 	prand = (unsigned int) SDL_GetPerformanceCounter() ;	// Seed PRNG
+	*(unsigned char*)(&prand + 1) = (prand == 0) ;
 	rnd () ;				// Randomise !
 
 	table = waves ;

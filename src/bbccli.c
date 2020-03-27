@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
-*       Version 1.08a, 26-Nov-2019                                *
+*       Version 1.11a, 28-Feb-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -471,7 +471,11 @@ void oscli (char *cmd)
 			liston |= BIT0 ;
 			break ;
 		case 80:
+#if defined __arm__ || defined __aarch64__
+			error (255, "Unsupported") ;
+#else
 			liston |= (BIT0 + BIT1) ;
+#endif
 			break ;
 		default:
 			error (254, "Bad command") ;

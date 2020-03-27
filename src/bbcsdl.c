@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2020                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.10a, 29-Jan-2020                                 *
+*       Version 1.11a, 27-Mar-2020                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -147,6 +147,7 @@ void (*glLogicOpBBC) (int) ;
 void (*glDisableBBC) (int) ;
 void (*glTexParameteriBBC) (int, int, int) ;
 #endif
+void (*SDL_RenderFlushBBC) (SDL_Renderer*) ;
 
 static SDL_Window * window ;
 static SDL_Renderer *renderer ;
@@ -168,6 +169,8 @@ void *dlsym (void *handle, const char *symbol)
 	    }
 	return procaddr ;
 }
+#else
+#include "dlfcn.h"
 #endif
 
 #if defined __LINUX__ || defined __ANDROID__
@@ -485,6 +488,9 @@ if (SDLNet_Init() == -1)
 
 // Setting quality to "linear" can break flood-fill, affecting 'jigsaw.bbc' etc.
 #if defined (__ANDROID__) || defined(__IPHONEOS__)
+#ifdef __ANDROID__
+	SDL_SetHint ("SDL_RENDER_BATCHING", "1") ;
+#endif
 	SDL_SetHint (SDL_HINT_RENDER_DRIVER, "opengles") ;
 	SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "nearest") ;
 	SDL_SetHint ("SDL_TV_REMOTE_AS_JOYSTICK", "0") ;
@@ -494,6 +500,7 @@ if (SDLNet_Init() == -1)
 	SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 6) ;
 	SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 5) ;
 #else
+	SDL_SetHint ("SDL_RENDER_BATCHING", "1") ;
 	SDL_SetHint (SDL_HINT_RENDER_DRIVER, "opengl") ;
 	SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "nearest") ;
 	SDL_SetHint ("SDL_MOUSE_FOCUS_CLICKTHROUGH", "1") ; 
@@ -661,6 +668,7 @@ szUserDir = szTempDir - 0x100 ;
 szLibrary = szUserDir - 0x100 ;
 szLoadDir = szLibrary - 0x100 ;
 
+SDL_RenderFlushBBC = dlsym ((void *) -1, "SDL_RenderFlush") ;
 glTexParameteriBBC = SDL_GL_GetProcAddress ("glTexParameteri") ;
 glLogicOpBBC = SDL_GL_GetProcAddress("glLogicOp") ;
 glEnableBBC  = SDL_GL_GetProcAddress("glEnable") ;
@@ -748,17 +756,15 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 	{
 		char *q ;
 		strcpy (szAutoRun, SDL_GetBasePath()) ;
+		q = szAutoRun + strlen (szAutoRun) ;
 		p = strrchr (argv[0], '/') ;
 		if (p == NULL) p = strrchr (argv[0], '\\') ;
 		if (p)
-		    {
 			strcat (szAutoRun, p + 1) ;
-			p += szAutoRun - argv[0] ;
-		    }
 		else
 			strcat (szAutoRun, argv[0]) ;
-		q = strrchr (szAutoRun, '.') ;
-		if (q > p) *q = '\0' ;
+		p = strrchr (szAutoRun, '.') ;
+		if (p > q) *p = '\0' ;
 		strcat (szAutoRun, ".bbc") ;
 		SDL_SetWindowTitle (window, szVersion) ;
 	}

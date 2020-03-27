@@ -1,10 +1,10 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (c) 2017-2019  R.T.Russell, http://www.rtrussell.co.uk/   *
+*       (c) 2017-2020  R.T.Russell, http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       BBCVDU.C  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.09a, 14-Dec-2019                                *
+*       Version 1.11a, 27-Mar-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -50,6 +50,7 @@ extern void (*glEnableBBC)  (int) ;
 extern void (*glLogicOpBBC) (int) ;
 extern void (*glDisableBBC) (int) ;
 #endif
+extern int (*SDL_RenderFlushBBC) (SDL_Renderer*) ;
 
 // Functions in bbcttx.c:
 void page7 (void) ;
@@ -947,6 +948,7 @@ static void charout_logic (short ax, short fg, int cx, int cy, int dx)
 	SDL_RenderReadPixels (memhdc, &rect, SDL_PIXELFORMAT_ABGR8888, p, pitch) ;
 	SDL_SetRenderTarget (memhdc, tex) ;
 	BBC_RenderSetClipRect (memhdc, hrect) ;
+	if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
 	glEnableBBC (GL_COLOR_LOGIC_OP) ;
 	glLogicOpBBC (0x1500 + (fg & 0xFF)) ;
 	setcol (fg >> 8) ;
@@ -957,6 +959,7 @@ static void charout_logic (short ax, short fg, int cx, int cy, int dx)
 			if (c & 0x8000)
 				SDL_RenderDrawPoint(memhdc, x, y) ;
 		}
+	if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
 	glDisableBBC (GL_COLOR_LOGIC_OP) ;
 	SDL_UnlockTexture (src) ;
 	SDL_DestroyTexture (src) ;
@@ -1220,10 +1223,10 @@ static void newmode (short wx, short wy, short cx, short cy, short nc, signed ch
 	SDL_SetRenderTarget (memhdc, tex) ;
 
 	// Set font
-	if ((modeno == 7) || ((modeno == -1) && (cx >= 16) && (cy >= 16)))
+	if ((modeno == 7) || ((modeno == -1) && (cx >= 16) && (cy >= 20) && ((bc & 1) == 0)))
 	{
-		gfxPrimitivesSetFont (ttxtfont, 16, 16) ;
-		gfxPrimitivesSetFontZoom (cx / 16,  cy / 16) ;
+		gfxPrimitivesSetFont (ttxtfont, 16, 20) ;
+		gfxPrimitivesSetFontZoom (cx / 16,  cy / 20) ;
 	}
 	else
 	{
@@ -1346,6 +1349,7 @@ static void plotns (unsigned char al, int cx, int cy)
 
 	if (rop != 0)
 	{
+		if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
 		glEnableBBC (GL_COLOR_LOGIC_OP) ;
 		glLogicOpBBC (0x1500 + rop) ;
 	}
@@ -1502,7 +1506,12 @@ static void plotns (unsigned char al, int cx, int cy)
 			ly = py ;
 			py = tmp ;
 		}
-		glDisableBBC (GL_COLOR_LOGIC_OP) ;
+		if (rop != 0)
+		    {
+			if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
+			glDisableBBC (GL_COLOR_LOGIC_OP) ;
+			rop = 0 ;
+		    }
 		if ((al & BIT1) != 0)
 			blit (cx, cy-ly+py, px, py, lx-px+1, ly-py+1, 0) ; // Copy
 		else
@@ -1531,13 +1540,22 @@ static void plotns (unsigned char al, int cx, int cy)
 			ly = py ;
 			py = tmp ;
 		}
-		glDisableBBC (GL_COLOR_LOGIC_OP) ;
+		if (rop != 0)
+		    {
+			if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
+			glDisableBBC (GL_COLOR_LOGIC_OP) ;
+			rop = 0 ;
+		    }
 		blit (cx, cy-ly+py, px, py, lx-px+1, ly-py+1, 1) ; // Swap
 		break ;
 	}
 
 	SDL_RenderSetClipRect (memhdc, NULL) ;
-	glDisableBBC (GL_COLOR_LOGIC_OP) ;
+	if (rop != 0)
+	    {
+		if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
+		glDisableBBC (GL_COLOR_LOGIC_OP) ;
+	    }
 	bChanged = 1 ;
 }
 
@@ -1574,9 +1592,11 @@ static void clg (void)
 			vy[2] = b - 1 ;
 			vx[3] = l ;
 			vy[3] = b - 1 ;
+			if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
 			glEnableBBC (GL_COLOR_LOGIC_OP) ;
 			glLogicOpBBC (0x1500 + rop) ;
 			filledPolygonColor (memhdc, vx, vy, 4, palette[(int) bakgnd >> 8]) ;
+			if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
 			glDisableBBC (GL_COLOR_LOGIC_OP) ;
 		    }
 		else
@@ -1942,7 +1962,10 @@ void xeqvdu_ (int data2, int data1, int code)
 		  break ;
 
 		case 27: // SEND NEXT TO OUTC
-		  send (code & 0xFF) ;
+		  if (vflags & HRGFLG)
+			sendg (code & 0xFF) ;
+		  else
+			send (code & 0xFF) ;
 		  break ;
 
 		case 28: // SET TEXT VIEWPORT

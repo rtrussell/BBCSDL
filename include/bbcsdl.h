@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (64-bit)                             *
-*       Copyright (c) R. T. Russell, 2000-2019                     *
+*       Copyright (c) R. T. Russell, 2000-2020                     *
 *                                                                  *
 *       BBCSDL.H constant definitions                              *
-*       Version 1.02a 26-Mar-2019                                  *
+*       Version 1.11a 24-Feb-2020                                  *
 \******************************************************************/
 
 // System constants :
@@ -190,12 +190,12 @@ extern int prchx ; 	// Average character width (printer)
 extern int prchy ; 	// Average character height (printer)
 extern int prntx ; 	// Horizontal printing position
 extern int prnty ; 	// Vertical printing position
+extern unsigned char cursx ; 	// Cursor (caret) width
 extern unsigned char lthick ; 	// Line thickness
+extern unsigned char cmcflg ;
 extern signed char tweak ; // Character spacing adjustment
-extern short cursx ; 	// Cursor (caret) width
 
 // Other variables declared in bbcdata.nas or bbcdat.s:
-extern char cmcflg ;
 extern char sclflg ;
 extern unsigned char bbcfont[] ;
 extern unsigned short ttxtfont[] ;

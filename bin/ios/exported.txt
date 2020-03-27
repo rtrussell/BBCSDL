@@ -348,6 +348,9 @@ _SDL_RWFromConstMem
 _SDL_RWFromFP
 _SDL_RWFromFile
 _SDL_RWFromMem
+_SDL_RWclose
+_SDL_RWread
+_SDL_RWwrite
 _SDL_RaiseWindow
 _SDL_RecordGesture
 _SDL_RegisterEvents
@@ -363,6 +366,7 @@ _SDL_RenderDrawRect
 _SDL_RenderDrawRects
 _SDL_RenderFillRect
 _SDL_RenderFillRects
+_SDL_RenderFlush
 _SDL_RenderCopyF
 _SDL_RenderCopyExF
 _SDL_RenderDrawLineF

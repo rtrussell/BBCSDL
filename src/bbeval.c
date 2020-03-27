@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.09a, 11-Jan-2020                                *
+*       Version 1.11a, 05-Mar-2020                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -540,12 +540,10 @@ unsigned int rnd (void)
 {
 	unsigned int ecx = *(unsigned char*)(&prand + 1) ;
 	unsigned int edx = prand ;
-	unsigned int eax = edx ;
-	unsigned int carry = (ecx & ~1) | (eax & 1) ;
-	eax = (eax >> 1) | (ecx << 31) ;
+	unsigned int eax = (edx >> 1) | (ecx << 31) ;
+	*(unsigned char*)(&prand + 1) = (ecx & ~1) | (edx & 1) ; // Preserve bits 1-7
 	eax = eax ^ (edx << 12) ;
 	edx = eax ^ (eax >> 20) ;
-	*(unsigned char*)(&prand + 1) = carry ;
 	prand = edx ;
 	return edx ;
 }
