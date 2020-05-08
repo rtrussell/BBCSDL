@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2020                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.11a, 27-Mar-2020                                 *
+*       Version 1.12a, 16-Apr-2020                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -16,6 +16,7 @@
 
 #ifdef __WINDOWS__
 #include <windows.h>
+#include <wchar.h>
 #if defined __x86_64__
 #define PLATFORM "Win64"
 #else
@@ -102,6 +103,10 @@ long long apicall_ (void *, void *) ;
 // Routines in BBCTTXT:
 
 void flip7 (void) ;
+
+// Routines in SDL2_gfxPrimitives:
+
+int RedefineChar (SDL_Renderer*, char, unsigned char*, Uint32, Uint32);
 
 // Global variables (external linkage):
 
@@ -341,11 +346,14 @@ static void SetDir (char *path)
 		getcwd (szLoadDir, MAX_PATH) ;
 	    }
 #ifdef __WINDOWS__
+	wchar_t widepath[MAX_PATH] ;
 	strcat (szLoadDir, "\\") ;
+	MultiByteToWideChar (CP_UTF8, 0, szLoadDir, -1, widepath, MAX_PATH) ;
+	_wchdir (widepath) ;
 #else
 	strcat (szLoadDir, "/") ;
-#endif
 	chdir (szLoadDir) ;
+#endif
 }
 
 static void ShutDown ()
@@ -488,9 +496,7 @@ if (SDLNet_Init() == -1)
 
 // Setting quality to "linear" can break flood-fill, affecting 'jigsaw.bbc' etc.
 #if defined (__ANDROID__) || defined(__IPHONEOS__)
-#ifdef __ANDROID__
 	SDL_SetHint ("SDL_RENDER_BATCHING", "1") ;
-#endif
 	SDL_SetHint (SDL_HINT_RENDER_DRIVER, "opengles") ;
 	SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "nearest") ;
 	SDL_SetHint ("SDL_TV_REMOTE_AS_JOYSTICK", "0") ;
@@ -668,7 +674,12 @@ szUserDir = szTempDir - 0x100 ;
 szLibrary = szUserDir - 0x100 ;
 szLoadDir = szLibrary - 0x100 ;
 
+#ifdef __IPHONEOS__
+SDL_RenderFlushBBC = SDL_GL_GetProcAddress ("SDL_RenderFlush") ;
+#else
 SDL_RenderFlushBBC = dlsym ((void *) -1, "SDL_RenderFlush") ;
+#endif
+
 glTexParameteriBBC = SDL_GL_GetProcAddress ("glTexParameteri") ;
 glLogicOpBBC = SDL_GL_GetProcAddress("glLogicOp") ;
 glEnableBBC  = SDL_GL_GetProcAddress("glEnable") ;
@@ -684,8 +695,10 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 }
 
 #ifdef __WINDOWS__
-	GetTempPath (MAX_PATH, szTempDir) ;
-	mkdir (szTempDir) ;
+	wchar_t widepath[MAX_PATH] ;
+	GetTempPathW (MAX_PATH, widepath) ;
+	_wmkdir (widepath) ;
+	WideCharToMultiByte (CP_UTF8, 0, widepath, -1, szTempDir, 256, NULL, NULL) ;
 #endif
 
 #ifdef __LINUX__
@@ -1071,6 +1084,12 @@ while (running)
 				case EVT_REFLAG :
 				reflag = ((reflag & ((size_t)ev.user.data1 & 0xFF00) >> 8)
 					^  ((size_t)ev.user.data1 & 0x00FF)) ;
+				SDL_SemPost (Sema4) ;
+				break ;
+
+				case EVT_OSWORD :
+				RedefineChar (renderer, *(char *)(ev.user.data2 + 2),
+							ev.user.data2 + 3, 16, 20) ;
 				SDL_SemPost (Sema4) ;
 				break ;
 

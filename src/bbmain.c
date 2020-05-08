@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.10a, 09-Feb-2020                                *
+*       Version 1.12a, 22-Apr-2020                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -176,11 +176,11 @@ static const signed char keywds[] = {
 	TWHEN,'W','H','E','N',
 	TWAIT,'W','A','I','T',' ',
 	TWIDTH,'W','I','D','T','H',
-	THIMEML,'H','I','M','E','M',
-	TLOMEML,'L','O','M','E','M',
-	TPAGEL,'P','A','G','E',
-	TPTRL,'P','T','R',
-	TTIMEL,'T','I','M','E',
+	THIMEML,'H','I','M','E','M',' ',
+	TLOMEML,'L','O','M','E','M',' ',
+	TPAGEL,'P','A','G','E',' ',
+	TPTRL,'P','T','R',' ',
+	TTIMEL,'T','I','M','E',' ',
 	0x00,0x7F} ;
 
 // Error messages:

@@ -4230,10 +4230,9 @@ int thickLineRGBA(SDL_Renderer *renderer, Sint16 x1, Sint16 y1, Sint16 x2, Sint1
 	return(result);
 }
 
-int RedefineChar(SDL_Renderer *renderer, char c, unsigned char *charpos)
+int RedefineChar(SDL_Renderer *renderer, char c, unsigned char *charpos, Uint32 width, Uint32 height)
 {
 	Uint32 ix, iy;
-	Uint32 height = 8, width = 8 ;
 	Uint8 *curpos;
 	Uint8 patt, mask;
 	Uint8 *linepos;
@@ -4702,8 +4701,8 @@ static int _gfxPrimitivesCompareFloat2(const void *a, const void *b)
 }
 
 // This constant determines the maximum size and/or complexity of polygon that can be
-// drawn. Set to just under 16K the maximum aaArc height is approximately 1100 lines.
-#define POLYSIZE 16380
+// drawn. Set to 16K the maximum aaArc height is approximately 1100 lines.
+#define POLYSIZE 16384
 
 /*!
 \brief Draw anti-aliased filled polygon with alpha blending.
@@ -4746,7 +4745,7 @@ int aaFilledPolygonRGBA(SDL_Renderer * renderer, const double * vx, const double
 	maxx = floor (maxx) ;
 	prec = floor (pow(2,19) / prec) ;
 
-	// Allocate main array, this determines the maximum polygon size and comoplexity:
+	// Allocate main array, this determines the maximum polygon size and complexity:
 	list = (float *) malloc (POLYSIZE * sizeof(float)) ;
 	if (list == NULL)
 		return -2 ;

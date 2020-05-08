@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCVDU.C  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.11a, 27-Mar-2020                                *
+*       Version 1.12a, 26-Apr-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -34,7 +34,7 @@ int thickEllipseColor(SDL_Renderer*, Sint16, Sint16, Sint16, Sint16, Uint32, Uin
 int thickArcColor(SDL_Renderer*, Sint16, Sint16, Sint16, Sint16, Sint16, Uint32, Uint8) ;
 int thickCircleColor(SDL_Renderer*, Sint16, Sint16, Sint16, Uint32, Uint8) ;
 int thickLineColorStyle (SDL_Renderer*, Sint16, Sint16, Sint16, Sint16, Uint8, Uint32, int) ;
-int RedefineChar (SDL_Renderer*, char, unsigned char*) ;
+int RedefineChar (SDL_Renderer*, char, unsigned char*, Uint32, Uint32) ;
 
 // Functions in flood.c:
 void flood(unsigned int* pBitmap, int x, int y, int w, int h,
@@ -1733,7 +1733,7 @@ static void defchr (unsigned char n, unsigned char a, unsigned char b,
 			pattern[5] = f ;
 			pattern[6] = g ;
 			pattern[7] = h ;
-			RedefineChar (memhdc, n, pattern) ;
+			RedefineChar (memhdc, n, pattern, 8, 8) ;
 			usrchr[n] = 1 ;
 		}
 	}

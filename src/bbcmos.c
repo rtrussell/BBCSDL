@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCMOS.C  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.11a, 05-Mar-2020                                *
+*       Version 1.12a, 26-Apr-2020                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -1453,6 +1453,7 @@ int getims (void)
 	*(int *)(accs + 4) = *(int *)(at + 8) ; // Day-of-month
 	*(int *)(accs + 7) = *(int *)(at + 4) ; // Month
 	*(int *)(accs + 11) = *(int *)(at + 20) ; // Year
+	if (*(accs + 4) == ' ') *(accs + 4) = '0' ;
 	memcpy (accs + 16, at + 11, 8) ; // Time
 	accs[3] = '.' ;
 	accs[15] = ',' ;
@@ -1549,7 +1550,7 @@ size_t guicall (void *func, PARM *parm)
 int oscall (int addr)
 {
 	int al = stavar[1] ;
-	void *xy = (void *) (size_t)stavar[24] + ((size_t)stavar[25] << 8) ;
+	void *xy = (void *) ((size_t)stavar[24] | ((size_t)stavar[25] << 8)) ;
 	switch (addr)
 	    {
 		case 0xFFE0: // OSRDCH
@@ -1568,7 +1569,15 @@ int oscall (int addr)
 			return 0 ;
 
 		case 0xFFF1: // OSWORD
-			memcpy (xy + 1, &bbcfont[*(unsigned char*)(xy) << 3], 8) ;
+			if (al == 139)
+				memcpy (xy + 3, &ttxtfont[*(unsigned char*)(xy + 2) * 20], 40) ;
+			else if (al == 140)
+			    {
+				pushev (EVT_OSWORD, (void *)140, xy) ;
+				waitev () ;
+			    }
+			else
+				memcpy (xy + 1, &bbcfont[*(unsigned char*)(xy) << 3], 8) ;
 			return 0 ;
 
 		case 0xFFF4: // OSBYTE

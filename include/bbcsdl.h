@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2000-2020                     *
 *                                                                  *
 *       BBCSDL.H constant definitions                              *
-*       Version 1.11a 24-Feb-2020                                  *
+*       Version 1.12a 27-Apr-2020                                  *
 \******************************************************************/
 
 // System constants :
@@ -54,6 +54,7 @@
 #define EVT_MOUSE	0x200C	// Get mouse position/buttons
 #define EVT_MOUSETO	0x200D	// Move mouse pointer
 #define EVT_OSK		0x200E	// En/disable On Screen Keyboard
+#define EVT_OSWORD	0x200F	// OSWORD call
 
 // Bit names:
 
