@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCMOS.C  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.12a, 26-Apr-2020                                *
+*       Version 1.13a, 02-Jun-2020                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -1307,7 +1307,23 @@ void osline (char *buffer)
 					char *q = p ;
 					do p-- ; while ((vflags & UTF8) && (*p < -64)) ;
 					oswrch (8) ;
-					memmove (p, q, buffer + 255 - q) ;
+					memmove (p, q, buffer + 256 - q) ;
+				    }
+				break ;
+
+			case 130:
+				while (p > buffer)
+				    {
+					oswrch (8) ;
+					do p-- ; while ((vflags & UTF8) && (*p < -64)) ;
+				    }
+				break ;
+
+			case 131:
+				while (*p != 0x0D)
+				    {
+					oswrch (9) ;
+					do p++ ; while ((vflags & UTF8) && (*p < -64)) ;
 				    }
 				break ;
 
@@ -1316,7 +1332,7 @@ void osline (char *buffer)
 				    {
 					char *q = p ;
 					do q++ ; while ((vflags & UTF8) && (*q < -64)) ;
-					memmove (p, q, buffer + 255 - q) ;
+					memmove (p, q, buffer + 256 - q) ;
 				    }
 				break ;
 
@@ -1356,9 +1372,10 @@ void osline (char *buffer)
 					while ((*s >= ' ') && (p < (buffer + 255)))
 					    {
 						oswrch (*s) ;
-						memmove (p + 1, p, buffer + 253 - p) ;
+						memmove (p + 1, p, buffer + 255 - p) ;
 						*p++ = *s++ ;
 					    }
+					*(buffer + 255) = 0x0D ;
 					SDL_free (t) ;
 				    }
 				break ;
@@ -1391,13 +1408,14 @@ void osline (char *buffer)
 					    }
 					if (key >= 32)
 					    {
-						memmove (p + 1, p, buffer + 253 - p) ;
+						memmove (p + 1, p, buffer + 255 - p) ;
 						*p++ = key ;
+						*(buffer + 255) = 0x0D ;
 						if ((*p != 0x0D) && (vflags & IOFLAG) && (queue == 0))
 						    {
 							char *q = p ;
 							do q++ ; while ((vflags & UTF8) && (*q < -64)) ;
-							memmove (p, q, buffer + 255 - q) ;
+							memmove (p, q, buffer + 256 - q) ;
 						    }
 					    }
 				    }
@@ -1570,7 +1588,7 @@ int oscall (int addr)
 
 		case 0xFFF1: // OSWORD
 			if (al == 139)
-				memcpy (xy + 3, &ttxtfont[*(unsigned char*)(xy + 2) * 20], 40) ;
+				memcpy (xy + 4, &ttxtfont[*(unsigned char*)(xy + 2) * 20], 40) ;
 			else if (al == 140)
 			    {
 				pushev (EVT_OSWORD, (void *)140, xy) ;
@@ -1831,6 +1849,15 @@ void tone (short **pbuffer)
 					    }
 				    }
 				al = epsect[ch] ; // pitch section
+				if ((al >= 3) && ((*ebx & BIT7) == 0)) // repeat ?
+				    {
+					al = 0 ;
+					epsect[ch] = 0 ;
+					if (tempo & 0x40)
+						epitch[ch] -= *(ebx+1) * *(ebx+4) +
+							      *(ebx+2) * *(ebx+5) +
+							      *(ebx+3) * *(ebx+6) ;
+				    }
 				if (al < 3)
 				    {
 					signed char step = *(ebx + al + 1) ; // pitch change
@@ -1841,10 +1868,9 @@ void tone (short **pbuffer)
 						ecount[ch] = 0 ;
 						al++ ; // move to next section
 						epsect[ch] = al ;
-						if ((al >= 3) && ((*ebx & BIT7) == 0)) // repeat ?
-							epsect[ch] = 0 ;
 					    }
-					epitch[ch] += step ;
+					if (num)
+						epitch[ch] += step ;
 				    }
 			    }
 		    }
@@ -1940,7 +1966,7 @@ void tone (short **pbuffer)
 void stick (short* buffer)
 {
 	unsigned char al = note (0) ;
-	unsigned char ah = tempo & 0x7F ;
+	unsigned char ah = tempo & 0x3F ;
 
 	if (al)
 		note (syncs [al]) ;
@@ -2233,7 +2259,7 @@ int entry (void *immediate)
 	waves = (short*) (envels + 0x100) ;	// Waveforms n.b. &20000 bytes long
 	filbuf[0] = (waves + 0x10000) ;		// File buffers n.b. pointer arithmetic!!
 	usrchr = (char*) (filbuf[0] + 0x800) ;	// User-defined characters
-	tempo = 5 ;				// Default SOUND tempo
+	tempo = 0x45 ;				// Default SOUND tempo
 	farray = 1 ;				// @hfile%() number of dimensions
 	fasize = MAX_PORTS + MAX_FILES + 4 ;	// @hfile%() number of elements
 

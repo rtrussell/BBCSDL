@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2020                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.12a, 16-Apr-2020                                 *
+*       Version 1.13a, 02-Jun-2020                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -252,9 +252,15 @@ static void UserAudioCallback(void* userdata, Uint8* stream, int len)
 {
 static Uint8 surplus[AUDIOLEN * MAX_TEMPO] ;
 static int leftover ;
-int blocksize = AUDIOLEN * (tempo & 0x7F) ;
+int blocksize = AUDIOLEN * (tempo & 0x3F) ;
 
-	if (len < leftover) return ;
+	if (len < leftover)
+	    {
+		memcpy (stream, surplus, len) ;
+		leftover -= len ;
+		memmove (surplus, surplus + len, leftover) ;
+		return ;
+	    }
 
 	if (leftover)
 	    {
@@ -841,11 +847,12 @@ for (i = 0; i < PALETTE_SIZE; i++)
 	palette[i] = r | (g << 8) | (b << 16) | 0xFF000000 ;
 }
 
+// Audio buffer should be <= 40 ms (total queued SOUNDs at min. duration)  
 SDL_memset(&want, 0, sizeof(want)) ;
 want.freq = 44100 ;
 want.format = AUDIO_S16LSB ;
 want.channels = 2 ;
-want.samples = 8192 ; // Needs to be this big on Linux
+want.samples = 1024 ; // Largest power-of-two <= AUDIOLEN (~ 23 ms)
 want.callback = UserAudioCallback ;
 
 if (sizex > 800)
@@ -1089,7 +1096,7 @@ while (running)
 
 				case EVT_OSWORD :
 				RedefineChar (renderer, *(char *)(ev.user.data2 + 2),
-							ev.user.data2 + 3, 16, 20) ;
+							ev.user.data2 + 4, 16, 20) ;
 				SDL_SemPost (Sema4) ;
 				break ;
 

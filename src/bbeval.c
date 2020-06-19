@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.11a, 05-Mar-2020                                *
+*       Version 1.13a, 07-Jun-2020                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -436,7 +436,8 @@ VAR loads (void *ptr, unsigned char type)
 				error (19, NULL) ; // 'String too long'
 			if ((ptr < zero) || ((ptr + v.s.l) > (zero + 0xFFFFFFFF)))
 			    {
-				v.s.p = alloct (v.s.l) - (char *) zero ;
+				// Don't use alloct because it will put string in accs
+				v.s.p = allocs (&tmps, v.s.l) - (char *) zero ;
 				memcpy (v.s.p + zero, ptr, v.s.l) ;
 			    }
 			else
@@ -447,7 +448,8 @@ VAR loads (void *ptr, unsigned char type)
 			v.s.l = strlen (ptr) ;
 			if ((ptr < zero) || ((ptr + v.s.l) > (zero + 0xFFFFFFFF)))
 			    {
-				v.s.p = alloct (v.s.l) - (char *) zero ;
+				// Don't use alloct because it will put string in accs
+				v.s.p = allocs (&tmps, v.s.l) - (char *) zero ;
 				memcpy (v.s.p + zero, ptr, v.s.l) ;
 			    }
 			else

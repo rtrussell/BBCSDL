@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCVDU.C  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.12a, 26-Apr-2020                                *
+*       Version 1.13a, 15-May-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -55,6 +55,7 @@ extern int (*SDL_RenderFlushBBC) (SDL_Renderer*) ;
 // Functions in bbcttx.c:
 void page7 (void) ;
 void send7 (char, short *, short *, int) ;
+extern unsigned char frigo[], frign[] ;
 
 static char xscrol[] = {0, 2, 1, 3} ;
 
@@ -504,8 +505,6 @@ static void cls (void)
 	int nc ;             // total number of (wide) characters per line
 	int octl, ocbr ;     // (wide) character offset from start of line
 	SDL_Rect rect = {textwl, textwt, textwr - textwl, textwb - textwt} ;
-
-	home () ; // home cursor
 
 	// Find character coordinates from pixel coordinates:
 	p2c (textwl, textwt, &pctl, &sl, &nc, &octl) ; // top-left (inside)
@@ -1227,6 +1226,13 @@ static void newmode (short wx, short wy, short cx, short cy, short nc, signed ch
 	{
 		gfxPrimitivesSetFont (ttxtfont, 16, 20) ;
 		gfxPrimitivesSetFontZoom (cx / 16,  cy / 20) ;
+		if (modeno == 7)
+		    {
+			int i ;
+			for (i = 0; i < 12; i++)
+				RedefineChar (memhdc, frigo[i],
+					(unsigned char *) &ttxtfont[frign[i] * 20], 16, 20) ;
+		    }
 	}
 	else
 	{
@@ -1648,7 +1654,7 @@ static void modechg (char al)
 	if (al >= NUMMODES)
 		return ;
 
-	if ((al < 16) && ((vflags & (CGAFLG + EGAFLG)) != 0))
+	if ((al < 16) && ((vflags & CGAFLG) != 0))
 	{
 		if ((vflags & EGAFLG) != 0)
 			al |= BIT3 ;
@@ -1698,6 +1704,18 @@ static void defchr (unsigned char n, unsigned char a, unsigned char b,
 
 	case 16:	// caret movement control
 		cmcflg = (cmcflg & b) ^ a ;
+		break ;
+
+	case 18:	// teletext extensions
+		if (a == 3)
+		    {
+			if (b)
+				vflags |= EGAFLG ;
+			else 
+				vflags &= ~EGAFLG ;
+			if (modeno == 7)
+				page7 () ;
+		    }
 		break ;
 
 	case 22:	// user-defined mode
@@ -1894,6 +1912,7 @@ void xeqvdu_ (int data2, int data1, int code)
 		  break ;
 
 		case 12: // CLEAR SCREEN
+		  home () ;
 		  cls () ;
 		  break ;
 

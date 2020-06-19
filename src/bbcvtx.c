@@ -1,10 +1,10 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       Copyright (c) R. T. Russell, 2016-2019                    *
+*       Copyright (c) R. T. Russell, 2016-2020                    *
 *                                                                 *
 *       BBCVTX.C  MODE 7 (teletext / videotex) emulator           *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.02a, 03-Apr-2019                                *
+*       Version 1.13a, 15-May-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -23,9 +23,9 @@
 void charttf(unsigned short ax, int col, SDL_Rect rect) ;
 
 //Code conversion for special symbols:
-static unsigned char frigo[] = {0x23,0x5B,0x5C,0x5D,0x5E,0x5F,0x60,0x7B,0x7C,0x7D,0x7E,0x7F} ;
-static unsigned char frign[] = { 163, 143, 189, 144, 141,  35, 151, 188, 157, 190, 247, 129} ; // not 035
-static unsigned short frigw[] = {0xA3,0x2190,0xBD,0x2192,0x2191,0x23,0x2014,0xBC,0x2016,0xBE,0xF7,0x25A0} ;
+unsigned char frigo[] = {0x23,0x5B,0x5C,0x5D,0x5E,0x5F,0x60,0x7B,0x7C,0x7D,0x7E,0x7F} ;
+unsigned char frign[] = { 163, 143, 189, 144, 141,  35, 151, 188, 157, 190, 247, 129} ; // not 035
+unsigned short frigw[] = {0xA3,0x2190,0xBD,0x2192,0x2191,0x23,0x2014,0xBC,0x2016,0xBE,0xF7,0x25A0} ;
 
 static int rgbtab[] = {
 		0xFF000000,	// black
@@ -50,7 +50,7 @@ static int rgbtab[] = {
 //       bit 0  - blue          ) three bits as colour.
 //
 static char ctab7[] = {
-		0x00,	// 0b00000000: NUL (no effect)
+		0x00,	// 0b00000000: NUL (no effect or Alpha black)
 		0xBC,	// 0b10111100: Alpha red
 		0xBA,	// 0b10111010: Alpha green
 		0xBE,	// 0b10111110: Alpha yellow
@@ -66,7 +66,7 @@ static char ctab7[] = {
 		0x10,	// 0b00010000: Double height
 		0x00,	// 0b00000000: SO (no effect)
 		0x00,	// 0b00000000: SI (no effect)
-		0x00,	// 0b00000000: DLE (no effect)
+		0x00,	// 0b00000000: DLE (no effect or Graphics black)
 		0x44,	// 0b01000100: Graphics red
 		0x42,	// 0b01000010: Graphics green
 		0x46,	// 0b01000110: Graphics yellow
@@ -77,7 +77,7 @@ static char ctab7[] = {
 		0x00,	// 0b00000000: Conceal
 		0xD8,	// 0b11011000: Contiguous graphics
 		0x20,	// 0b00100000: Separated graphics
-		0x00,	// 0b00000000: ESC (no effect)
+		0x00,	// 0b00000000: ESC (no effect or toggle charset)
 		0x00,	// 0b00000000: Black background
 		0x00,	// 0b00000000: New background
 		0xF0,	// 0b11110000: Hold graphics
@@ -125,6 +125,7 @@ static void setrgb (char al)
 //         bit 6 - background R
 //         bit 5 - background G
 //         bit 4 - background B
+//         bit 3 - 0=normal, 1=secondary charset
 //         bit 2 - foreground R
 //         bit 1 - foreground G
 //         bit 0 - foreground B
@@ -143,6 +144,8 @@ static void chout7 (unsigned char al, unsigned char ah, int xpos, int ypos)
 
 	if ((al & BIT7) == 0)
 	{
+		if (ah & BIT3)
+			al |= BIT7 ;
 		if (vflags & UFONT)
 		    {
 			int i ;
@@ -155,10 +158,6 @@ static void chout7 (unsigned char al, unsigned char ah, int xpos, int ypos)
 		    }
 		else
 		    {
-			int i ;
-			for (i = 0; i < 12; i++)
-				if (al == frigo[i])
-					al = frign[i] ;
 			characterColor (memhdc, xpos, ypos, al, rgbtab[ah & 7]) ;
 		    }
 		return ;
@@ -234,7 +233,7 @@ static void outch7 (unsigned char al, unsigned char ah, unsigned char mode, int 
 //                 bit 6 - background R
 //                 bit 5 - background G
 //                 bit 4 - background B
-//                 bit 3 - 0=flash-update, 1=normal (unaffected)
+//                 bit 3 - 0=normal, 1=secondary charset
 //                 bit 2 - foreground R
 //                 bit 1 - foreground G
 //                 bit 0 - foreground B
@@ -289,6 +288,27 @@ static short char7 (short *pc, unsigned char *pattr, unsigned char *pmode, char 
 			*pattr = attr ;	// Set at
 			break ;
 
+		case 27:		// Toggle character set
+			if (vflags & EGAFLG)
+				attr ^= BIT3 ;
+			break ;
+
+		case 0:			// Alpha black
+			if (vflags & EGAFLG)
+			    {
+				attr &= 0xF8 ;
+				mode &= 0x7F ;
+			    }
+			break ;
+
+		case 16:		// Graphics black
+			if (vflags & EGAFLG)
+			    {
+				attr &= 0xF8 ;
+				mode |= 0x80 ;
+			    }
+			break ;
+
 		default:
 			al = ctab7[(int) al] ;		// Action code
 
@@ -312,16 +332,14 @@ static short char7 (short *pc, unsigned char *pattr, unsigned char *pmode, char 
 		if ((mode ^ oldmode) & BIT5)
 			held = 0 ;		// Clear held graphic on D/H change
 
-		if (held)
-			al = held | 0x80 ;	// Display held graphic
-		else
-			al = ' ' ;		// Display space
-
 		if (*pmode & BIT4)
 		{
-			held = 0 ;		// Clear held graphic on release
-			al = ' ' ;
+			if ((vflags & EGAFLG) == 0)
+				held = 0 ;	// Clear held graphic (SAA5050 bug)
+			al = ' ' ;		// Display space
 		}
+		else
+			al = held ;		// Display held graphic
 	}
 
 	if ((mode & BIT3) && !(mode & BIT5))
@@ -441,23 +459,24 @@ void send7 (unsigned char al, short *pc, short *sl, int ypos)
 }
 
 // Update the entire Viewdata screen
-static void update7 (unsigned char attr)
+static void update7 (unsigned char flag)
 {
 	int row, ypos = 0 ;
 	short *pc = chrmap ;
-	unsigned char mode = 0x10 ;		// Initial mode
+	unsigned char attr ;
+	unsigned char mode = 0x10 ;	// Initial mode
 
 	for (row = 0; row < 25; row++)
 	{
 		int col, xpos = 0 ;
 		char held = 0 ;		// Held graphics character
-		unsigned char sticky = 0 ;	// To detect any D/H
-		attr = (attr & 8) | 7 ; // Initial attributes
+		unsigned char sticky = flag ;	// To detect any D/H
+		attr = 7 ; 		// Initial attributes
 		for (col = 0; col < 40; col++)
 		{
 			short atch = char7 (pc, &attr, &mode, &held) ;
 			sticky |= mode ;
-			if (atch & 0x8800)
+			if ((atch & 0x8000) || (sticky & BIT0))
 				outch7 (atch & 0xFF, atch >> 8, mode, xpos, ypos) ; 
 			pc++ ;
 			xpos += CHARX ;
@@ -483,5 +502,5 @@ void flip7 (void)
 // Update the entire MODE7 screen:
 void page7 (void)
 {
-	update7 (8) ;			// Full update
+	update7 (1) ;			// Full update
 }

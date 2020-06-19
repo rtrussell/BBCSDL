@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
-*       Version 1.11a, 28-Feb-2020                                *
+*       Version 1.13a, 02-Jun-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -869,7 +869,7 @@ void oscli (char *cmd)
 	case TEMPO:
 		n = 0 ;
 		sscanf (p, "%i", &n) ;
-		if (((n & 0x7F) <= MAX_TEMPO) && ((n & 0x7F) > 0))
+		if (((n & 0x3F) <= MAX_TEMPO) && ((n & 0x3F) > 0))
 			tempo = n ;
 		return ;
 

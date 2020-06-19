@@ -1,0 +1,28 @@
+Update your Raspberry Pi:
+
+ sudo apt-get update
+ sudo apt-get dist-upgrade
+
+Install SDL 2.0:
+
+ sudo apt-get install libsdl2-2.0-0
+ sudo apt-get install libsdl2-ttf-2.0-0
+ sudo apt-get install libsdl2-net-2.0-0
+ sudo apt-get install mesa-utils
+ chmod +x bbcsdl
+ chmod +x mkicon.sh
+
+Enable the 'experimental' GL Driver (may require a reboot):
+
+ sudo raspi-config
+ Advanced Options... GL Driver... GL (Full KMS)... Ok... Finish
+
+To start BBC BASIC:
+
+ ./bbcsdl
+
+To create a desktop shortcut:
+
+ ./mkicon.sh
+
+RTR 20-Oct-2018
