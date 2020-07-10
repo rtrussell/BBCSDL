@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.12a, 22-Apr-2020                                *
+*       Version 1.14a, 10-Jul-2020                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -16,6 +16,12 @@ void oswrch (unsigned char) ;	// Write to display or other output stream (VDU)
 void osline (char *) ;		// Read line of input
 void reset (void) ;		// Prepare for reporting an error
 void faterr (const char *) ;	// Report a 'fatal' error message
+void trap (void) ;		// Test for ESCape
+void osload (char*, void*, int) ; // Load a file to memory
+void ossave (char*, void*, int) ; // Save a file from memory
+
+// Routines in bbccli:
+void oscli (char*) ;            // Command Line Interface
 
 // Routines in bbexec:
 void xeq (void) ;		// Execute program
@@ -33,6 +39,19 @@ signed char *esi ;		// Program pointer
 heapptr *esp ;			// Stack pointer
 #endif
 
+// List of immediate mode commands:
+
+static const signed char comnds[] = {
+	0x18,'A','U','T','O',
+	0x19,'D','E','L','E','T','E',
+	0x1A,'E','D','I','T',
+	0x1B,'L','I','S','T',
+	0x1C,'L','O','A','D',
+	0x1D,'N','E','W',
+	0x1E,'R','E','N','U','M','B','E','R',
+	0x1F,'S','A','V','E',
+	0x00,0x7F } ;
+	
 // List of token values and associated keywords.
 // If a keyword is followed by a space it will only
 // match the word followed immediately by a delimiter.
@@ -348,11 +367,10 @@ char * encode (unsigned short lino, char *ebx)
 }
 
 // Search for a keyword
-// Return token if found, zero if not found
+// Return token if found, unchanged character if not found
 // If found, advance pointer past keyword
-signed char tokit (char **pesi)
+static signed char tokit (char **pesi, const signed char *ebx)
 {
-	const signed char *ebx = keywds ;
 	signed char al, ah ;
 	while (1)
 	    {
@@ -425,14 +443,14 @@ char *lexan (char *esi, char *ebx, unsigned char mode)
 					if (al == '*')
 						mode |= BIT6 ;
 					else if ((al >= 'A') && (al <= 'z'))
-						al = tokit (&esi) ;
+						al = tokit (&esi, keywds) ;
 					if (al == TDATA)
 						mode |= BIT6 ;
 					else if ((al >= TOKLO) && (al <= TOKHI))
 						al += OFFSIT ;
 				    }
 				else if ((al >= 'A') && (al <= 'z'))
-					al = tokit (&esi) ;
+					al = tokit (&esi, keywds) ;
 				if (al == TREM) mode |= BIT6 ; // quit tokenising
 				if ((al == TFN) || (al == TPROC) || range2(al)) mode |= BIT5 ;
 				if (al == '&') mode |= BIT3 ; // in hex
@@ -491,31 +509,55 @@ void text (const char *txt)
 		outchr (*txt++) ;
 }
 
-// List a program line (entered with pointer to line number)
-void listline (signed char *p)
+// List a program line without CRLF (entered with pointer to line number)
+void listline (signed char *p, int *pindent)
 {
-	signed char al ;
+	int n ;
+	signed char al = 0 ;
 	char number[7] ;
-	unsigned char mode = BIT0 ;
+	unsigned char mode = BIT0 ; // set left
 	unsigned short lino = *(unsigned short*) p ;
 	if (lino)
-		sprintf (number, "%5d ", lino) ;
+		sprintf (number, "%5d", lino) ;
 	else
-		sprintf (number, "      ") ;
+		sprintf (number, "     ") ;
 	text (number) ;
 	p += 2 ;
-	while ((al = *p++) != 0x0D)
+
+	if (lstopt & 1)
+		oswrch (32) ;
+
+	if (strchr ("\355\375\316\315\213\311\314", *p))
+		*pindent -= 1 ;
+	if (*p == TENDCASE)
+		*pindent -= 2 ;
+	if (lstopt & 2)
+		for (n = 0; n < *pindent * 2; n++)
+			oswrch (' ') ;
+	if (strchr ("\343\365\307\213\311\314", *p))
+		*pindent += 1 ;
+	if (*p == TCASE)
+		*pindent += 2 ;
+
+	while (*p != 0x0D)
 	    {
-		if (al == '"')
+		al = *p++ ;
+		if ((al == '"') && !(mode & 0x60))
 			mode ^= BIT7 ;
-		if (mode & (BIT6 | BIT7))
+		if (mode & (BIT5 | BIT6 | BIT7))
 			oswrch (al) ;
 		else
 		    {
-			if ((al == TREM) || ((al == TDATA) && (mode & BIT0)))
-				mode |= BIT6 ;
+			if ((al == '*') && (mode & BIT0))
+				mode |= BIT4 ; // *command
+			if ((al == TDATA) && (mode & BIT0))
+				mode |= BIT5 ; // DATA
+			if (al == TREM)
+				mode |= BIT6 ; // REM
 			if (al != ' ')
-				mode &= ~BIT0 ;
+				mode &= ~(BIT0 | BIT1) ; // right mode, clear EXIT
+			if (al == TEXIT)
+				mode |= BIT1 ; // EXIT
 			if (strchr((const char *)list2, al))
 				mode |= BIT0 ;
 			if (al == TLINO)
@@ -529,8 +571,18 @@ void listline (signed char *p)
 			else
 				token (al) ;
 		    }
+		if (!(mode & 0xF2))
+		    {
+			if (strchr ("\343\365\307", *p))
+				*pindent += 1 ;
+			if (strchr ("\355\375\316", *p))
+				*pindent -= 1 ;
+			if (*p == TCASE)
+				*pindent += 2 ;
+		    }
 	    }
-	crlf () ;
+	if (!(mode & 0xF2) && (al == TTHEN))
+		*pindent += 1 ;
 }
 
 // Search for top of program
@@ -1254,6 +1306,8 @@ void * getvar (unsigned char *ptype)
 			if (al == '.')
 			    {
 				signed char *edx = *(void **)ebx ; // template pointer
+				if (edx == NULL)
+					error (26, NULL); // 'No such variable'
 				esi++ ; 
 				edx += 4 ; 		    // skip size record
 				ebx = scanll (NULL, edx) ;
@@ -1344,13 +1398,72 @@ void * getdim (unsigned char *ptype)
 	return ebx ;
 }
 
+// Get a range of line numbers [lo[,[hi]]]:
+static void lrange (char *ptr, unsigned short *plo, unsigned short *phi)
+{
+	int n = 0 ;
+	*plo = 0 ;
+	*phi = 0 ;
+	if (sscanf (ptr, "%hu ,%n%hu", plo, &n, phi) == 0)
+		sscanf (ptr, " ,%n%hu", &n, phi) ;
+	if ((*phi == 0) && (*plo == 0))	*phi = 0xFFFF ;
+	if ((*phi == 0) && (n != 0))    *phi = 0xFFFF ;
+}
+
+// Replacement for strstr() which uses a string terminator other than NUL:
+static char *strstrt (signed char *lookin, char *lookfor, char t)
+{
+	char *t1 = memchr (lookin, t, 256) ;
+	char *t2 = memchr (lookfor, t, 256) ;
+	*t1 = 0 ; *t2 = 0 ;
+	char *result = strstr ((char *) lookin, lookfor) ;
+	*t1 = t ; *t2 = t ;
+	return result ;
+}
+
+// Fixup line-number cross-references in a line:
+static void fixup (signed char *ptr, int nlines, unsigned short start, unsigned short step)
+{
+	signed char c ;
+	int quote = 0 ;
+	unsigned short n ;
+	unsigned short lino = *(unsigned short *)(ptr + 1) ;
+	ptr += 3 ;
+	while ((c = *ptr++) != 0x0D)
+	    {
+		if (c == '"') quote = !quote ;
+		if ((c == TLINO) && !quote) 
+		    {
+			int i ;
+			unsigned char ah = *(unsigned char *)ptr++ ;
+			n = ((*(unsigned char *)ptr++) ^ ((ah << 2) & 0xC0)) ;
+			n += ((*(unsigned char *)ptr++) ^ ((ah << 4) & 0xC0)) * 256 ;
+
+			for (i = 0; i < nlines; i++)
+				if (n == *(unsigned short *)(lomem + zero + i * 2))
+					break ;
+
+			if (n == *(unsigned short *)(lomem + zero + i * 2))
+				encode (start + i * step, (char *) ptr - 4) ;
+			else
+			    {
+				sprintf (accs, "No such line %hu referenced in (new) "
+						"line %hu\r\n", n, lino) ;
+				text (accs) ;
+			    }
+		    }
+	    }
+}
+
 // Main interpreter entry point:
 int basic (void *ecx, void *edx, void *prompt)
 {
 	int errcode ;
+	unsigned short autoinc = 0, autonum = 0 ;
 
-	stavar[0] = 0x90A ;             // Initialise @%
-	liston = 0x30 ;			// Initialise OPT/*FLOAT/*lowercase
+	stavar[0] = 0x90A ;	// Initialise @%
+	liston = 0x30 ;		// Initialise OPT/*FLOAT/*HEX/*LOWERCASE
+	lstopt = 3 ;		// Initialise LISTO
 	errtxt = szNotice ;
 	cmdadr = szCmdLine - (char *) zero ;
 	cmdlen = strlen (szCmdLine) ;
@@ -1404,18 +1517,196 @@ int basic (void *ecx, void *edx, void *prompt)
 			    }
 			crlf () ;
 			prompt = (void *) 1 ;
+			autonum = 0 ;
+			autoinc = 0 ;
 		    }
 	    }
 
-	if (prompt)
+	while (prompt)
 	    {
+		int n = 0 ;
+		unsigned short lino = 0 ;
+
 		esp = (heapptr *)((himem + (size_t) zero) & -4) ;
-		oswrch ('>') ;
+		if (autonum)
+		    {
+			sprintf (accs, "%5hu ", autonum) ;
+			text (accs) ;
+		    }			
+		else if (autoinc)
+			autoinc = 0 ;
+		else
+			oswrch ('>') ;
+
 		liston = (liston & 0x0F) | 0x30 ;
 		clrtrp () ;
 		osline (accs) ;
+		*(char *)(memchr (accs, 0x0D, 256) + 1) = 0 ; // Add NUL term for sscanf
 		crlf () ;
-		*(lexan (accs, buffer, 1)) = 0 ;	// Lexical analysis
+
+		sscanf (accs, "%hu%n", &lino, &n) ;
+		if (lino == 0)
+		    {
+			n = 0 ;
+			lino = autonum ;
+			autonum += autoinc ;
+		    }
+		while (*(accs + n) == 32) n++ ;
+		*(lexan (accs + n, buffer, 1)) = 0 ;	// Lexical analysis
+		curlin = buffer - (char *)zero ; // In case of error
+
+		if (lino)
+		    {
+			signed char *tmp = vpage + zero ;
+			clear () ;
+			n = strlen (buffer) + 3 ;
+			while (lino > *(unsigned short *)(tmp + 1))
+				tmp += (int)*(unsigned char *)tmp ; 
+			if (lino == *(unsigned short *)(tmp + 1))
+				memmove (tmp, tmp + *(unsigned char *)tmp,
+				gettop (vpage + zero, NULL) - tmp + 3 - *(unsigned char *)tmp) ;
+			if (n > 4)
+			    {
+				memmove (tmp + n, tmp, gettop (vpage + zero, NULL) - tmp + 3) ;
+				*(unsigned char *)tmp = n ;
+				*(unsigned short *)(tmp + 1) = lino ;
+				memcpy (tmp + 3, buffer, n - 3) ;
+			    }
+			clear () ; // essential to set lomem correctly
+		    }
+		else
+		    {
+			unsigned short lo, hi ;
+			char *tmp = accs + n ;
+			n = tokit (&tmp, comnds) ;
+			tmp++ ;
+			switch (n)
+			    {
+				case 0x18: // AUTO
+					lrange (tmp, &autonum, &autoinc) ;
+					if (autonum == 0) autonum = 10 ;
+					if (autoinc == 0xFFFF) autoinc = 10 ;
+					if (autoinc == 0) autoinc = 10 ;
+					break ;
+
+				case 0x19: // DELETE
+					clear () ;
+					lrange (tmp, &lo, &hi) ;
+					if ((lo == 0) && (hi == 0xFFFF)) error (16, NULL) ;
+					if (hi == 0) hi = lo ;
+					esi = vpage + zero ;
+					while (*esi && (*(unsigned short *)(esi + 1) < lo))
+						esi += (int)*(unsigned char *)esi ;
+					tmp = (char*) esi ;
+					while (*esi && (*(unsigned short *)(esi + 1) <= hi))
+						esi += (int)*(unsigned char *)esi ;
+					memmove (tmp, esi, gettop (vpage + zero, NULL) - esi + 3) ;
+					break ;
+
+				case 0x1A: // EDIT
+					lrange (tmp, &lo, &hi) ;
+					if ((lo == 0) && (hi == 0xFFFF)) error (16, NULL) ;
+					if (hi == 0) hi = lo ;
+					esi = findl (lo) ;
+					if (esi == NULL) error (41, NULL) ;
+					strcpy (accs, "spool \042") ;
+					strcat (accs, szTempDir) ;
+					strcat (accs, "bbc.edit.tmp\042\015") ;
+					oswrch (21) ;
+					oscli (accs) ;
+					while (*esi && (*(unsigned short *)(esi + 1) <= hi))
+					    {
+						n = 0 ;
+						listline (esi + 1, &n) ;
+						esi += *(unsigned char *)esi ;
+					    }
+					*(accs + 5) = 0x0D ;
+					oscli (accs) ;
+					oswrch (6) ;
+					memcpy (accs, "exec  ", 6) ;
+					oscli (accs) ;
+					autoinc = 1 ; // suppress prompt
+					break ;
+
+				case 0x1B: // LIST[O]
+					if ((*tmp == 'O') || (*tmp == 'o'))
+					    {
+						n = 0 ;
+						sscanf (tmp + 1, "%u", &n) ;
+						lstopt = n ;
+						break ;
+					    }
+					lrange (tmp, &lo, &hi) ;
+					if (hi == 0) hi = lo ;
+					esi = vpage + zero ;
+					n = 0 ;
+					*(lexan (tmp, buffer, 1)) = 0 ; // to support LISTIF
+					tmp = strchr (buffer, TIF) ;
+					while ((tmp != NULL) && (*(++tmp) == ' ')) ;
+					while (*esi && (*(unsigned short *)(esi + 1) < lo))
+						esi += (int)*(unsigned char *)esi ; 
+					while (*esi && (*(unsigned short *)(esi + 1) <= hi))
+					    {
+						trap () ;
+						if ((tmp == NULL) || (strstrt (esi + 3, tmp, 13)))
+						    {
+							listline (esi + 1, &n) ;
+							crlf () ;
+						    }
+						esi += *(unsigned char *)esi ;
+					    }
+					break ;
+
+				case 0x1C: // LOAD
+					osload (tmp, vpage + zero, (void *)esp -
+						 (vpage + zero) - STACK_NEEDED) ;
+					clear () ;
+					break ;
+
+				case 0x1D: // NEW 
+					*(signed char *)(vpage + zero) = 0 ;
+					break ;
+
+				case 0x1E: // RENUMBER
+					clear () ;
+					lrange (tmp, &lo, &hi) ;
+					if (lo == 0) lo = 10 ;
+					if (hi == 0xFFFF) hi = 10 ;
+					if (hi == 0) hi = 10 ;
+					esi = vpage + zero ;
+					n = 0 ;
+					while (*esi)
+					    {
+						*(unsigned short *)(lomem + zero + 2*n) = 
+						*(unsigned short *)(esi + 1) ;
+						esi += *(unsigned char *)esi ;
+						n++ ;
+					    }
+					if ((lo + n*hi - hi) >= 65535) error (20, NULL) ; 
+					esi = vpage + zero ;
+					lino = lo ;
+					while (*esi)
+					    {
+						unsigned char c = *(unsigned char *)esi ;
+						*(unsigned short *)(esi + 1) = lino ;
+						if (memchr (esi + 3, TLINO, c - 4))
+							fixup (esi, n, lo, hi) ;
+						lino += hi ;
+						esi += c ;
+					    }
+					break ;
+
+				case 0x1F: // SAVE
+					clear () ;
+					ossave (tmp, vpage + zero, gettop (vpage + zero, NULL) -
+						(signed char *) (vpage + zero) + 3) ;
+					break ;
+
+				default:
+					prompt = NULL ;
+			    }
+		    }
+
 		esi = (signed char *) buffer ;
 	    }
 	xeq () ;

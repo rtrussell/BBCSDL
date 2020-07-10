@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2000-2020                    *
 *                                                                 *
 *       BBCDAT.S RAM data definitions                             *
-*       Version 1.13a, 15-May-2020                                *
+*       Version 1.14a, 25-Jun-2020                                *
 \*****************************************************************/
 
 .equ	MAX_PORTS,4
@@ -36,6 +36,7 @@
 .global _vwidth
 .global _errnum
 .global _liston
+.global _lstopt
 .global _tmps
 
 .global _path
@@ -216,7 +217,7 @@ _prand:
 _random:.fill	5,1,0		/* Current 'random' number (5 bytes) */
 _vwidth:.byte	0		/* Current value of WIDTH */
 _errnum:.byte	0		/* Error code of last error */
-_liston:.byte	0		/* Current LISTO / OPT value */
+_liston:.byte	0		/* *FLOAT/*HEX/*LOWERCASE/OPT */
 
 /* Variables used by OS-specific modules (bbcmos, bbccli, bbcvdu, bbcvtx) */
 
@@ -228,7 +229,7 @@ _keybdq:.long	0		/* Pointer to keyboard queue */
 _keyptr:.long	0		/* Pointer to *KEY string */
 	.long	0		/* 64-bit pointer */
 
-	.byte	0		/* Unused (was cmcflg) */
+_lstopt:.byte	0		/* LISTO value (indentation) */
 _sclflg:.byte	0		/* Scroll flag (COPY key) */
 _optval:.byte	0		/* *OUTPUT and *INPUT values */
 

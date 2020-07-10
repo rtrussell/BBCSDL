@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (32-bits or 64-bits)                 *
-*       Copyright (c) R. T. Russell, 2000-2019                     *
+*       Copyright (c) R. T. Russell, 2000-2020                     *
 *                                                                  *
 *       BBC.h constant, variable and structure declarations        *
-*       Version 1.08a, 21-Nov-2019                                 *
+*       Version 1.14a, 25-Jun-2020                                 *
 \******************************************************************/
 
 // Constants:
@@ -323,6 +323,7 @@ extern heapptr proptr[] ;	// Pointer to user PROCedures
 extern node *flist[] ;		// String free-lists
 extern STR tmps ;		// Temporary string descriptor
 extern unsigned char liston ;	// *FLOAT/*HEX/*LOWERCASE/OPT
+extern unsigned char lstopt ;	// LISTO value (indentation)
 extern unsigned int count ;     // Character count since newline
 extern unsigned char vwidth ;	// Width for auto-newline
 extern int link00 ;		// Terminating link in @ list

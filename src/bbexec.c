@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.09a, 11-Jan-2020                                *
+*       Version 1.14a, 03-Jul-2020                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -1129,6 +1129,7 @@ void procfn (signed char flag)
 		*--esp = FNCHK ;
 	else
 		*--esp = PROCHK ;
+	check () ;
 
 	if (nxt () == '(')
 	    {

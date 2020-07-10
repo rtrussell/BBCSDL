@@ -3,7 +3,7 @@
 ;*       Copyright (c) R. T. Russell, 2000-2020                    *
 ;*                                                                 *
 ;*       BBCDATA.NAS RAM data definitions                          *
-;*       Version 1.13a, 15-May-2020                                *
+;*       Version 1.14a, 25-Jun-2020                                *
 ;\*****************************************************************/
 ;
 MAX_PORTS       EQU     4       ; Maximum number of i/o ports
@@ -34,7 +34,7 @@ SOUNDQL         EQU     5*SOUNDQE ; Number of bytes per channel
 	GLOBAL	hwndProg,zoom,offsetx,offsety,platform
 	GLOBAL	memhdc,reflag,sysflg,panx,pany
 	GLOBAL	prntx,prnty,prchx,prchy,cursx
-	GLOBAL	paperl,paperr,papert,paperb
+	GLOBAL	paperl,paperr,papert,paperb,lstopt
 ;
 	GLOBAL	datend,sysvar,bbcfont,lastick,link00
 	GLOBAL	cmdlen,cmdadr,dirlen,diradr,liblen,libadr
@@ -94,7 +94,7 @@ prand:
 random:	times 5 db 0		; Current 'random' number (5 bytes)
 vwidth:	db	0		; Current value of WIDTH
 errnum:	db	0		; Error code of last error
-liston:	db	0		; Current LISTO / OPT value
+liston:	db	0		; *FLOAT/*HEX/*LOWERCASE/OPT
 ;
 ;Variables used by OS-specific modules (bbcmos, bbccli, bbcvdu, bbcvtx)
 ;
@@ -106,7 +106,7 @@ keybdq:	dd	0		; Pointer to keyboard queue
 keyptr:	dd	0		; Pointer to *KEY string
 	dd	0		; 64-bit pointer
 ;
-	db	0		; Unused (was cmcflg)
+lstopt:	db	0		; LISTO value (indentation)
 sclflg:	db	0		; Scroll flag (COPY key)
 optval:	db	0		; *OUTPUT and *INPUT values
 ;

@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCMOS.C  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.13a, 02-Jun-2020                                *
+*       Version 1.14a, 09-Jul-2020                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -867,16 +867,6 @@ static float harms[8][9] = {
 // Forward reference:
 void quiet (void) ;
 
-// Prepare for outputting an error message:
-void reset (void)
-{
-	vduq[10] = 0 ;	// Flush VDU queue
-	keyexp = 0 ;	// Cancel *KEY expansion
-	optval = 0 ;	// Cancel I/O redirection
-	reflag = 0 ;	// *REFRESH ON
-	quiet () ;
- }
-
 // Push event onto queue:
 void pushev (int code, void *data1, void *data2)
 {
@@ -1094,6 +1084,12 @@ void trap (void)
 		if (flags & ESCFLG)
 		    {
 			flags &= ~ESCFLG ;
+			kbdqr = kbdqw ;
+			if (exchan)
+			    {
+				SDL_RWclose (exchan) ;
+ 				exchan = NULL ;
+			    }
 			error (17, NULL) ; // 'Escape'
 		    }
 }
@@ -1106,6 +1102,12 @@ heapptr xtrap (void)
 		if (flags & ESCFLG)
 		    {
 			flags &= ~ESCFLG ;
+			kbdqr = kbdqw ;
+			if (exchan)
+			    {
+				SDL_RWclose (exchan) ;
+ 				exchan = NULL ;
+			    }
 			error (17, NULL) ; // 'Escape'
 		    }
 		if (flags & ALERT)
@@ -1272,6 +1274,17 @@ void oswrch (unsigned char vdu)
 		getcsr(NULL, NULL) ; // thread sync after possible UTF8 change
 }
 
+// Prepare for outputting an error message:
+void reset (void)
+{
+	vduq[10] = 0 ;	// Flush VDU queue
+	keyexp = 0 ;	// Cancel *KEY expansion
+	optval = 0 ;	// Cancel I/O redirection
+	reflag = 0 ;	// *REFRESH ON
+	oswrch (6) ;	// Enable VDU drivers
+	quiet () ;
+ }
+
 unsigned char copykey (int *cc, int key)
 {
 	pushev (EVT_COPYKEY, cc, (void *)(intptr_t) key) ;
@@ -1305,7 +1318,7 @@ void osline (char *buffer)
 				if (p > buffer)
 				    {
 					char *q = p ;
-					do p-- ; while ((vflags & UTF8) && (*p < -64)) ;
+					do p-- ; while ((vflags & UTF8) && (*(signed char*)p < -64)) ;
 					oswrch (8) ;
 					memmove (p, q, buffer + 256 - q) ;
 				    }
@@ -1315,7 +1328,7 @@ void osline (char *buffer)
 				while (p > buffer)
 				    {
 					oswrch (8) ;
-					do p-- ; while ((vflags & UTF8) && (*p < -64)) ;
+					do p-- ; while ((vflags & UTF8) && (*(signed char*)p < -64)) ;
 				    }
 				break ;
 
@@ -1323,7 +1336,7 @@ void osline (char *buffer)
 				while (*p != 0x0D)
 				    {
 					oswrch (9) ;
-					do p++ ; while ((vflags & UTF8) && (*p < -64)) ;
+					do p++ ; while ((vflags & UTF8) && (*(signed char*)p < -64)) ;
 				    }
 				break ;
 
@@ -1331,7 +1344,7 @@ void osline (char *buffer)
 				if (*p != 0x0D)
 				    {
 					char *q = p ;
-					do q++ ; while ((vflags & UTF8) && (*q < -64)) ;
+					do q++ ; while ((vflags & UTF8) && (*(signed char*)q < -64)) ;
 					memmove (p, q, buffer + 256 - q) ;
 				    }
 				break ;
@@ -1340,7 +1353,7 @@ void osline (char *buffer)
 				if (p > buffer)
 				    {
 					oswrch (8) ;
-					do p-- ; while ((vflags & UTF8) && (*p < -64)) ;
+					do p-- ; while ((vflags & UTF8) && (*(signed char*)p < -64)) ;
 				    }
 				break ;
 
@@ -1348,7 +1361,7 @@ void osline (char *buffer)
 				if (*p != 0x0D)
 				    {
 					oswrch (9) ;
-					do p++ ; while ((vflags & UTF8) && (*p < -64)) ;
+					do p++ ; while ((vflags & UTF8) && (*(signed char*)p < -64)) ;
 				    }
 				break ;
 
@@ -1414,7 +1427,8 @@ void osline (char *buffer)
 						if ((*p != 0x0D) && (vflags & IOFLAG) && (queue == 0))
 						    {
 							char *q = p ;
-							do q++ ; while ((vflags & UTF8) && (*q < -64)) ;
+							do q++ ; while ((vflags & UTF8) &&
+								(*(signed char*)q < -64)) ;
 							memmove (p, q, buffer + 256 - q) ;
 						    }
 					    }
@@ -1436,7 +1450,7 @@ void osline (char *buffer)
 			oswrch (8) ;
 			while (n)
 			    {
-				if (!(vflags & UTF8) || (*p >= -64))
+				if (!(vflags & UTF8) || (*(signed char*)p >= -64))
 					oswrch (8) ;
 				p-- ;
 				n-- ;
@@ -1453,7 +1467,7 @@ void osline (char *buffer)
 // Get TIME
 int getime (void)
 {
-	int n = SDL_GetTicks () ;
+	unsigned int n = SDL_GetTicks () ;
 	if (n < lastick)
 		timoff += 0x19999999 ;
 	lastick = n ;
@@ -1599,6 +1613,8 @@ int oscall (int addr)
 			return 0 ;
 
 		case 0xFFF4: // OSBYTE
+			if (al == 129)
+				return oskey (stavar[24] | stavar[25] << 8) << 8 ;
 			return (vgetc (0x80000000, 0x80000000) << 8) ;
 
 		case 0xFFF7: // OSCLI
@@ -2003,6 +2019,22 @@ void osload (char *p, void *addr, int max)
 	SDL_RWclose (file) ;
 	if (n == 0)
 		error (189, SDL_GetError()) ;
+}
+
+// Save a file from memory:
+void ossave (char *p, void *addr, int len)
+{
+	int n ;
+	SDL_RWops *file ;
+	if (NULL == setup (path, p, ".bbc", '\0', NULL))
+		error (253, "Bad string") ;
+	file = SDL_RWFromFile (path, "w+b") ;
+	if (file == NULL)
+		error (214, "Couldn't create file") ;
+	n = SDL_RWwrite(file, addr, 1, len) ;
+	SDL_RWclose (file) ;
+	if (n < len)
+		error (189, SDL_GetError ()) ;
 }
 
 // Open a file:

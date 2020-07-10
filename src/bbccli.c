@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
-*       Version 1.13a, 02-Jun-2020                                *
+*       Version 1.14a, 25-Jun-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -37,7 +37,7 @@ Uint32 UserTimerCallback(Uint32, void *) ;
 void crlf (void) ;
 void outchr (unsigned char) ;
 void text (const char*) ;
-void listline (signed char*) ;
+void listline (signed char*, int*) ;
 void quiet (void) ;
 void getcsr (int*, int*) ;
 
@@ -627,6 +627,7 @@ void oscli (char *cmd)
 		srcfile = SDL_RWFromFile (path, "rb") ;
 		if (srcfile == NULL)
 			error (214, "File or path not found") ;
+		b = 0 ;
 		while (1)
 		    {
 			unsigned char al ;
@@ -640,7 +641,8 @@ void oscli (char *cmd)
 			if (n && al)
 			    {
 				SDL_RWread (srcfile, path2, 1, al - 1) ;
-				listline ((signed char *)path2) ;
+				listline ((signed char *)path2, &b) ;
+				crlf () ;
 			    }
 			else
 				break ;

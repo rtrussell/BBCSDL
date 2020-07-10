@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2020                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.13a, 02-Jun-2020                                 *
+*       Version 1.14a, 19-Jun-2020                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -1421,8 +1421,9 @@ while (running)
 					break ;
 
 					case SDL_WINDOWEVENT_RESIZED :
-					putevt (siztrp, WM_SIZE, ev.window.windowID,
-					  (ev.window.data2 << 16) | ev.window.data1) ;
+					if (ev.window.data1 && ev.window.data2)
+					    putevt (siztrp, WM_SIZE, ev.window.windowID,
+						(ev.window.data2 << 16) | ev.window.data1) ;
 					break ;
 				}
 				flags |= ALERT ;
