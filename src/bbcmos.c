@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCMOS.C  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.14a, 09-Jul-2020                                *
+*       Version 1.14a, 25-Jul-2020                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -867,6 +867,15 @@ static float harms[8][9] = {
 // Forward reference:
 void quiet (void) ;
 
+// Prepare for outputting an error message:
+void reset (void)
+{
+	vduq[10] = 0 ;	// Flush VDU queue
+	keyexp = 0 ;	// Cancel *KEY expansion
+	optval = 0 ;	// Cancel I/O redirection
+	reflag = 0 ;	// *REFRESH ON
+ }
+
 // Push event onto queue:
 void pushev (int code, void *data1, void *data2)
 {
@@ -1031,7 +1040,7 @@ int vgetc (int x, int y)
 }
 
 // Enable on-screen keyboard (Android):
-void oskon (void)
+static void oskon (void)
 {
 #if defined(__ANDROID__) || defined(__IPHONEOS__)
 	pushev (EVT_OSK, (void *) 1, NULL) ;
@@ -1085,6 +1094,7 @@ void trap (void)
 		    {
 			flags &= ~ESCFLG ;
 			kbdqr = kbdqw ;
+			quiet () ;
 			if (exchan)
 			    {
 				SDL_RWclose (exchan) ;
@@ -1103,6 +1113,7 @@ heapptr xtrap (void)
 		    {
 			flags &= ~ESCFLG ;
 			kbdqr = kbdqw ;
+			quiet () ;
 			if (exchan)
 			    {
 				SDL_RWclose (exchan) ;
@@ -1274,18 +1285,7 @@ void oswrch (unsigned char vdu)
 		getcsr(NULL, NULL) ; // thread sync after possible UTF8 change
 }
 
-// Prepare for outputting an error message:
-void reset (void)
-{
-	vduq[10] = 0 ;	// Flush VDU queue
-	keyexp = 0 ;	// Cancel *KEY expansion
-	optval = 0 ;	// Cancel I/O redirection
-	reflag = 0 ;	// *REFRESH ON
-	oswrch (6) ;	// Enable VDU drivers
-	quiet () ;
- }
-
-unsigned char copykey (int *cc, int key)
+static unsigned char copykey (int *cc, int key)
 {
 	pushev (EVT_COPYKEY, cc, (void *)(intptr_t) key) ;
 	return (unsigned char) waitev () ;
@@ -1294,6 +1294,7 @@ unsigned char copykey (int *cc, int key)
 // Input and edit a string :
 void osline (char *buffer)
 {
+	char *eol = buffer ;
 	char *p = buffer ;
 	*buffer = 0x0D ;
 	int cc = -1 ; // Copy key
@@ -1316,6 +1317,16 @@ void osline (char *buffer)
 			case 8:
 			case 127:
 				if (p > buffer)
+				    {
+					char *q = p ;
+					do p-- ; while ((vflags & UTF8) && (*(signed char*)p < -64)) ;
+					oswrch (8) ;
+					memmove (p, q, buffer + 256 - q) ;
+				    }
+				break ;
+
+			case 21:
+				while (p > buffer)
 				    {
 					char *q = p ;
 					do p-- ; while ((vflags & UTF8) && (*(signed char*)p < -64)) ;
@@ -1371,6 +1382,11 @@ void osline (char *buffer)
 				copykey (&cc, 0) ;
 				copykey (&cc, key) ;
 				copykey (&cc, 32) ;
+				if (*p == 0x0D)
+				    {
+					oswrch (32) ;
+					oswrch (8) ;
+				    }
 				break ;
 
 			case 155:
@@ -1437,6 +1453,7 @@ void osline (char *buffer)
 
 		if (queue == 0)
 		    {
+			int i ;
 			oswrch (23) ;
 			oswrch (1) ;
 			for (n = 8 ; n != 0 ; n--)
@@ -1446,8 +1463,11 @@ void osline (char *buffer)
 				oswrch (*p++) ;
 				n++ ;
 			    }
-			oswrch (32) ;
-			oswrch (8) ;
+			for (i = 0; i < (eol - p); i++)
+				oswrch (32) ;
+			for (i = 0; i < (eol - p); i++)
+				oswrch (8) ;
+			eol = p ;
 			while (n)
 			    {
 				if (!(vflags & UTF8) || (*(signed char*)p >= -64))
@@ -1578,6 +1598,26 @@ size_t guicall (void *func, PARM *parm)
 	return waitev () ;
 }
 
+int osbyte (int al, int xy)
+{
+	if (al == 129)
+		return (oskey (xy) << 8) + 129 ;
+	return ((vgetc (0x80000000, 0x80000000) << 8) + 135) ;
+}
+
+void osword (int al, void *xy)
+{
+	if (al == 139)
+		memcpy (xy + 4, &ttxtfont[*(unsigned char*)(xy + 2) * 20], 40) ;
+	else if (al == 140)
+	    {
+		pushev (EVT_OSWORD, (void *)140, xy) ;
+		waitev () ;
+	    }
+	else
+		memcpy (xy + 1, &bbcfont[*(unsigned char*)(xy) << 3], 8) ;
+}
+
 // Call an emulated OS subroutine (if CALL or USR to an address < 0x10000)
 int oscall (int addr)
 {
@@ -1601,21 +1641,11 @@ int oscall (int addr)
 			return 0 ;
 
 		case 0xFFF1: // OSWORD
-			if (al == 139)
-				memcpy (xy + 4, &ttxtfont[*(unsigned char*)(xy + 2) * 20], 40) ;
-			else if (al == 140)
-			    {
-				pushev (EVT_OSWORD, (void *)140, xy) ;
-				waitev () ;
-			    }
-			else
-				memcpy (xy + 1, &bbcfont[*(unsigned char*)(xy) << 3], 8) ;
+			osword (al, xy) ;
 			return 0 ;
 
 		case 0xFFF4: // OSBYTE
-			if (al == 129)
-				return oskey (stavar[24] | stavar[25] << 8) << 8 ;
-			return (vgetc (0x80000000, 0x80000000) << 8) ;
+			return osbyte (al, stavar[24] | stavar[25] << 8) ;
 
 		case 0xFFF7: // OSCLI
 			oscli (xy) ;
@@ -1754,7 +1784,7 @@ void quiet (void)
 }
 
 // Process note(s) from sound queue:
-unsigned char note (unsigned char mask)
+static unsigned char note (unsigned char mask)
 {
 	unsigned char al ;
 	unsigned char ch ;
@@ -1813,7 +1843,7 @@ unsigned char note (unsigned char mask)
 }
 
 // Synthesise sound waveform:
-void tone (short **pbuffer)
+static void tone (short **pbuffer)
 {
 	int i, ch ;
 	short *buffer ;

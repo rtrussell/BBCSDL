@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
-*       Version 1.14a, 25-Jun-2020                                *
+*       Version 1.14a, 22-Jul-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -20,7 +20,7 @@
 #include "SDL_stbimage.h"
 
 #undef MAX_PATH
-#define NCMDS 50	// number of OSCLI commands
+#define NCMDS 51	// number of OSCLI commands
 #define POWR2 32	// largest power-of-2 less than NCMDS
 #define COPYBUFLEN 4096	// length of buffer used for *COPY command
 #define _S_IWRITE 0x0080
@@ -43,7 +43,7 @@ void getcsr (int*, int*) ;
 
 static char *cmds[NCMDS] = {
 		"bye", "cd", "chdir", "copy", "del", "delete", "dir", "display",
-		"ega", "era", "erase", "esc", "exec", "float", "font", "fx",
+		"dump", "ega", "era", "erase", "esc", "exec", "float", "font", "fx",
 		"gsave", "help", "hex", "input", "key", "list", "load", "lock", "lowercase",
 		"md", "mdisplay", "mkdir", "noega", "osk", "output", "quit", "rd", "refresh",
 		"ren", "rename", "rmdir", "run", "save", "screensave", "spool", "spoolon",
@@ -51,7 +51,7 @@ static char *cmds[NCMDS] = {
 
 enum {
 		BYE, CD, CHDIR, COPY, DEL, DELETE, DIRCMD, DISPLAY,
-		EGA, ERA, ERASE, ESC, EXEC, FLOAT, FONT, FX,
+		DUMP, EGA, ERA, ERASE, ESC, EXEC, FLOAT, FONT, FX,
 		GSAVE, HELP, HEX, INPUT, KEY, LIST, LOAD, LOCK, LOWERCASE,
 		MD, MDISPLAY, MKDIR, NOEGA, OSK, OUTPUT, QUIT, RD, REFRESH,
 		REN, RENAME, RMDIR, RUN, SAVE, SCREENSAVE, SPOOL, SPOOLON,
@@ -268,670 +268,708 @@ void oscli (char *cmd)
 	while (*p == ' ') p++ ;		// Skip leading spaces
 
 	switch (b)
-	{
-	case BYE:			// *BYE
-	case QUIT:			// *QUIT
-		error (-1, NULL) ;
+	    {
+		case BYE:			// *BYE
+		case QUIT:			// *QUIT
+			error (-1, NULL) ;
 
-	case CD:			// *CD [directory]
-	case CHDIR:			// *CHDIR [directory]
-		setup (path, p, "", ' ', &flag) ;
-		if (flag == 0)
-		{
-			getcwd (path, MAX_PATH) ;
-			text (path) ;
-			crlf () ;
-			return ;
-		}
-		if (chdir (path))
-			error (206, "Bad directory") ;
-		return ;
-
-	case COPY:			// *COPY oldfile newfile
-		p = setup (path, p, ".bbc", ' ', NULL) ;
-		srcfile = SDL_RWFromFile (path, "rb") ;
-		if (srcfile == NULL)
-			error (214, "File or path not found") ;
-		setup (path, p, ".bbc", ' ', NULL) ;
-		dstfile = SDL_RWFromFile (path, "wb") ;
-		if (dstfile == NULL)
-		{
-			SDL_RWclose (srcfile) ;
-			error (189, SDL_GetError ()) ;	// SDL error
-		}
-		p = malloc (COPYBUFLEN) ;
-		do
-		{
-			n = SDL_RWread (srcfile, p, 1, COPYBUFLEN) ;
-			if (n == 0)
-				break ;
-		}
-		while (SDL_RWwrite (dstfile, p, 1, n)) ;
-		free (p) ;
-		SDL_RWclose (srcfile) ;
-		SDL_RWclose (dstfile) ;
-		if (n)
-			error (189, SDL_GetError ()) ;
-		return ;
-
-	case DEL:			// *DEL filename
-	case DELETE:			// *DELETE filename
-	case ERA:			// *ERA filename
-	case ERASE:			// *ERASE filename
-		setup (path, p, ".bbc", ' ', NULL) ;
-		if (remove (path))
-			error (254, "Bad command") ;	// Bad command
-		return ;
-
-	case DIRCMD:
-		setup (path, p, ".bbc", ' ', &flag) ;
-		if ((flag & BIT0) == 0)
-			strcat (path, "*.bbc") ;
-		if (flag & BIT1)
-		{
-			p = path + strlen (path) ;
-			q = path ;
-			while ((*p != '/') && (*p != '\\')) p-- ;
-			if ((p == path) || (*(p - 1) == ':'))
-			{
-				dd = 0 ;
-				*++p = 0 ;	// root
-			}
-			else
-			{
-				dd = *p ;
-				*p++ = 0 ;	// not root
-			}
-		}
-		else
-		{
-			getcwd (path2, MAX_PATH) ;
-#ifdef __WINDOWS__
-			dd = '\\' ;
-#else
-			dd = '/' ;
-#endif
-			p = path ;
-			q = path2 ;
-		}
-		text ("Directory of ") ;
-		text (q) ;
-		outchr (dd) ;
-		text (p) ;
-		crlf () ;
-
-		d = opendir (q) ;
-		if (d == NULL)
-			error (254, "Bad command") ;
-
-		while (1)
-		{
-			if (flags & (ESCFLG | KILL))
-			{
-				closedir (d) ;
-				crlf () ;
-				trap () ;
-			}
-			struct dirent *r = readdir (d) ;
-			if (r == NULL)
-				break ;
-			if (!wild (p, r -> d_name))
-				continue ;
-			outchr (' ') ;
-			outchr (' ') ;
-			text (r -> d_name) ;
-			do
-				outchr (' ') ;
-			while ( (count != 0) && (count != 20) &&
-				(count != 40) && (count < 60)) ;
-			if (count > 60)
-				crlf () ;
-		}
-		closedir (d) ;
-		crlf () ;
-		return ;
-
-	case DISPLAY:		// *DISPLAY bmpfile [xpos,ypos[,width,height[,keycol]]]
-		{
-			int col = 0 ;
-			SDL_Rect rect = {0, 0, 0, 0} ;
-			SDL_Surface *bmp ;
-
-			p = setup (path, p, ".bmp", ' ', NULL) ;
-
-			p += cpy - cmd ;
-			sscanf (p, "%i, %i, %i, %i, %x",
-				&rect.x, &rect.y, &rect.w, &rect.h, &col) ;
-			if ((rect.h == 0) && (col == 0))
+		case CD:			// *CD [directory]
+		case CHDIR:			// *CHDIR [directory]
+			setup (path, p, "", ' ', &flag) ;
+			if (flag == 0)
 			    {
-				rect.w = 0 ;
-				sscanf (p, "%i, %i, %x", &rect.x, &rect.y, &col) ;
+				getcwd (path, MAX_PATH) ;
+				text (path) ;
+				crlf () ;
+				return ;
 			    }
-			rect.w /= 2 ;
-			rect.h /= 2 ;
+			if (chdir (path))
+				error (206, "Bad directory") ;
+			return ;
 
+		case COPY:			// *COPY oldfile newfile
+			p = setup (path, p, ".bbc", ' ', NULL) ;
 			srcfile = SDL_RWFromFile (path, "rb") ;
-			if (srcfile == 0)
+			if (srcfile == NULL)
 				error (214, "File or path not found") ;
-			bmp = SDL_LoadBMP_RW (srcfile, 0) ;
-			if (bmp)
-				SDL_RWclose (srcfile) ;
-			else
-				bmp = STBIMG_Load_RW (srcfile, 1) ;
-			if (bmp == NULL)
-				error (189, SDL_GetError ()) ;
-			if (col)
-				SDL_SetColorKey (bmp, 1, col) ;
-
-			pushev (EVT_DISPLAY, &rect, bmp) ;
-			if (0 == waitev ())
-				error (189, SDL_GetError ()) ;
-			return ;
-		}
-
-	case EGA:
-		vflags |= CGAFLG ;
-		if (onoff (p))
-			vflags |= EGAFLG ;
-		else
-			vflags &= ~EGAFLG ;
-		return ;
-
-	case ESC:
-		if (onoff (p))
-			flags &= ~ESCDIS ;
-		else
-			flags |= ESCDIS ;
-		return ;
-
-	case EXEC:
-		if (exchan)
-		{
-			SDL_RWclose (exchan) ;
-			exchan = NULL ;
-		}
-		setup (path, p, ".bbc", ' ', NULL) ;
-		if (*path == 0)
-			return ;
-		exchan = SDL_RWFromFile (path, "rb") ;
-		if (exchan == NULL)
-			error (214, "File or path not found") ;
-		return ;
-
-	case FLOAT:
-		n = 0 ;
-		sscanf (p, "%i", &n) ;
-		switch (n)
-		{
-		case 40:
-			liston &= ~(BIT0 + BIT1) ;
-			break ;
-		case 64:
-			liston &= ~BIT1 ;
-			liston |= BIT0 ;
-			break ;
-		case 80:
-#if defined __arm__ || defined __aarch64__
-			error (255, "Unsupported") ;
-#else
-			liston |= (BIT0 + BIT1) ;
-#endif
-			break ;
-		default:
-			error (254, "Bad command") ;
-		}
-		return ;
-
-	case FONT:			// *FONT [filename,[size[,BIQU]]]
-		{
-			int size = 0, style = 0 ;
-			unsigned char attr = 0 ;
-			unsigned char flag ;
-			p = setup (path, p, ".ttf", ' ', &flag) ;
-			if (*p == ',') p++ ;
-			if (*p != 0x0D)
-				size = (strtol (p, &p, 10) * 21845 + 8192) >> 14 ;
-			if ((size == 0) && flag) size = abs (chary) ;
-			while (*p == ' ') p++ ;
-			if (*p == ',') p++ ;
-			while (*p != 0x0D) attr |= *p++ ;
-			if ((attr & BIT2) && (attr & BIT4))
-				style |= TTF_STYLE_UNDERLINE ;
-			if ((attr & BIT4) && !(attr & BIT2))
-				style |= TTF_STYLE_STRIKETHROUGH ;
-			if (attr & BIT3)
-				style |= TTF_STYLE_ITALIC ;
-			if (attr & BIT1)
-				style |= TTF_STYLE_BOLD ;
-			pushev (EVT_FONT, path, (void *)(intptr_t)((style << 16) | size)) ;
-			if ((waitev() == 0) && (size != 0))
-				error (246, "No such font") ;
-		return ;
-		}
-
-	case FX:
-		n = 0 ; b = 0 ;
-		sscanf (p, "%i,%i", &n, &b) ;
-		if (n == 15)
-		    {
-			if (b == 0)
-				quiet () ;
-			kbdqr = kbdqw ;
-		    }
-		else if (n == 21)
-		    {
-			if (b == 0)
-				kbdqr = kbdqw ;
-			else if ((b >= 4) && (b <= 7))
-			    {
-				sndqw[b - 4] = 0 ;
-				sndqr[b - 4] = 0 ;
-				eenvel[b - 4] = 0 ;
-			    }
-		    }
-		return ;
-
-	case GSAVE:			// *GSAVE bmpfile [xpos,ypos[,width,height]]
-	case SCREENSAVE:
-		{
-			int bfSize ;
-			SDL_Rect rect = {0, 0, 0, 0} ;
-
-			p = setup (path, p, ".bmp", ' ', NULL) ;
-
-			p += cpy - cmd ;
-			sscanf (p, "%i, %i, %i, %i",
-				&rect.x, &rect.y, &rect.w, &rect.h) ;
-			rect.w /= 2 ;
-			rect.h /= 2 ;
-
-			if ((rect.w == 0) || (rect.h == 0))
-			{
-				getcsr (NULL, NULL) ;
-				rect.w = sizex ;
-				rect.h = sizey ;
-			}
-
-			bfSize = rect.h * ((rect.w * 3 + 3) & -4) + 14 + 40 ;
-			p = malloc (bfSize) ;
-			if (p == NULL)
-				error (254, "Bad command") ;
-			memset (p, 0, 54) ;
-			* (short*) p = 0x4D42 ;		// bfType = 'BM'
-			* (int*) (p + 2) = bfSize ;	// bfSize
-			* (int*) (p + 10) = 54 ;	// bfOffBits
-			* (int*) (p + 14) = 40 ;	// biSize
-			* (int*) (p + 18) = rect.w ;	// biWidth
-			* (int*) (p + 22) = rect.h ;	// biHeight (bottom-up)
-			* (short*) (p + 26) = 1 ;	// biPlanes
-			* (short*) (p + 28) = 24 ;	// biBitCount
-
-			pushev (EVT_PIXELS, &rect, p + 54) ;
-			waitev () ;
-
+			setup (path, p, ".bbc", ' ', NULL) ;
 			dstfile = SDL_RWFromFile (path, "wb") ;
 			if (dstfile == NULL)
-			{
-				free (p) ;
-				error (189, SDL_GetError ()) ;
-			}
-			n = SDL_RWwrite (dstfile, p, 1, bfSize) ;
+			    {
+				SDL_RWclose (srcfile) ;
+				error (189, SDL_GetError ()) ;	// SDL error
+			    }
+			p = malloc (COPYBUFLEN) ;
+			do
+			    {
+				n = SDL_RWread (srcfile, p, 1, COPYBUFLEN) ;
+				if (n == 0)
+					break ;
+			    }
+			while (SDL_RWwrite (dstfile, p, 1, n)) ;
 			free (p) ;
-			if (n != bfSize)
-				error (189, SDL_GetError ()) ;
+			SDL_RWclose (srcfile) ;
 			SDL_RWclose (dstfile) ;
+			if (n)
+				error (189, SDL_GetError ()) ;
 			return ;
-		}
 
-	case HELP:
-			text (szVersion) ;
+		case DEL:			// *DEL filename
+		case DELETE:			// *DELETE filename
+		case ERA:			// *ERA filename
+		case ERASE:			// *ERASE filename
+			setup (path, p, ".bbc", ' ', NULL) ;
+			if (remove (path))
+				error (254, "Bad command") ;	// Bad command
+			return ;
+
+		case DIRCMD:
+			setup (path, p, ".bbc", ' ', &flag) ;
+			if ((flag & BIT0) == 0)
+				strcat (path, "*.bbc") ;
+			if (flag & BIT1)
+			    {
+				p = path + strlen (path) ;
+				q = path ;
+				while ((*p != '/') && (*p != '\\')) p-- ;
+				if ((p == path) || (*(p - 1) == ':'))
+				    {
+					dd = 0 ;
+					*++p = 0 ;	// root
+				    }
+				else
+				    {
+					dd = *p ;
+					*p++ = 0 ;	// not root
+				    }
+			    }
+			else
+			    {
+				getcwd (path2, MAX_PATH) ;
+#ifdef __WINDOWS__
+				dd = '\\' ;
+#else
+				dd = '/' ;
+#endif
+				p = path ;
+				q = path2 ;
+			    }
+			text ("Directory of ") ;
+			text (q) ;
+			outchr (dd) ;
+			text (p) ;
+			crlf () ;
+
+			d = opendir (q) ;
+			if (d == NULL)
+				error (254, "Bad command") ;
+
+			while (1)
+			    {
+				if (flags & (ESCFLG | KILL))
+				    {
+					closedir (d) ;
+					crlf () ;
+					trap () ;
+				    }
+				struct dirent *r = readdir (d) ;
+				if (r == NULL)
+					break ;
+				if (!wild (p, r -> d_name))
+					continue ;
+				outchr (' ') ;
+				outchr (' ') ;
+				text (r -> d_name) ;
+				do
+					outchr (' ') ;
+				while ( (count != 0) && (count != 20) &&
+					(count != 40) && (count < 60)) ;
+				if (count > 60)
+					crlf () ;
+			    }
+			closedir (d) ;
 			crlf () ;
 			return ;
 
-	case HEX:
-		n = 0 ;
-		sscanf (p, "%i", &n) ;
-		switch (n)
-		{
-		case 32:
-			liston &= ~BIT2 ;
-			break ;
-		case 64:
-			liston |= BIT2 ;
-			break ;
-		default:
-			error (254, "Bad command") ;
-		}
-		return ;
-
-	case KEY:
-		n = 0 ;
-		if (*p != 0x0D)
-			n = strtol (p, &p, 10) ;
-		if ((n < 1) || (n > 24))
-			error (251, "Bad key") ;
-		if (*(keystr + n))
-		{
-			free (*(keystr + n)) ;
-			*(keystr + n) = NULL ;
-		}
-		b = parse (NULL, p, 0) ;
-		if (b == 0)
-			return ;
-		*(keystr + n) = malloc (b) ;
-		parse (*(keystr + n), p, 0) ;
-		return ;
-
-	case LIST:
-		setup (path, p, ".bbc", ' ', NULL) ;
-		srcfile = SDL_RWFromFile (path, "rb") ;
-		if (srcfile == NULL)
-			error (214, "File or path not found") ;
-		b = 0 ;
-		while (1)
-		    {
-			unsigned char al ;
-			if (flags & (ESCFLG | KILL))
+		case DISPLAY:		// *DISPLAY bmpfile [xpos,ypos[,width,height[,keycol]]]
 			    {
-				SDL_RWclose (srcfile) ;
-				crlf () ;
-				trap () ;
+				int col = 0 ;
+				SDL_Rect rect = {0, 0, 0, 0} ;
+				SDL_Surface *bmp ;
+
+				p = setup (path, p, ".bmp", ' ', NULL) ;
+
+				p += cpy - cmd ;
+				sscanf (p, "%i, %i, %i, %i, %x",
+					&rect.x, &rect.y, &rect.w, &rect.h, &col) ;
+				if ((rect.h == 0) && (col == 0))
+				    {
+					rect.w = 0 ;
+					sscanf (p, "%i, %i, %x", &rect.x, &rect.y, &col) ;
+				    }
+				rect.w /= 2 ;
+				rect.h /= 2 ;
+
+				srcfile = SDL_RWFromFile (path, "rb") ;
+				if (srcfile == 0)
+					error (214, "File or path not found") ;
+				bmp = SDL_LoadBMP_RW (srcfile, 0) ;
+				if (bmp)
+					SDL_RWclose (srcfile) ;
+				else
+					bmp = STBIMG_Load_RW (srcfile, 1) ;
+				if (bmp == NULL)
+					error (189, SDL_GetError ()) ;
+				if (col)
+					SDL_SetColorKey (bmp, 1, col) ;
+
+				pushev (EVT_DISPLAY, &rect, bmp) ;
+				if (0 == waitev ())
+					error (189, SDL_GetError ()) ;
+				return ;
 			    }
-			n = SDL_RWread (srcfile, &al, 1, 1) ;
-			if (n && al)
-			    {
-				SDL_RWread (srcfile, path2, 1, al - 1) ;
-				listline ((signed char *)path2, &b) ;
-				crlf () ;
-			    }
-			else
-				break ;
-		    } ;
-		SDL_RWclose (srcfile) ;
-		return ;
 
-	case LOAD:		// *LOAD filename hexaddr [+maxlen]
-		p = setup (path, p, ".bbc", ' ', NULL) ;
-		n = 0 ;
-		q = 0 ;
-		if (*p != 0x0D)
-		    {
-			q = (char *) (size_t) strtoll (p, &p, 16) ;
-			while (*p == ' ') p++ ;
-			if (*p == '+')
-				n = strtol (p + 1, &p, 16) ;
-			else
-				n = (char *) (size_t) strtoll (p, &p, 16) - q ;
-		    }
-		if ((n <= 0) && ((q < (char *)userRAM) || (q >= (char *)userTOP)))
-			error (8, NULL) ; // 'Address out of range'
-		if (n <= 0)
-			n = (char *)userTOP - q ;
-		srcfile = SDL_RWFromFile (path, "rb") ;
-		if (srcfile == NULL)
-			error (214, "File or path not found") ;
-		if (0 == SDL_RWread(srcfile, q, 1, n))
-			error (189, SDL_GetError ()) ;
-		SDL_RWclose (srcfile ) ;
-		return ;
-
-	case LOCK:
-		setup (path, p, ".bbc", ' ', NULL) ;
-		if (0 != chmod (path, _S_IREAD))
-			error (254, "Bad command") ;
-		return ;
-
-	case LOWERCASE:
-		if (onoff (p))
-			liston |= BIT3 ;
-		else
-			liston &= ~BIT3 ;
-		return ;
-
-	case MD:
-	case MKDIR:
-		setup (path, p, "", ' ', NULL) ;
-#ifdef __WINDOWS__
-		if (0 != mkdir (path))
-#else
-		if (0 != mkdir (path, 0777))
-#endif
-			error (254, "Bad command") ;
-		return ;
-
-	case MDISPLAY:		// *MDISPLAY hexaddr [xpos,ypos[,width,height[,keycol]]]
-		{
-			int col = 0 ;
-			void *addr = NULL ;
-			SDL_Rect rect = {0, 0, 0, 0} ;
-			SDL_Surface *bmp ;
-
-			p += cpy - cmd ;
-			sscanf (p, "%p %i, %i, %i, %i, %x",
-				&addr, &rect.x, &rect.y, &rect.w, &rect.h, &col) ;
-			if ((rect.h == 0) && (col == 0))
-			    {
-				rect.w = 0 ;
-				sscanf (p, "%x %i, %i, %x", (int*) &addr, &rect.x, &rect.y, &col) ;
-			    }
-			rect.w /= 2 ;
-			rect.h /= 2 ;
-
-			srcfile = SDL_RWFromMem (addr, *(int*)(addr + 2)) ;
-			if (srcfile == 0)
-				error (189, SDL_GetError ()) ;
-			bmp = SDL_LoadBMP_RW (srcfile, 0) ;
-			if (bmp)
-				SDL_RWclose (srcfile) ;
-			else
-				bmp = STBIMG_Load_RW (srcfile, 1) ;
-			if (bmp == NULL)
-				error (189, SDL_GetError ()) ;
-			if (col)
-				SDL_SetColorKey (bmp, 1, col) ;
-
-			pushev (EVT_DISPLAY, &rect, bmp) ;
-			if (0 == waitev ())
-				error (189, SDL_GetError ()) ;
-			return ;
-		}
-
-	case NOEGA:
-		vflags &= ~(CGAFLG + EGAFLG) ;
-		return ;
-
-	case OSK:
-		if (onoff (p))
-			pushev (EVT_OSK, (void *) 1, NULL) ;
-		else
-			pushev (EVT_OSK, NULL, NULL) ;
-		return ;
-
-	case RD:
-	case RMDIR:
-		setup (path, p, "", ' ', NULL) ;
-		if (0 != rmdir (path))
-			error (254, "Bad command") ;
-		return ;
-
-	case REFRESH:
-		while (*p == ' ') p++ ;
-		if (*p != 0x0D)
-		    {
+		case EGA:
+			vflags |= CGAFLG ;
 			if (onoff (p))
-				pushev (EVT_REFLAG, NULL, NULL) ;
+				vflags |= EGAFLG ;
 			else
-				pushev (EVT_REFLAG, (void *)2, NULL) ;
-			waitev () ;
+				vflags &= ~EGAFLG ;
 			return ;
-		    }
-		pushev (EVT_REFLAG, (void *)0x201, NULL) ;
-		waitev () ;
-		while (reflag & 1)
-			SDL_Delay (1) ;
-		return ;
 
-	case REN:
-	case RENAME:
-		p = setup (path, p, ".bbc", ' ', NULL) ;
-		setup (path2, p, ".bbc", ' ', NULL) ;
-		dstfile = SDL_RWFromFile (path2, "rb") ;
-		if (dstfile != NULL)
-		    {
-			SDL_RWclose (dstfile) ;
-			error (196, "File exists") ;
-		    }
-		if (0 != rename (path, path2))
-			error (196, "File exists") ;
-		return ;
-
-	case RUN:
-		strncpy (path, p, MAX_PATH - 1) ;
-		q = memchr (path, 0x0D, MAX_PATH) ;
-		if (q != NULL) *q = 0 ;
-		q = path + strlen (path) - 1 ;
-		if (*q == ';')
-			*q = '&' ;
-#ifdef __IPHONEOS__
-		error (255, "Unsupported") ;
-#else
-		if (0 != system (path))
-			error (254, "Bad command") ;
-#endif
-		return ;
-
-	case SAVE:		// *SAVE filename hexaddr +hexlen
-		p = setup (path, p, ".bbc", ' ', NULL) ;
-		n = 0 ;
-		q = 0 ;
-		if (*p != 0x0D)
-		    {
-			q = (char *) (size_t) strtoll (p, &p, 16) ;
-			while (*p == ' ') p++ ;
-			if (*p == '+')
-				n = strtol (p + 1, &p, 16) ;
+		case ESC:
+			if (onoff (p))
+				flags &= ~ESCDIS ;
 			else
-				n = (char *) (size_t) strtoll (p, &p, 16) - q ;
-		    }
-		if (n <= 0)
-			error (254, "Bad command") ;
-		dstfile = SDL_RWFromFile (path, "wb") ;
-		if (dstfile == NULL)
-			error (189, SDL_GetError ()) ;
-		if (0 == SDL_RWwrite(dstfile, q, 1, n))
-			error (189, SDL_GetError ()) ;
-		SDL_RWclose (dstfile ) ;
-		return ;
-
-	case SPOOL:
-		if (spchan != NULL)
-		    {
-			SDL_RWclose (spchan) ;
-			spchan = NULL ;
-		    }
-		while (*p == ' ') p++ ;
-		if (*p == 0x0D)
+				flags |= ESCDIS ;
 			return ;
-		setup (path, p, ".bbc", ' ', NULL) ;
-		spchan = SDL_RWFromFile (path, "wb") ;
-		if (spchan == NULL)
-			error (189, SDL_GetError ()) ;
-		return ;
 
-	case SPOOLON:
-		if (spchan != NULL)
-		    {
-			SDL_RWclose (spchan) ;
-			spchan = NULL ;
-		    }
-		while (*p == ' ') p++ ;
-		if (*p == 0x0D)
-			return ;
-		setup (path, p, ".bbc", ' ', NULL) ;
-		spchan = SDL_RWFromFile (path, "ab") ;
-		if (spchan == NULL)
-			error (189, SDL_GetError ()) ;
-		return ;
-
-	case STEREO:
-		b = 0 ;
-		n = 0 ;
-		sscanf (p, "%i,%i", &b, &n) ;
-		b &= 3 ;
-		smix[b]     = 0x4000 - (n << 7) ;
-		smix[b + 4] = 0x4000 + (n << 7) ;
-		return ;
-
-	case SYS:
-		n = 0 ;
-		sscanf (p, "%i", &n) ;
-		sysflg = n ;
-		return ;
-
-	case TEMPO:
-		n = 0 ;
-		sscanf (p, "%i", &n) ;
-		if (((n & 0x3F) <= MAX_TEMPO) && ((n & 0x3F) > 0))
-			tempo = n ;
-		return ;
-
-	case TIMER:
-		n = 0 ;
-		sscanf (p, "%i", &n) ;
-		if (n == 0)
-			return ;
-		SDL_RemoveTimer (UserTimerID) ;
-		UserTimerID = SDL_AddTimer (n, UserTimerCallback, 0) ;
-		return ;
-
-	case TV:
-		return ;		// ignored
-
-	case TYPE:
-		setup (path, p, ".bbc", ' ', NULL) ;
-		srcfile = SDL_RWFromFile (path, "rb") ;
-		if (srcfile == NULL)
-			error (214, "File or path not found") ;
-		do
-		    {
-			char ch ;
-			if (flags & (ESCFLG | KILL))
+		case EXEC:
+			if (exchan)
 			    {
-				SDL_RWclose (srcfile) ;
-				crlf () ;
-				trap () ;
+				SDL_RWclose (exchan) ;
+				exchan = NULL ;
 			    }
-			n = SDL_RWread (srcfile, &ch, 1, 1) ;
-			oswrch (ch) ;
-		    }
-		while (n) ;
-		SDL_RWclose (srcfile) ;
-		return ;
+			setup (path, p, ".bbc", ' ', NULL) ;
+			if (*path == 0)
+				return ;
+			exchan = SDL_RWFromFile (path, "rb") ;
+			if (exchan == NULL)
+				error (214, "File or path not found") ;
+			return ;
 
-	case UNLOCK:
-		setup (path, p, ".bbc", ' ', NULL) ;
-		if (0 != chmod (path, _S_IREAD | _S_IWRITE))
-			error (254, "Bad command") ;
-		return ;
+		case FLOAT:
+			n = 0 ;
+			sscanf (p, "%i", &n) ;
+			switch (n)
+			    {
+				case 40:
+					liston &= ~(BIT0 + BIT1) ;
+					break ;
+				case 64:
+					liston &= ~BIT1 ;
+					liston |= BIT0 ;
+					break ;
+				case 80:
+#if defined __arm__ || defined __aarch64__
+					error (255, "Unsupported") ;
+#else
+					liston |= (BIT0 + BIT1) ;
+#endif
+					break ;
+				default:
+					error (254, "Bad command") ;
+			    }
+			return ;
 
-	case VOICE:
-		b = 0 ;
-		n = 0 ;
-		sscanf (p, "%i,%i", &b, &n) ;
-		voices[b & 3] = n & 7 ;
-		return ;
+		case FONT:			// *FONT [filename,[size[,BIQU]]]
+			    {
+				int size = 0, style = 0 ;
+				unsigned char attr = 0 ;
+				unsigned char flag ;
+				p = setup (path, p, ".ttf", ' ', &flag) ;
+				if (*p == ',') p++ ;
+				if (*p != 0x0D)
+					size = (strtol (p, &p, 10) * 21845 + 8192) >> 14 ;
+				if ((size == 0) && flag) size = abs (chary) ;
+				while (*p == ' ') p++ ;
+				if (*p == ',') p++ ;
+				while (*p != 0x0D) attr |= *p++ ;
+				if ((attr & BIT2) && (attr & BIT4))
+					style |= TTF_STYLE_UNDERLINE ;
+				if ((attr & BIT4) && !(attr & BIT2))
+					style |= TTF_STYLE_STRIKETHROUGH ;
+				if (attr & BIT3)
+					style |= TTF_STYLE_ITALIC ;
+				if (attr & BIT1)
+					style |= TTF_STYLE_BOLD ;
+				pushev (EVT_FONT, path, (void *)(intptr_t)((style << 16) | size)) ;
+				if ((waitev() == 0) && (size != 0))
+					error (246, "No such font") ;
+				return ;
+			    }
 
-	case INPUT:
-		n = 0 ;
-		sscanf (p, "%i", &n) ;
-		optval = (optval & 0x0F) | (n << 4) ;
-		return ;
+		case FX:
+			n = 0 ; b = 0 ;
+			sscanf (p, "%i,%i", &n, &b) ;
+			if (n == 15)
+			    {
+				if (b == 0)
+					quiet () ;
+				kbdqr = kbdqw ;
+			    }
+			else if (n == 21)
+			    {
+				if (b == 0)
+					kbdqr = kbdqw ;
+				else if ((b >= 4) && (b <= 7))
+				    {
+					sndqw[b - 4] = 0 ;
+					sndqr[b - 4] = 0 ;
+					eenvel[b - 4] = 0 ;
+				    }
+			    }
+			return ;
 
-	case OUTPUT:
-		n = 0 ;
-		sscanf (p, "%i", &n) ;
-		optval = (optval & 0xF0) | (n & 0x0F) ;
-		return ;
+		case GSAVE:			// *GSAVE bmpfile [xpos,ypos[,width,height]]
+		case SCREENSAVE:
+			    {
+				int bfSize ;
+				SDL_Rect rect = {0, 0, 0, 0} ;
+
+				p = setup (path, p, ".bmp", ' ', NULL) ;
+
+				p += cpy - cmd ;
+				sscanf (p, "%i, %i, %i, %i",
+					&rect.x, &rect.y, &rect.w, &rect.h) ;
+				rect.w /= 2 ;
+				rect.h /= 2 ;
+
+				if ((rect.w == 0) || (rect.h == 0))
+				    {
+					getcsr (NULL, NULL) ;
+					rect.w = sizex ;
+					rect.h = sizey ;
+				    }
+
+				bfSize = rect.h * ((rect.w * 3 + 3) & -4) + 14 + 40 ;
+				p = malloc (bfSize) ;
+				if (p == NULL)
+					error (254, "Bad command") ;
+				memset (p, 0, 54) ;
+				* (short*) p = 0x4D42 ;		// bfType = 'BM'
+				* (int*) (p + 2) = bfSize ;	// bfSize
+				* (int*) (p + 10) = 54 ;	// bfOffBits
+				* (int*) (p + 14) = 40 ;	// biSize
+				* (int*) (p + 18) = rect.w ;	// biWidth
+				* (int*) (p + 22) = rect.h ;	// biHeight (bottom-up)
+				* (short*) (p + 26) = 1 ;	// biPlanes
+				* (short*) (p + 28) = 24 ;	// biBitCount
+
+				pushev (EVT_PIXELS, &rect, p + 54) ;
+				waitev () ;
+
+				dstfile = SDL_RWFromFile (path, "wb") ;
+				if (dstfile == NULL)
+				    {
+					free (p) ;
+					error (189, SDL_GetError ()) ;
+				    }
+				n = SDL_RWwrite (dstfile, p, 1, bfSize) ;
+				free (p) ;
+				if (n != bfSize)
+					error (189, SDL_GetError ()) ;
+				SDL_RWclose (dstfile) ;
+				return ;
+			    }
+
+		case HELP:
+				text (szVersion) ;
+				crlf () ;
+				return ;
+
+		case HEX:
+			n = 0 ;
+			sscanf (p, "%i", &n) ;
+			switch (n)
+			    {
+				case 32:
+					liston &= ~BIT2 ;
+					break ;
+				case 64:
+					liston |= BIT2 ;
+					break ;
+				default:
+					error (254, "Bad command") ;
+			    }
+			return ;
+
+		case KEY:
+			n = 0 ;
+			if (*p != 0x0D)
+				n = strtol (p, &p, 10) ;
+			if ((n < 1) || (n > 24))
+				error (251, "Bad key") ;
+			if (*(keystr + n))
+			    {
+				free (*(keystr + n)) ;
+				*(keystr + n) = NULL ;
+			    }
+			b = parse (NULL, p, 0) ;
+			if (b == 0)
+				return ;
+			*(keystr + n) = malloc (b) ;
+			parse (*(keystr + n), p, 0) ;
+			return ;
+
+		case LIST:
+			setup (path, p, ".bbc", ' ', NULL) ;
+			srcfile = SDL_RWFromFile (path, "rb") ;
+			if (srcfile == NULL)
+				error (214, "File or path not found") ;
+			b = 0 ;
+			while (1)
+			    {
+				unsigned char al ;
+				if (flags & (ESCFLG | KILL))
+				    {
+					SDL_RWclose (srcfile) ;
+					trap () ;
+				    }
+				n = SDL_RWread (srcfile, &al, 1, 1) ;
+				if (n && al)
+				    {
+					SDL_RWread (srcfile, path2, 1, al - 1) ;
+					listline ((signed char *)path2, &b) ;
+					crlf () ;
+				    }
+				else
+					break ;
+			    } ;
+			SDL_RWclose (srcfile) ;
+			return ;
+
+		case LOAD:		// *LOAD filename hexaddr [+maxlen]
+			p = setup (path, p, ".bbc", ' ', NULL) ;
+			n = 0 ;
+			q = 0 ;
+			if (*p != 0x0D)
+			    {
+				q = (char *) (size_t) strtoll (p, &p, 16) ;
+				while (*p == ' ') p++ ;
+				if (*p == '+')
+					n = strtol (p + 1, &p, 16) ;
+				else
+					n = (char *) (size_t) strtoll (p, &p, 16) - q ;
+			    }
+			if ((n <= 0) && ((q < (char *)userRAM) || (q >= (char *)userTOP)))
+				error (8, NULL) ; // 'Address out of range'
+			if (n <= 0)
+				n = (char *)userTOP - q ;
+			srcfile = SDL_RWFromFile (path, "rb") ;
+			if (srcfile == NULL)
+				error (214, "File or path not found") ;
+			if (0 == SDL_RWread(srcfile, q, 1, n))
+				error (189, SDL_GetError ()) ;
+			SDL_RWclose (srcfile ) ;
+			return ;
+
+		case LOCK:
+			setup (path, p, ".bbc", ' ', NULL) ;
+			if (0 != chmod (path, _S_IREAD))
+				error (254, "Bad command") ;
+			return ;
+
+		case LOWERCASE:
+			if (onoff (p))
+				liston |= BIT3 ;
+			else
+				liston &= ~BIT3 ;
+			return ;
+
+		case MD:
+		case MKDIR:
+			setup (path, p, "", ' ', NULL) ;
+#ifdef __WINDOWS__
+			if (0 != mkdir (path))
+#else
+			if (0 != mkdir (path, 0777))
+#endif
+				error (254, "Bad command") ;
+			return ;
+
+		case MDISPLAY:		// *MDISPLAY hexaddr [xpos,ypos[,width,height[,keycol]]]
+			    {
+				int col = 0 ;
+				void *addr = NULL ;
+				SDL_Rect rect = {0, 0, 0, 0} ;
+				SDL_Surface *bmp ;
+
+				p += cpy - cmd ;
+				sscanf (p, "%p %i, %i, %i, %i, %x",
+					&addr, &rect.x, &rect.y, &rect.w, &rect.h, &col) ;
+				if ((rect.h == 0) && (col == 0))
+				    {
+					rect.w = 0 ;
+					sscanf (p, "%x %i, %i, %x", (int*) &addr, &rect.x, &rect.y, &col) ;
+				    }
+				rect.w /= 2 ;
+				rect.h /= 2 ;
+
+				srcfile = SDL_RWFromMem (addr, *(int*)(addr + 2)) ;
+				if (srcfile == 0)
+					error (189, SDL_GetError ()) ;
+				bmp = SDL_LoadBMP_RW (srcfile, 0) ;
+				if (bmp)
+					SDL_RWclose (srcfile) ;
+				else
+					bmp = STBIMG_Load_RW (srcfile, 1) ;
+				if (bmp == NULL)
+					error (189, SDL_GetError ()) ;
+				if (col)
+					SDL_SetColorKey (bmp, 1, col) ;
+
+				pushev (EVT_DISPLAY, &rect, bmp) ;
+				if (0 == waitev ())
+					error (189, SDL_GetError ()) ;
+				return ;
+			    }
+
+		case NOEGA:
+			vflags &= ~(CGAFLG + EGAFLG) ;
+			return ;
+
+		case OSK:
+			if (onoff (p))
+				pushev (EVT_OSK, (void *) 1, NULL) ;
+			else
+				pushev (EVT_OSK, NULL, NULL) ;
+			return ;
+
+		case RD:
+		case RMDIR:
+			setup (path, p, "", ' ', NULL) ;
+			if (0 != rmdir (path))
+				error (254, "Bad command") ;
+			return ;
+
+		case REFRESH:
+			while (*p == ' ') p++ ;
+			if (*p != 0x0D)
+			    {
+				if (onoff (p))
+					pushev (EVT_REFLAG, NULL, NULL) ;
+				else
+					pushev (EVT_REFLAG, (void *)2, NULL) ;
+				waitev () ;
+				return ;
+			    }
+			pushev (EVT_REFLAG, (void *)0x201, NULL) ;
+			waitev () ;
+			while (reflag & 1)
+				SDL_Delay (1) ;
+			return ;
+
+		case REN:
+		case RENAME:
+			p = setup (path, p, ".bbc", ' ', NULL) ;
+			setup (path2, p, ".bbc", ' ', NULL) ;
+			dstfile = SDL_RWFromFile (path2, "rb") ;
+			if (dstfile != NULL)
+			    {
+				SDL_RWclose (dstfile) ;
+				error (196, "File exists") ;
+			    }
+			if (0 != rename (path, path2))
+				error (196, "File exists") ;
+			return ;
+
+		case RUN:
+			strncpy (path, p, MAX_PATH - 1) ;
+			q = memchr (path, 0x0D, MAX_PATH) ;
+			if (q != NULL) *q = 0 ;
+			q = path + strlen (path) - 1 ;
+			if (*q == ';')
+				*q = '&' ;
+#ifdef __IPHONEOS__
+			error (255, "Unsupported") ;
+#else
+			if (0 != system (path))
+				error (254, "Bad command") ;
+#endif
+			return ;
+
+		case SAVE:		// *SAVE filename hexaddr +hexlen
+			p = setup (path, p, ".bbc", ' ', NULL) ;
+			n = 0 ;
+			q = 0 ;
+			if (*p != 0x0D)
+			    {
+				q = (char *) (size_t) strtoll (p, &p, 16) ;
+				while (*p == ' ') p++ ;
+				if (*p == '+')
+					n = strtol (p + 1, &p, 16) ;
+				else
+					n = (char *) (size_t) strtoll (p, &p, 16) - q ;
+			    }
+			if (n <= 0)
+				error (254, "Bad command") ;
+			dstfile = SDL_RWFromFile (path, "wb") ;
+			if (dstfile == NULL)
+				error (189, SDL_GetError ()) ;
+			if (0 == SDL_RWwrite(dstfile, q, 1, n))
+				error (189, SDL_GetError ()) ;
+			SDL_RWclose (dstfile ) ;
+			return ;
+
+		case SPOOL:
+			if (spchan != NULL)
+			    {
+				SDL_RWclose (spchan) ;
+				spchan = NULL ;
+			    }
+			while (*p == ' ') p++ ;
+			if (*p == 0x0D)
+				return ;
+			setup (path, p, ".bbc", ' ', NULL) ;
+			spchan = SDL_RWFromFile (path, "wb") ;
+			if (spchan == NULL)
+				error (189, SDL_GetError ()) ;
+			return ;
+
+		case SPOOLON:
+			if (spchan != NULL)
+			    {
+				SDL_RWclose (spchan) ;
+				spchan = NULL ;
+			    }
+			while (*p == ' ') p++ ;
+			if (*p == 0x0D)
+				return ;
+			setup (path, p, ".bbc", ' ', NULL) ;
+			spchan = SDL_RWFromFile (path, "ab") ;
+			if (spchan == NULL)
+				error (189, SDL_GetError ()) ;
+			return ;
+
+		case STEREO:
+			b = 0 ;
+			n = 0 ;
+			sscanf (p, "%i,%i", &b, &n) ;
+			b &= 3 ;
+			smix[b]     = 0x4000 - (n << 7) ;
+			smix[b + 4] = 0x4000 + (n << 7) ;
+			return ;
+
+		case SYS:
+			n = 0 ;
+			sscanf (p, "%i", &n) ;
+			sysflg = n ;
+			return ;
+
+		case TEMPO:
+			n = 0 ;
+			sscanf (p, "%i", &n) ;
+			if (((n & 0x3F) <= MAX_TEMPO) && ((n & 0x3F) > 0))
+				tempo = n ;
+			return ;
+
+		case TIMER:
+			n = 0 ;
+			sscanf (p, "%i", &n) ;
+			if (n == 0)
+				return ;
+			SDL_RemoveTimer (UserTimerID) ;
+			UserTimerID = SDL_AddTimer (n, UserTimerCallback, 0) ;
+			return ;
+
+		case TV:
+			return ;		// ignored
+
+		case TYPE:
+			setup (path, p, ".bbc", ' ', NULL) ;
+			srcfile = SDL_RWFromFile (path, "rb") ;
+			if (srcfile == NULL)
+				error (214, "File or path not found") ;
+			do
+			    {
+				char ch ;
+				if (flags & (ESCFLG | KILL))
+				    {
+					SDL_RWclose (srcfile) ;
+					crlf () ;
+					trap () ;
+				    }
+				n = SDL_RWread (srcfile, &ch, 1, 1) ;
+				oswrch (ch) ;
+			    }
+			while (n) ;
+			SDL_RWclose (srcfile) ;
+			crlf () ; // Zero COUNT
+			return ;
+
+		case UNLOCK:
+			setup (path, p, ".bbc", ' ', NULL) ;
+			if (0 != chmod (path, _S_IREAD | _S_IWRITE))
+				error (254, "Bad command") ;
+			return ;
+
+		case VOICE:
+			b = 0 ;
+			n = 0 ;
+			sscanf (p, "%i,%i", &b, &n) ;
+			voices[b & 3] = n & 7 ;
+			return ;
+
+		case INPUT:
+			n = 0 ;
+			sscanf (p, "%i", &n) ;
+			optval = (optval & 0x0F) | (n << 4) ;
+			return ;
+
+		case OUTPUT:
+			n = 0 ;
+			sscanf (p, "%i", &n) ;
+			optval = (optval & 0xF0) | (n & 0x0F) ;
+			return ;
+
+		case DUMP:
+			setup (path, p, ".bbc", ' ', NULL) ;
+			srcfile = SDL_RWFromFile (path, "rb") ;
+			if (srcfile == NULL)
+				error (214, "File or path not found") ;
+			b = 0 ;
+			do
+			    {
+				int i ;
+				unsigned char buff[16] ;
+				if (flags & (ESCFLG | KILL))
+				    {
+					SDL_RWclose (srcfile) ;
+					trap () ;
+				    }
+				n = SDL_RWread (srcfile, buff, 1, 16) ;
+				if (n)
+				    {
+					memset (path, ' ', 80) ;
+					sprintf (path, "%08X  ", b) ;
+					for (i = 0; i < n; i++)
+					    {
+						sprintf (path + 10 + 3 * i, "%02X ", buff[i]) ;
+						if ((buff[i] >= ' ') && (buff[i] <= '~'))
+							path[59+i] = buff[i] ;
+						else
+							path[59+i] = '.' ;
+					    }
+						path[10 + 3 * n] = ' ' ; path[75] = 0 ;
+					text (path) ;
+					crlf () ;
+					b += n ;
+				    }
+			    }
+			while (n) ;
+			SDL_RWclose (srcfile) ;
+			return ;
 	} ;
 
 	error (254, "Bad command") ;

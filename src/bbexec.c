@@ -100,7 +100,7 @@ void spaces (int num)
 		outchr (' ') ;
 }
 
-void dotab (void)
+static void dotab (void)
 {
 	int x = expri () ;
 	if (*esi == ',')
@@ -227,10 +227,10 @@ void storen (VAR v, void *ptr, unsigned char type)
 		case 40:
 			if (v.i.t)
 			    {
-				long double t = truncl (v.f) ;
-				v.i.n = v.f ;
-				if (v.i.n != t)
+				long long t = v.f ;
+				if (t != truncl(v.f))
 					error (20, NULL) ; // 'Number too big'
+				v.i.n = t ;
 			    }
 			// *(int *)ptr = (int) v.s.p ;
 			// *(int *)((char *)ptr + 4) = v.s.l ;
@@ -317,7 +317,7 @@ void modifs (VAR v, void *ptr, unsigned char type, signed char op)
 } 
 
 // Assign to a numeric variable (supports compound assignment operators):
-void assign (void *ptr, unsigned char type)
+static void assign (void *ptr, unsigned char type)
 {
 	signed char op = nxt () ;
 	esi++ ;
@@ -333,7 +333,7 @@ void assign (void *ptr, unsigned char type)
 }
 
 // Assign to a string variable (supports compound += operator):
-void assigns (void *ptr, unsigned char type)
+static void assigns (void *ptr, unsigned char type)
 {
 	signed char op = nxt () ;
 	esi++ ;

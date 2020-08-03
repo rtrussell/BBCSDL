@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       32-bit BBC BASIC Interpreter                              *
-*       (c) 2017-2019  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2018-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbasmb.c: Simple ARM 4 assembler                          *
-*       Version 1.05c, 11-Aug-2019                                *
+*       Version 1.14a, 25-Jul-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -59,6 +59,8 @@ long long getptr (int) ;
 void setptr (int, long long) ;
 long long getext (int) ;
 void oscli (char *) ;
+int osbyte (int, int) ;
+void osword (int, void *) ;
 
 static char *mnemonics[] = {
 		"adc", "add", "adr", "align", "and", "bic", "blx", "bl", "bx", "b", "clz",
@@ -104,14 +106,14 @@ static unsigned char regno[] = {
 static char *shifts[] = { "lsl", "lsr", "asr", "ror", "rrx", "asl" } ;
 
 static char *oslist[] = {
-		"osrdch", "oswrch", "oskey", "osline", "oscli", "osopen",
+		"osrdch", "oswrch", "oskey", "osline", "oscli", "osopen", "osbyte", "osword",
 		"osshut", "osbget", "osbput", "getptr", "setptr", "getext" } ;
 
 static void *osfunc[] = {
-		osrdch, oswrch, oskey, osline, oscli, osopen,
+		osrdch, oswrch, oskey, osline, oscli, osopen, osbyte, osword, 
 		osshut, osbget, osbput, getptr, setptr, getext } ;
 
-int lookup (char **arr, int num)
+static int lookup (char **arr, int num)
 {
 	int i, n ;
 	for (i = 0; i < num; i++)
@@ -126,7 +128,7 @@ int lookup (char **arr, int num)
 	return i ;
 }
 
-unsigned char reg (void)
+static unsigned char reg (void)
 {
 	int i ;
 	nxt () ;
@@ -141,7 +143,7 @@ unsigned char reg (void)
 	return regno[i] ;
 }
 
-unsigned char shift (void)
+static unsigned char shift (void)
 {
 	int i ;
 	nxt () ;
@@ -151,7 +153,7 @@ unsigned char shift (void)
 	return i % 5 ;
 }
 
-unsigned char stackop (int mnemonic) 
+static unsigned char stackop (int mnemonic) 
 {
 	int i = lookup (stackops, sizeof(stackops) / sizeof(stackops[0])) ;
 	if (i < 0)
@@ -161,7 +163,7 @@ unsigned char stackop (int mnemonic)
 	return i & 3 ;
 }
 
-unsigned char shiftcount (void)
+static unsigned char shiftcount (void)
 {
 	int n = expri () ;
 	if ((n < 0) || (n > 31))
@@ -169,7 +171,7 @@ unsigned char shiftcount (void)
 	return n ;
 }
 
-int immrot (unsigned int n) 
+static int immrot (unsigned int n) 
 {
 	int rotate = 0 ;
 	while (n > 255)
@@ -186,7 +188,7 @@ int immrot (unsigned int n)
 	return n | (rotate << 8) ;
 }
 
-int reglist (void) 
+static int reglist (void) 
 {
 	int temp = 0 ;
 	if (nxt () != '{')
@@ -213,7 +215,7 @@ int reglist (void)
 	return temp ;
 }
 
-int shifter_operand (void)
+static int shifter_operand (void)
 {
 	int bits, temp ;
 	if (nxt () == '#')
@@ -237,7 +239,7 @@ int shifter_operand (void)
 	return bits | (reg () << 8) | BIT4 ;
 }
 
-int offset (unsigned char *pimm, unsigned char *pplus)
+static int offset (unsigned char *pimm, unsigned char *pplus)
 {
 	*pimm = 0 ;
 	*pplus = 1 ;
@@ -261,7 +263,7 @@ int offset (unsigned char *pimm, unsigned char *pplus)
 	return reg () ;
 }
 
-void tabit (int x)
+static void tabit (int x)
 {
 	if (count == x) 
 		return ;
@@ -270,7 +272,7 @@ void tabit (int x)
 	spaces (x - count) ;
 }
 
-void poke (void *p, int n) 
+static void poke (void *p, int n) 
 {
 	char *d ;
 	if (liston & BIT6)

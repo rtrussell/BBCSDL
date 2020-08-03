@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       64-bit BBC BASIC Interpreter                              *
-*       Copyright (c) 2019 R.T.Russell http://www.rtrussell.co.uk *
+*       Copyright (c) 2020 R.T.Russell http://www.rtrussell.co.uk *
 *                                                                 *
 *       bbasmb_x86_64.c: x86-64 assembler                         *
-*       Version 1.05c, 11-Aug-2019                                *
+*       Version 1.14a, 25-Jul-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -58,7 +58,9 @@ void osbput (int, unsigned char) ;
 long long getptr (int) ; 
 void setptr (int, long long) ; 
 long long getext (int) ; 
-void oscli (char *) ; 
+void oscli (char *) ;
+int osbyte (int, int) ;
+void osword (int, void*) ;
 
 // instruction mnemonics (alphabetically ordered):
 // No privileged ops, no SSSE3, no SSE4, no AVX
@@ -1225,11 +1227,11 @@ static unsigned char instructions[] = {
 static unsigned char segpfx[] = {0x26, 0x2E, 0x36, 0x3E, 0x64, 0x65} ;
 
 static char *oslist[] = {
-		"osrdch", "oswrch", "oskey", "osline", "oscli", "osopen",
+		"osrdch", "oswrch", "oskey", "osline", "oscli", "osopen", "osbyte", "osword",
 		"osshut", "osbget", "osbput", "getptr", "setptr", "getext" } ; 
 
 static void *osfunc[] = {
-		osrdch, oswrch, oskey, osline, oscli, osopen,
+		osrdch, oswrch, oskey, osline, oscli, osopen, osbyte, osword,
 		osshut, osbget, osbput, getptr, setptr, getext } ;
 
 // String comparison (q is NUL-terminated):

@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2000-2020                     *
 *                                                                  *
 *       BBC.h constant, variable and structure declarations        *
-*       Version 1.14a, 25-Jun-2020                                 *
+*       Version 1.14a, 15-Jul-2020                                 *
 \******************************************************************/
 
 // Constants:
@@ -226,7 +226,11 @@ typedef struct tagPARM
 // to force the type word (.i.t or .s.t member) to a value other than 0 or -1. 
 typedef union tagVAR
 {
+#if defined(__arm__) || defined(__aarch64__)
+	double f ;
+#else
         long double f ;
+#endif
         struct
         {
           long long n ;

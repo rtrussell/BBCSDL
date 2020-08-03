@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.14a, 10-Jul-2020                                *
+*       Version 1.14a, 21-Jul-2020                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -19,6 +19,9 @@ void faterr (const char *) ;	// Report a 'fatal' error message
 void trap (void) ;		// Test for ESCape
 void osload (char*, void*, int) ; // Load a file to memory
 void ossave (char*, void*, int) ; // Save a file from memory
+int osopen (int, char *) ;	// Open a file
+unsigned char osbget (int, int*) ; // Read a byte from a file
+void osshut (int) ;		// Close file(s)
 
 // Routines in bbccli:
 void oscli (char*) ;            // Command Line Interface
@@ -354,7 +357,7 @@ signed char *search (signed char *edx, signed char token)
 }
 
 // Encode line number into pseudo binary form.
-char * encode (unsigned short lino, char *ebx)
+static char * encode (unsigned short lino, char *ebx)
 {
 	unsigned char al = lino & 0xC0 ;
 	unsigned char ah = (lino >> 8) & 0xC0 ;
@@ -635,7 +638,7 @@ void clear (void)
 
 // Find the line containing a particular address
 // Return NULL if not found
-signed char* findlin (signed char *ebx, signed char *edx, char **pebp)
+static signed char* findlin (signed char *ebx, signed char *edx, char **pebp)
 {
 	int n  = 0 ;
 	if (pebp != NULL) *pebp = NULL ;
@@ -1120,7 +1123,7 @@ void *getdef (unsigned char *found)
 }
 
 // Find variable/array type from suffix character(s):
-unsigned char getype (char *ptr)
+static unsigned char getype (char *ptr)
 {
 	char al = *(ptr - 2) ; // type character
 	char ah = *(ptr - 3) ; // to check for %%
@@ -1415,6 +1418,7 @@ static char *strstrt (signed char *lookin, char *lookfor, char t)
 {
 	char *t1 = memchr (lookin, t, 256) ;
 	char *t2 = memchr (lookfor, t, 256) ;
+	if ((t1 == NULL) || (t2 == NULL)) return NULL ;
 	*t1 = 0 ; *t2 = 0 ;
 	char *result = strstr ((char *) lookin, lookfor) ;
 	*t1 = t ; *t2 = t ;
@@ -1658,8 +1662,42 @@ int basic (void *ecx, void *edx, void *prompt)
 					break ;
 
 				case 0x1C: // LOAD
+					memset (vpage + zero, 0, 256) ; // in case a short text file
 					osload (tmp, vpage + zero, (void *)esp -
 						 (vpage + zero) - STACK_NEEDED) ;
+					esi = vpage + (signed char *) zero ;
+					while (*esi)
+					    {
+						esi += (int)*(unsigned char *)esi ; 
+						if (*(esi-1) != 0x0D) break ;
+					    }
+					if (*(esi-1) != 0x0D)
+					    {
+						int eof = 0 ;
+						int file = osopen (0, tmp) ;
+						esi = vpage + (signed char *) zero ;
+						lino = 0 ;
+						while (1)
+						    {
+							tmp = accs ; n = 65535 ;
+							do *tmp = osbget (file, &eof) ;
+							while (!eof && --n && (*tmp++ != 0x0A)) ;
+							if (eof || (n <= 0)) break ;
+							*(tmp - 1) = 0x0D ; *tmp = 0 ;
+							tmp = accs ; lino++ ; n = 0 ;
+							sscanf (tmp, "%hu%n", &lino, &n) ;
+							tmp += n ;
+							while ((*tmp == 32) || (*tmp == 9)) tmp++ ;
+							n = lexan (tmp, (char *) esi + 3, 1)
+								- (char *) esi ;
+							if (n > 255) break ;
+							*esi = n ;
+							*(unsigned short *)(esi + 1) = lino ;
+							esi += n ;
+						    }
+						osshut (file) ;
+						*esi = 0 ;
+					    }
 					clear () ;
 					break ;
 
@@ -1682,7 +1720,7 @@ int basic (void *ecx, void *edx, void *prompt)
 						esi += *(unsigned char *)esi ;
 						n++ ;
 					    }
-					if ((lo + n*hi - hi) >= 65535) error (20, NULL) ; 
+					if ((lo + n*hi - hi) > 65535) error (20, NULL) ; 
 					esi = vpage + zero ;
 					lino = lo ;
 					while (*esi)

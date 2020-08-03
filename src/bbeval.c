@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.13a, 07-Jun-2020                                *
+*       Version 1.14a, 15-Jun-2020                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -30,6 +30,13 @@
 #define logl log
 #define fabsl fabs
 #define truncl trunc
+#define EFORMAT "%.*E"
+#define FFORMAT "%.*f"
+#define GFORMAT "%.*G"
+#else
+#define EFORMAT "%.*LE"
+#define FFORMAT "%.*Lf"
+#define GFORMAT "%.*LG"
 #endif
 
 // Routines in bbmain:
@@ -123,13 +130,13 @@ int str (VAR v, char *dst, int format)
 		case 0x10000:
 			if (prec) prec-- ;
 			if (v.i.t == 0) v.f = v.i.n ;
-			n = sprintf(dst, "%.*LE", prec, v.f) ;
+			n = sprintf(dst, EFORMAT, prec, v.f) ;
 			strcpy (fmt, "%-3d") ;
 			break ;
 
 		case 0x20000:
 			if (v.i.t == 0) v.f = v.i.n ;
-			n = sprintf(dst, "%.*Lf", prec, v.f) ;
+			n = sprintf(dst, FFORMAT, prec, v.f) ;
 			break ;
 
 		default:
@@ -140,7 +147,7 @@ int str (VAR v, char *dst, int format)
 			if (n <= prec) break ;
 			v.f = v.i.n ;
 		    }
-		n = sprintf(dst, "%.*LG", prec, v.f) ;
+		n = sprintf(dst, GFORMAT, prec, v.f) ;
 	    }
 
 	p = strchr (dst, 'E') ;
@@ -236,7 +243,7 @@ static long double xpow10 (long double n, int p)
 
 // Get an unsigned integer from a string:
 
-unsigned long long number (int *pcount, int *ptrunc)
+static unsigned long long number (int *pcount, int *ptrunc)
 {
 	unsigned long long n = 0 ;
 	while (1)
@@ -246,7 +253,8 @@ unsigned long long number (int *pcount, int *ptrunc)
 			break ;
 		esi++ ;
 		(*pcount)++ ;
-		if ((n > 0x1999999999999999L) || ((n == 0x1999999999999999L) && (al > '5')))
+		if ((n > 0x1999999999999999L) || ((n == 0x1999999999999999L) && 
+				((al > '5') || *ptrunc)))
 			(*ptrunc)++ ;
 		else
 			n = n * 10 + (al - '0') ;
@@ -849,7 +857,7 @@ VAR items (void)
 	return v ;
 }
 
-VAR itemn (void)
+static VAR itemn (void)
 {
 	VAR v = item () ;
 	if (v.s.t == -1)
@@ -857,7 +865,7 @@ VAR itemn (void)
 	return v ;
 }
 
-VAR itemf (void)
+static VAR itemf (void)
 {
 	VAR v = item () ;
 	if (v.s.t == -1)
