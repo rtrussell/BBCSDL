@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.14a, 03-Jul-2020                                *
+*       Version 1.15a, 04-Aug-2020                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -329,7 +329,7 @@ static void assign (void *ptr, unsigned char type)
 		else
 			error (4, NULL) ; // Mistake
 	    }
-	modify (expr (), ptr, type, op) ;
+	modify (exprn (), ptr, type, op) ;
 }
 
 // Assign to a string variable (supports compound += operator):

@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2020                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.14a, 19-Jun-2020                                 *
+*       Version 1.15a, 04-Aug-2020                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -1416,12 +1416,11 @@ while (running)
 				switch (ev.window.event)
 				{
 					case SDL_WINDOWEVENT_MOVED :
-					putevt (siztrp, WM_MOVE, ev.window.windowID,
-					  (ev.window.data2 << 16) | ev.window.data1) ;
+					    putevt (siztrp, WM_MOVE, ev.window.windowID,
+						(ev.window.data2 << 16) | ev.window.data1) ;
 					break ;
 
 					case SDL_WINDOWEVENT_RESIZED :
-					if (ev.window.data1 && ev.window.data2)
 					    putevt (siztrp, WM_SIZE, ev.window.windowID,
 						(ev.window.data2 << 16) | ev.window.data1) ;
 					break ;
@@ -1448,7 +1447,8 @@ while (running)
 		case SDL_APP_DIDENTERFOREGROUND:
 			if (siztrp)
 			{
-				putevt (siztrp, WM_SIZE, 0, 0) ; // Signal 'restored from background'
+				// Signal 'restored from background'
+				putevt (siztrp, WM_SIZE, 0, (winy << 16) | winx) ; 
 				flags |= ALERT ;
 			}
 			break ;
