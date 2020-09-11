@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCMOS.C  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.14a, 25-Jul-2020                                *
+*       Version 1.15a, 30-Aug-2020                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -17,14 +17,16 @@
 #include "SDL_ttf.h"
 #include "bbcsdl.h"
 
-#if defined __WINDOWS__
+#if defined __WINDOWS__ || defined __EMSCRIPTEN__
 void *dlsym (void *, const char *) ;
 #define RTLD_DEFAULT (void *)(-1)
 #else
 #include "dlfcn.h"
 #endif
 
-#if defined __arm__ || defined __aarch64__
+#if defined __EMSCRIPTEN__
+// WASM has no official SIMD support yet
+#elif defined __arm__ || defined __aarch64__
 #include <arm_neon.h>
 #else
 #include <emmintrin.h>
@@ -876,6 +878,15 @@ void reset (void)
 	reflag = 0 ;	// *REFRESH ON
  }
 
+static int BBC_PushEvent(SDL_Event* event)
+{
+	int ret ;
+	SDL_LockMutex (Mutex) ;
+	ret = SDL_PushEvent (event) ;
+	SDL_UnlockMutex (Mutex) ;
+	return ret ;
+}
+
 // Push event onto queue:
 void pushev (int code, void *data1, void *data2)
 {
@@ -887,7 +898,7 @@ void pushev (int code, void *data1, void *data2)
 	event.user.data2 = data2 ;
 
 	SDL_AtomicIncRef ((SDL_atomic_t*) &nUserEv) ;
-	while (SDL_PushEvent (&event) < 0)
+	while (BBC_PushEvent (&event) <= 0)
 		SDL_Delay (1) ;
 	while (nUserEv >= MAX_EVENTS)
 		SDL_Delay (1) ;
@@ -1507,8 +1518,8 @@ int getims (void)
 	*(int *)(accs + 11) = *(int *)(at + 20) ; // Year
 	if (*(accs + 4) == ' ') *(accs + 4) = '0' ;
 	memcpy (accs + 16, at + 11, 8) ; // Time
-	accs[3] = '.' ;
-	accs[15] = ',' ;
+	*(accs + 3) = '.' ;
+	*(accs + 15) = ',' ;
 	return 24 ;
 }
 
@@ -1778,9 +1789,7 @@ void quiet (void)
 		eenvel[i] = 0 ;
 		sacc[i] = 0 ;
 	    }
-	if (hwo)
-		SDL_CloseAudioDevice (hwo) ;
-	hwo = 0 ;
+	pushev (WMU_WAVECLOSE, NULL, NULL) ;
 }
 
 // Process note(s) from sound queue:
@@ -1849,7 +1858,7 @@ static void tone (short **pbuffer)
 	short *buffer ;
 	unsigned char taps ;
 	static unsigned short noise ;
-	static int __attribute__((aligned(16))) tempi[4] ;
+	static unsigned int __attribute__((aligned(16))) tempi[4] ;
 	static short __attribute__((aligned(16))) temps[8] ;
 
 	for (ch = 0; ch < 4; ch++)
@@ -1926,7 +1935,9 @@ static void tone (short **pbuffer)
 	tempi[1] = voices[1] ;
 	tempi[2] = voices[2] ;
 	tempi[3] = voices[3] ;
-#if defined __arm__ || defined __aarch64__
+#if defined __EMSCRIPTEN__
+	int wavep[4] = { tempi[0] << 13, tempi[1] << 13, tempi[2] << 13, tempi[3] << 13 } ;
+#elif defined __arm__ || defined __aarch64__
 	int32x4_t wavep = vshlq_n_s32 (vld1q_s32 ((int32_t*) tempi), 13) ;
 #else
 	__m128i wavep = _mm_slli_epi32 (_mm_load_si128 ((__m128i*)tempi), 13) ;
@@ -1935,7 +1946,9 @@ static void tone (short **pbuffer)
 	tempi[1] = freqs[epitch[1]] ;
 	tempi[2] = freqs[epitch[2]] ;
 	tempi[3] = freqs[epitch[3]] ;
-#if defined __arm__ || defined __aarch64__
+#if defined __EMSCRIPTEN__
+	unsigned int inctp[4] = { tempi[0] << 13, tempi[1] << 13, tempi[2] << 13, tempi[3] << 13 } ;
+#elif defined __arm__ || defined __aarch64__
 	uint32x4_t inctp = vshlq_n_u32 (vld1q_u32 ((uint32_t*)tempi), 13) ;
 #else
 	__m128i inctp = _mm_slli_epi32 (_mm_load_si128 ((__m128i*)tempi), 13) ;
@@ -1948,7 +1961,12 @@ static void tone (short **pbuffer)
 	temps[5] = temps[1] ;
 	temps[6] = temps[2] ;
 	temps[7] = temps[3] ;
-#if defined __arm__ || defined __aarch64__
+#if defined __EMSCRIPTEN__
+	short smixp[8] = { (smix[0] * temps[0]) >> 16, (smix[1] * temps[1]) >> 16,
+			   (smix[2] * temps[2]) >> 16, (smix[3] * temps[3]) >> 16, 
+			   (smix[4] * temps[4]) >> 16, (smix[5] * temps[5]) >> 16, 
+			   (smix[6] * temps[6]) >> 16, (smix[7] * temps[7]) >> 16 } ; 
+#elif defined __arm__ || defined __aarch64__
 	int16x8_t smixp = vqdmulhq_s16 (vld1q_s16 ((int16_t*)smix),
 					   vld1q_s16 ((int16_t*)temps)) ;
 	uint32x4_t saccp = vld1q_u32 ((uint32_t*) sacc) ;
@@ -1963,7 +1981,11 @@ static void tone (short **pbuffer)
 	buffer = *pbuffer ;
 	for (i = 0; i < 441; i++) // samples in 0.01 seconds
 	    {
-#if defined __arm__ || defined __aarch64__
+#if defined __EMSCRIPTEN__
+		sacc[0] += inctp[0] ; sacc[1] += inctp[1] ; sacc[2] += inctp[2] ; sacc[3] += inctp[3] ;
+		tempi[0] = (sacc[0] >> 19) + wavep[0] ; tempi[1] = (sacc[1] >> 19) + wavep[1] ;
+		tempi[2] = (sacc[2] >> 19) + wavep[2] ; tempi[3] = (sacc[3] >> 19) + wavep[3] ;
+#elif defined __arm__ || defined __aarch64__
 		saccp = vaddq_u32 (saccp, inctp) ; // DDS accumulator
 		vst1q_u32 ((uint32_t*) tempi, vorrq_u32 (vshrq_n_u32 (saccp, 19), (uint32x4_t)wavep)) ; 
 #else
@@ -1986,7 +2008,14 @@ static void tone (short **pbuffer)
  		temps[6] = temps[2] ;
  		temps[7] = temps[3] ;
 
-#if defined __arm__ || defined __aarch64__
+#if defined __EMSCRIPTEN__
+		temps[0] = (temps[0] * smixp[0]) >> 16 ; temps[1] = (temps[1] * smixp[1]) >> 16 ; 
+		temps[2] = (temps[2] * smixp[2]) >> 16 ; temps[3] = (temps[3] * smixp[3]) >> 16 ; 
+		temps[4] = (temps[4] * smixp[4]) >> 16 ; temps[5] = (temps[5] * smixp[5]) >> 16 ; 
+		temps[6] = (temps[6] * smixp[6]) >> 16 ; temps[7] = (temps[7] * smixp[7]) >> 16 ; 
+		*buffer++ = ((int)temps[0] + (int)temps[1] + (int)temps[2] + (int)temps[3]) << 1 ; // left
+		*buffer++ = ((int)temps[4] + (int)temps[5] + (int)temps[6] + (int)temps[7]) << 1 ; // right
+#elif defined __arm__ || defined __aarch64__
 		vst1q_s16 ((int16_t*) temps,
 				vqdmulhq_s16 (vld1q_s16 ((int16_t*) temps), smixp)) ;
 		*buffer++ = ((int)temps[0] + (int)temps[1] + (int)temps[2] + (int)temps[3]) >> 1 ; // left
@@ -1999,7 +2028,9 @@ static void tone (short **pbuffer)
 #endif
 	    }
 
-#if defined __arm__ || defined __aarch64__
+#if defined __EMSCRIPTEN__
+//
+#elif defined __arm__ || defined __aarch64__
 	vst1q_u32 ((uint32_t*) sacc, saccp) ;
 #else
 	_mm_storeu_si128 ((__m128i*) sacc, saccp) ;
@@ -2312,8 +2343,8 @@ int entry (void *immediate)
 	memset (&stavar[1], 0, (char *)datend - (char *)&stavar[1]) ;
 
 	accs = (char*) userRAM ;		// String accumulator
-	buffer = (char*) accs + 0x10000 ;	// Temporary string buffer
-	path = (char*) buffer + 0x100 ;		// File path
+	buff = (char*) accs + 0x10000 ;		// Temporary string buffer
+	path = (char*) buff + 0x100 ;		// File path
 	keystr = (char**) (path + 0x100) ;	// *KEY strings
 	keybdq = (char*) keystr + 0x100 ;	// Keyboard queue
 	eventq = (void*) keybdq + 0x100 ;	// Event queue

@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCVTX.C  MODE 7 (teletext / videotex) emulator           *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.13a, 15-May-2020                                *
+*       Version 1.15a, 06-Sep-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -378,8 +378,8 @@ static void row7 (short *pc, short *sl, int ypos, unsigned char *pattr,  unsigne
 		if (sl == pc)
 		{
 			outch7 (atch & 0xFF, atch >> 8, *pmode, xpos, ypos) ;
-			if ((*pmode & (BIT0 | BIT1 | BIT2)) == 0)
-			return ;
+			if (!(*pmode & (BIT0 | BIT2)) && !((*pmode & BIT1) && (*pmode & BIT7)))
+				return ;
 		}
 		if ((sl > pc) && ((*pmode & (BIT0 | BIT2))
 				 || ((*pmode & BIT1) && !(*pmode & BIT4))))

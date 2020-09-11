@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.14a, 21-Jul-2020                                *
+*       Version 1.15a, 27-Aug-2020                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -27,7 +27,7 @@ void osshut (int) ;		// Close file(s)
 void oscli (char*) ;            // Command Line Interface
 
 // Routines in bbexec:
-void xeq (void) ;		// Execute program
+VAR xeq (void) ;		// Execute program
 
 // Routines in bbeval:
 long long itemi (void);		// Return an integer numeric item
@@ -474,11 +474,11 @@ void crlf (void) ;
 void outchr (unsigned char al)
 {
 	oswrch (al) ;
-	if (al == 0x0D) count = 0 ;
+	if (al == 0x0D) vcount = 0 ;
 	if (al >= ' ')
 	    {
-		count += 1 ;
-		if ((vwidth != 0) && (count == vwidth))
+		vcount += 1 ;
+		if ((vwidth != 0) && (vcount == vwidth))
 		    crlf () ;
 	    }
 }
@@ -502,7 +502,7 @@ void crlf (void)
 {
 	outchr (0x0D) ;
 	outchr (0x0A) ;
-	count = 0 ;
+	vcount = 0 ;
 }
 
 // Output a NUL-terminated string:
@@ -674,7 +674,7 @@ unsigned short setlin (signed char *edx, char **pebp)
 // Can optionally be entered with a target address.
 signed char * findl (unsigned int edx)
 {
-	signed char *ebx = vpage + zero ;
+	signed char *ebx = vpage + (signed char *) zero ;
 	if (*ebx == 0)
 		return NULL ; // No program
 	if ((edx + (signed char *) zero) >= ebx)
@@ -796,7 +796,7 @@ char * allocs (unsigned int *ps, int len)
 
 // allocate new string space from the heap:
 
-	addr = ((pfree + 1) & -2) + zero ; // Unicode align
+	addr = ((pfree + 1) & -2) + (char *) zero ; // Unicode align
 	if (size > ((char *)esp - addr - STACK_NEEDED))
 		error (0, NULL) ; // 'No room'
 	pfree = addr + size - (char *) zero ;
@@ -987,7 +987,7 @@ void *create (unsigned char **pedi, unsigned char *ptype)
 // As create but handle whole array and whole structure
 void * putvar (void *ebx, unsigned char *ptype)
 {
-	unsigned char *edi = pfree + zero ;
+	unsigned char *edi = pfree + (unsigned char *) zero ;
 
 	*(heapptr *)edi = *(heapptr *) ebx ;
 	*(heapptr *)ebx = edi - (unsigned char *) zero ;
@@ -1014,7 +1014,7 @@ void * putvar (void *ebx, unsigned char *ptype)
 void * putdef (void *ebx)
 {
 	unsigned char type ;
-	unsigned char *edi = pfree + zero ;
+	unsigned char *edi = pfree + (unsigned char *) zero ;
 
 	*(heapptr *)edi = *(heapptr *) ebx ; 
 	*(heapptr *)ebx = edi - (unsigned char *) zero ;
@@ -1071,7 +1071,7 @@ static void *scanll (heapptr *base, signed char *edi)
 		prev = this ;
 		next = *(int *)prev ;
 		if (base)
-			edi = next + zero ;
+			edi = next + (signed char *) zero ;
 		else
 			edi = this + next ;
 	    }
@@ -1369,7 +1369,7 @@ void *getput (unsigned char *ptype)
 void * getdim (unsigned char *ptype)
 {
 	void *ebx ;
-	unsigned char *edi = pfree + zero ;
+	unsigned char *edi = pfree + (unsigned char *) zero ;
 	signed char *oldesi = esi ;
 	char c = nxt () ;
 
@@ -1483,9 +1483,9 @@ int basic (void *ecx, void *edx, void *prompt)
 	curlin = ecx - zero ;
 	himem = edx - zero ;
 	clear () ;
-	datptr = search (vpage + zero, TDATA) - (signed char *) zero ;
+	datptr = search (vpage + (signed char *) zero, TDATA) - (signed char *) zero ;
 
-	esi = vpage + 3 + zero ;
+	esi = vpage + 3 + (signed char *) zero ;
 	esp = (heapptr *)((himem + (size_t) zero) & -4) ;
 
 	errcode = (setjmp (env)) ; // 1 = error, -1 = QUIT, 256 = END/STOP
@@ -1501,7 +1501,7 @@ int basic (void *ecx, void *edx, void *prompt)
 		esp = (heapptr *)((himem + (size_t) zero) & -4) ;
 		if (errtrp)
 		    {
-			esi = errtrp + zero ;
+			esi = errtrp + (signed char *) zero ;
 			prompt = NULL ;
 			if (onersp != NULL)
 				esp = onersp ;
@@ -1556,14 +1556,14 @@ int basic (void *ecx, void *edx, void *prompt)
 			autonum += autoinc ;
 		    }
 		while (*(accs + n) == 32) n++ ;
-		*(lexan (accs + n, buffer, 1)) = 0 ;	// Lexical analysis
-		curlin = buffer - (char *)zero ; // In case of error
+		*(lexan (accs + n, buff, 1)) = 0 ;	// Lexical analysis
+		curlin = buff - (char *)zero ; // In case of error
 
 		if (lino)
 		    {
-			signed char *tmp = vpage + zero ;
+			signed char *tmp = vpage + (signed char *) zero ;
 			clear () ;
-			n = strlen (buffer) + 3 ;
+			n = strlen (buff) + 3 ;
 			while (lino > *(unsigned short *)(tmp + 1))
 				tmp += (int)*(unsigned char *)tmp ; 
 			if (lino == *(unsigned short *)(tmp + 1))
@@ -1574,7 +1574,7 @@ int basic (void *ecx, void *edx, void *prompt)
 				memmove (tmp + n, tmp, gettop (vpage + zero, NULL) - tmp + 3) ;
 				*(unsigned char *)tmp = n ;
 				*(unsigned short *)(tmp + 1) = lino ;
-				memcpy (tmp + 3, buffer, n - 3) ;
+				memcpy (tmp + 3, buff, n - 3) ;
 			    }
 			clear () ; // essential to set lomem correctly
 		    }
@@ -1598,7 +1598,7 @@ int basic (void *ecx, void *edx, void *prompt)
 					lrange (tmp, &lo, &hi) ;
 					if ((lo == 0) && (hi == 0xFFFF)) error (16, NULL) ;
 					if (hi == 0) hi = lo ;
-					esi = vpage + zero ;
+					esi = vpage + (signed char *) zero ;
 					while (*esi && (*(unsigned short *)(esi + 1) < lo))
 						esi += (int)*(unsigned char *)esi ;
 					tmp = (char*) esi ;
@@ -1642,10 +1642,10 @@ int basic (void *ecx, void *edx, void *prompt)
 					    }
 					lrange (tmp, &lo, &hi) ;
 					if (hi == 0) hi = lo ;
-					esi = vpage + zero ;
+					esi = vpage + (signed char *) zero ;
 					n = 0 ;
-					*(lexan (tmp, buffer, 1)) = 0 ; // to support LISTIF
-					tmp = strchr (buffer, TIF) ;
+					*(lexan (tmp, buff, 1)) = 0 ; // to support LISTIF
+					tmp = strchr (buff, TIF) ;
 					while ((tmp != NULL) && (*(++tmp) == ' ')) ;
 					while (*esi && (*(unsigned short *)(esi + 1) < lo))
 						esi += (int)*(unsigned char *)esi ; 
@@ -1711,7 +1711,7 @@ int basic (void *ecx, void *edx, void *prompt)
 					if (lo == 0) lo = 10 ;
 					if (hi == 0xFFFF) hi = 10 ;
 					if (hi == 0) hi = 10 ;
-					esi = vpage + zero ;
+					esi = vpage + (signed char *) zero ;
 					n = 0 ;
 					while (*esi)
 					    {
@@ -1721,7 +1721,7 @@ int basic (void *ecx, void *edx, void *prompt)
 						n++ ;
 					    }
 					if ((lo + n*hi - hi) > 65535) error (20, NULL) ; 
-					esi = vpage + zero ;
+					esi = vpage + (signed char *) zero ;
 					lino = lo ;
 					while (*esi)
 					    {
@@ -1745,7 +1745,7 @@ int basic (void *ecx, void *edx, void *prompt)
 			    }
 		    }
 
-		esi = (signed char *) buffer ;
+		esi = (signed char *) buff ;
 	    }
 	xeq () ;
 	return 0 ;

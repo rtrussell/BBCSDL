@@ -4,7 +4,7 @@
 *                                                                 *
 *       BBCVDU.C  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.13a, 15-May-2020                                *
+*       Version 1.15a, 18-Aug-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -59,13 +59,25 @@ extern unsigned char frigo[], frign[] ;
 
 static char xscrol[] = {0, 2, 1, 3} ;
 
-static char dbrop[] =
+static short logicop[] =
 {
 	0,	// GCOL 0 - just plot
-        7,	// GCOL 1 - OR  (GL_OR)
-        1,	// GCOL 2 - AND (GL_AND)
-        6,	// GCOL 3 - XOR (GL_XOR)
-        10,	// GCOL 4 - NOT (GL_INVERT)
+        0x1507,	// GCOL 1 - OR  (GL_OR)
+        0x1501,	// GCOL 2 - AND (GL_AND)
+        0x1506,	// GCOL 3 - XOR (GL_XOR)
+        0x150A,	// GCOL 4 - NOT (GL_INVERT)
+        0,
+        0,
+        0
+} ;
+
+static SDL_BlendMode blendop[] = 
+{
+	SDL_BLENDMODE_NONE, // GCOL 0 - just plot
+	SDL_BLENDMODE_ADD,  // GCOL 1 - add
+	SDL_BLENDMODE_MOD,  // GCOL 2 - multiply
+	0,		    // GCOL 3 - 'xor' (populated in vduinit)
+	0,		    // GCOL 4 - 'not' (populated in vduinit)
         0,
         0,
         0
@@ -77,7 +89,7 @@ static char dbrop[] =
 // exactly even with the poorest colour resolution (15-bit RGB).
 
 // With a non-paletted display, logical plotting modes (AND, OR,
-// XOR, INVERT) act upon the RGB value, *not* the palette index//
+// XOR, INVERT) act upon the RGB value, *not* the palette index;
 // this may give unexpected results.  To maximise compatibility
 // between paletted and non-paletted displays, the default coltab
 // should have the property that logical maipulation of the index
@@ -110,13 +122,13 @@ static unsigned int coltab[NUMCOLOURS] =
 0xFFC8C800,        // Cyan
 0xFFC8C8C8,        // White
 0xFF383838,        // Grey
-0xFF3838F8,        // Intensified red
-0xFF38F838,        // Intensified green
-0xFF38F8F8,        // Intensified yellow
-0xFFF83838,        // Intensified blue
-0xFFF838F8,        // Intensified magenta
-0xFFF8F838,        // Intensified cyan
-0xFFF8F8F8         // Intensified white
+0xFF0000FF,        // Intensified red
+0xFF00FF00,        // Intensified green
+0xFF00FFFF,        // Intensified yellow
+0xFFFF0000,        // Intensified blue
+0xFFFF00FF,        // Intensified magenta
+0xFFFFFF00,        // Intensified cyan
+0xFFFFFFFF         // Intensified white
 } ;
 
 // For logical plotting to work correctly in 4-colour modes
@@ -199,7 +211,7 @@ void (*APIfunc) (int, int, int, int, int, int, int, int, int, int) ;
 
 // Bugfix version of SDL_RenderSetClipRect (SDL Bugzilla 2700)
 // n.b. writes to the rect, which is supposedly a constant!
-int BBC_RenderSetClipRect (SDL_Renderer* renderer, SDL_Rect* rect)
+static int BBC_RenderSetClipRect (SDL_Renderer* renderer, SDL_Rect* rect)
 {
 	int w, h, result ;
 
@@ -220,6 +232,9 @@ int BBC_RenderSetClipRect (SDL_Renderer* renderer, SDL_Rect* rect)
 int BBC_RenderReadPixels (SDL_Renderer* renderer, const SDL_Rect* rect,
                           Uint32 format, void* pixels, int pitch)
 {
+#ifdef __EMSCRIPTEN__
+	return SDL_RenderReadPixels (renderer, rect, format, pixels, pitch) ;
+#else
 	int result ;
 	SDL_Rect dst = {0, 0, rect->w, rect->h} ;
 	SDL_Texture *tex = SDL_GetRenderTarget (renderer) ;
@@ -228,6 +243,7 @@ int BBC_RenderReadPixels (SDL_Renderer* renderer, const SDL_Rect* rect,
 	result = SDL_RenderReadPixels (renderer, &dst, format, pixels, pitch) ;
 	SDL_SetRenderTarget (renderer, tex) ;
 	return result ;
+#endif
 }
 
 /*****************************************************************\
@@ -235,7 +251,7 @@ int BBC_RenderReadPixels (SDL_Renderer* renderer, const SDL_Rect* rect,
 \*****************************************************************/
 
 // Set render draw colour:
-static void setcol (char ci)
+static void setcol (unsigned char ci)
 {
 	int col = palette[(int) ci] ;
 	SDL_SetRenderDrawColor (memhdc, col & 0xFF, (col >> 8) & 0xFF,
@@ -933,35 +949,61 @@ static void charout(unsigned short ax, unsigned char fg, unsigned char bg,
 // Output a character with a logical plotting mode
 static void charout_logic (short ax, short fg, int cx, int cy, int dx)
 {
-	int pitch, c, x, y ;
+	int pitch ;
 	int *p ;
-	SDL_Rect rect = {0, 0, dx, chary} ;
-	SDL_Texture *tex = SDL_GetRenderTarget (memhdc) ;
-	SDL_Texture *src = SDL_CreateTexture (memhdc, SDL_PIXELFORMAT_ABGR8888,
+	unsigned char rop = fg & 7, col = fg >> 8 ;
+	if (glLogicOpBBC)
+	    {
+		int c, x, y ;
+		SDL_Rect rect = {0, 0, dx, chary} ;
+		SDL_Texture *tex = SDL_GetRenderTarget (memhdc) ;
+		SDL_Texture *src = SDL_CreateTexture (memhdc, SDL_PIXELFORMAT_ABGR8888,
 				SDL_TEXTUREACCESS_STREAMING, dx, chary) ;
-	SDL_SetRenderTarget (memhdc, NULL) ;
-	SDL_SetRenderDrawColor (memhdc, 0, 0, 0, 0xFF) ;
-	SDL_RenderFillRect (memhdc, &rect) ;
-	charout (ax, 0xFF, 0xFF, 0, 0, dx) ;
-	SDL_LockTexture (src, NULL, (void **) &p, &pitch) ;
-	SDL_RenderReadPixels (memhdc, &rect, SDL_PIXELFORMAT_ABGR8888, p, pitch) ;
-	SDL_SetRenderTarget (memhdc, tex) ;
-	BBC_RenderSetClipRect (memhdc, hrect) ;
-	if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
-	glEnableBBC (GL_COLOR_LOGIC_OP) ;
-	glLogicOpBBC (0x1500 + (fg & 0xFF)) ;
-	setcol (fg >> 8) ;
-	for (y = cy; y < (cy + chary); y++)
-		for (x = cx; x < (cx + dx); x++)
-		{
-			c = *p++ ;
-			if (c & 0x8000)
-				SDL_RenderDrawPoint(memhdc, x, y) ;
-		}
-	if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
-	glDisableBBC (GL_COLOR_LOGIC_OP) ;
-	SDL_UnlockTexture (src) ;
-	SDL_DestroyTexture (src) ;
+		SDL_SetRenderTarget (memhdc, NULL) ;
+		SDL_SetRenderDrawColor (memhdc, 0, 0, 0, 0xFF) ;
+		SDL_RenderFillRect (memhdc, &rect) ;
+		charout (ax, 0xFF, 0xFF, 0, 0, dx) ;
+		SDL_LockTexture (src, NULL, (void **) &p, &pitch) ;
+		SDL_RenderReadPixels (memhdc, &rect, SDL_PIXELFORMAT_ABGR8888, p, pitch) ;
+		SDL_SetRenderTarget (memhdc, tex) ;
+		BBC_RenderSetClipRect (memhdc, hrect) ;
+			if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
+		glEnableBBC (GL_COLOR_LOGIC_OP) ;
+		glLogicOpBBC (logicop[rop]) ;
+		setcol (col) ;
+		for (y = cy; y < (cy + chary); y++)
+			for (x = cx; x < (cx + dx); x++)
+			    {
+				c = *p++ ;
+				if (c & 0x8000)
+					SDL_RenderDrawPoint(memhdc, x, y) ;
+			    }
+		if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
+		glDisableBBC (GL_COLOR_LOGIC_OP) ;
+		SDL_UnlockTexture (src) ;
+		SDL_DestroyTexture (src) ;
+	    }
+	else
+	    {
+		SDL_Rect rect = {cx, cy, dx, chary} ;
+		SDL_Texture *tex = SDL_CreateTexture (memhdc, SDL_PIXELFORMAT_ABGR8888,
+				SDL_TEXTUREACCESS_STREAMING, dx, chary) ;
+		SDL_LockTexture (tex, NULL, (void **) &p, &pitch) ;
+		SDL_RenderReadPixels (memhdc, &rect, SDL_PIXELFORMAT_ABGR8888, p, pitch) ;
+		SDL_UnlockTexture (tex) ;
+		SDL_SetTextureBlendMode (tex, blendop[rop]) ;
+		if (rop == 2)
+			SDL_SetRenderDrawColor (memhdc, 0xFF, 0xFF, 0xFF, 0xFF) ;
+		else
+			SDL_SetRenderDrawColor (memhdc, 0, 0, 0, 0xFF) ;
+		BBC_RenderSetClipRect (memhdc, hrect) ;
+		SDL_RenderFillRect (memhdc, &rect) ;
+		if (rop == 3) col |= 8 ;
+		if (rop == 4) col = 255 ;
+		charout (ax, col, 0xFF, cx, cy, dx) ;
+		SDL_RenderCopy (memhdc, tex, NULL, &rect) ;
+		SDL_DestroyTexture (tex) ;
+	    }
 }
 
 // (variable pitch)
@@ -1153,9 +1195,9 @@ static void gcol (char al, signed char ah)
 	if (al == 4)
 		ah |= 0x7F ;		// GCOL 4 - NOT
 	if (ah >= 0)
-		forgnd = (((ah & colmsk) << 8) | dbrop[(int) al]) ;
+		forgnd = (((ah & colmsk) << 8) | al) ;
 	else
-		bakgnd = (((ah & colmsk) << 8) | dbrop[(int) al]) ;
+		bakgnd = (((ah & colmsk) << 8) | al) ;
 }
 
 // Set default palette and colours:
@@ -1176,6 +1218,7 @@ static void rescol (void)
 	}
 	for (i = 0; i < n; i++)
 		palette[i] = p[i] ;
+	palette[255] = 0xFFFFFFFF ; // for 'invert' colour 
 	txtfor = colmsk & 7 ;
 	txtbak = 0 ;
 	gcol (0, txtfor) ;
@@ -1248,6 +1291,10 @@ static void newmode (short wx, short wy, short cx, short cy, short nc, signed ch
 // Initialise VDU system:
 static void vduinit (void)
 {
+	blendop[3] = SDL_ComposeCustomBlendMode (SDL_BLENDFACTOR_ONE_MINUS_DST_COLOR, 
+			SDL_BLENDFACTOR_ONE_MINUS_SRC_COLOR, SDL_BLENDOPERATION_ADD, 
+			SDL_BLENDFACTOR_ZERO, SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD) ;
+	blendop[4] = blendop[3] ;
 	hfont = NULL ;
 	modeno = -1 ;
 	cursb = chary ;
@@ -1257,8 +1304,8 @@ static void vduinit (void)
 	lthick = 1 ;
 	cursx = 0 ;
 	tweak = 0 ;
-#ifdef __IPHONEOS__
 	rescol () ;
+#ifdef __IPHONEOS__
 	minit (0) ;
 #else
 	minit (-1) ;
@@ -1326,17 +1373,17 @@ static void plotns (unsigned char al, int cx, int cy)
 	switch (al & 3)
 	{
 	case 1:		// plot in foreground colour
-		rop = forgnd & 0xFF ;
+		rop = forgnd & 7 ;
 		col = forgnd >> 8 ;
 		break ;
 
 	case 2:		// plot in inverse colour
-		rop = dbrop[4] ;
+		rop = 4 ;
 		col = colmsk ;
 		break ;
 
 	case 3:		// plot in background colour
-		rop = bakgnd & 0xFF ;
+		rop = bakgnd & 7 ;
 		col = bakgnd >> 8 ;
 	}
 
@@ -1351,13 +1398,25 @@ static void plotns (unsigned char al, int cx, int cy)
 	lasty = cy ;
 
 	if ((al & 0xC3) == 0)
+	    {
+		bChanged = 1 ;		// so moves can't flood event queue
 		return ;		// just move, don't plot
+	    }
 
 	if (rop != 0)
 	{
-		if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
-		glEnableBBC (GL_COLOR_LOGIC_OP) ;
-		glLogicOpBBC (0x1500 + rop) ;
+		if (glLogicOpBBC)
+		    {
+			if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
+			glEnableBBC (GL_COLOR_LOGIC_OP) ;
+			glLogicOpBBC (logicop[rop]) ;
+		    }
+		else
+		    {
+			SDL_SetRenderDrawBlendMode (memhdc, blendop[rop]) ;
+			if (rop == 3) col |= 8 ;
+			if (rop == 4) col = 255 ;
+		    }
 	}
 
 	BBC_RenderSetClipRect (memhdc, hrect) ;
@@ -1514,8 +1573,13 @@ static void plotns (unsigned char al, int cx, int cy)
 		}
 		if (rop != 0)
 		    {
-			if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
-			glDisableBBC (GL_COLOR_LOGIC_OP) ;
+			if (glLogicOpBBC)
+			    {
+				if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
+				glDisableBBC (GL_COLOR_LOGIC_OP) ;
+			    }
+			else
+				SDL_SetRenderDrawBlendMode (memhdc, SDL_BLENDMODE_NONE) ;
 			rop = 0 ;
 		    }
 		if ((al & BIT1) != 0)
@@ -1548,8 +1612,13 @@ static void plotns (unsigned char al, int cx, int cy)
 		}
 		if (rop != 0)
 		    {
-			if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
-			glDisableBBC (GL_COLOR_LOGIC_OP) ;
+			if (glLogicOpBBC)
+			    {
+				if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
+				glDisableBBC (GL_COLOR_LOGIC_OP) ;
+			    }
+			else
+				SDL_SetRenderDrawBlendMode (memhdc, SDL_BLENDMODE_NONE) ;
 			rop = 0 ;
 		    }
 		blit (cx, cy-ly+py, px, py, lx-px+1, ly-py+1, 1) ; // Swap
@@ -1559,8 +1628,13 @@ static void plotns (unsigned char al, int cx, int cy)
 	SDL_RenderSetClipRect (memhdc, NULL) ;
 	if (rop != 0)
 	    {
-		if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
-		glDisableBBC (GL_COLOR_LOGIC_OP) ;
+		if (glLogicOpBBC)
+		    {
+			if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
+			glDisableBBC (GL_COLOR_LOGIC_OP) ;
+		    }
+		else
+			SDL_SetRenderDrawBlendMode (memhdc, SDL_BLENDMODE_NONE) ;
 	    }
 	bChanged = 1 ;
 }
@@ -1585,7 +1659,7 @@ static void clg (void)
 	if (modeno != 7)
 	{
 		int l, r, t, b ;
-		unsigned char rop = bakgnd & 0xFF ;
+		unsigned char rop = bakgnd & 7, col = bakgnd >> 8 ;
 		grawin (&l, &r, &t, &b) ;
 		if (rop != 0)
 		    {
@@ -1598,12 +1672,27 @@ static void clg (void)
 			vy[2] = b - 1 ;
 			vx[3] = l ;
 			vy[3] = b - 1 ;
-			if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
-			glEnableBBC (GL_COLOR_LOGIC_OP) ;
-			glLogicOpBBC (0x1500 + rop) ;
-			filledPolygonColor (memhdc, vx, vy, 4, palette[(int) bakgnd >> 8]) ;
-			if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
-			glDisableBBC (GL_COLOR_LOGIC_OP) ;
+
+			if (glLogicOpBBC)
+			    {
+				if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
+				glEnableBBC (GL_COLOR_LOGIC_OP) ;
+				glLogicOpBBC (logicop[rop]) ;
+			    }
+			else
+			    {
+				SDL_SetRenderDrawBlendMode (memhdc, blendop[rop]) ;
+				if (rop == 3) col |= 8 ;
+				if (rop == 4) col = 255 ;
+			    }
+			filledPolygonColor (memhdc, vx, vy, 4, palette[(int) col]) ;
+			if (glLogicOpBBC)
+			    {
+				if (SDL_RenderFlushBBC) SDL_RenderFlushBBC (memhdc) ;
+				glDisableBBC (GL_COLOR_LOGIC_OP) ;
+			    }
+			else
+				SDL_SetRenderDrawBlendMode (memhdc, SDL_BLENDMODE_NONE) ;
 		    }
 		else
 		    {
@@ -1900,6 +1989,7 @@ void xeqvdu_ (int data2, int data1, int code)
 		  break ;
 
 		case 9: // RIGHT
+		  unpend () ;
 		  qmove (0) ;
 		  break ;
 
@@ -2337,6 +2427,20 @@ int disply_ (SDL_Rect *dst, SDL_Surface *surf)
 // Read pixels (for *GSAVE/*SCREENSAVE):
 void getpix_ (SDL_Rect *src, void *buffer)
 {
+#ifdef __EMSCRIPTEN__
+	int i, j, k = src->h - 1 ;
+	int pitch = (src->w * 3 + 3) & -4 ;
+	ascale (&src->x, &src->y) ;
+	src->y -= (src->h - 1) ;	// adjust ypos to top
+	SDL_RenderReadPixels (memhdc, src, SDL_PIXELFORMAT_BGR24, buffer, pitch) ;
+	for (j = 0; j < src->h / 2; j++, k--)
+		for (i = 0; i < pitch; i += 4)
+		    {
+			int t = *(int *)(buffer + j*pitch + i) ;
+			*(int *)(buffer + j*pitch + i) = *(int *)(buffer + k*pitch + i) ;
+			*(int *)(buffer + k*pitch + i) = t ;
+		    }
+#else
 	SDL_Texture *tex = SDL_GetRenderTarget (memhdc) ;
 	SDL_SetRenderTarget (memhdc, NULL) ;
 	SDL_Rect dst = {0, 0, src->w, src->h} ;
@@ -2346,4 +2450,5 @@ void getpix_ (SDL_Rect *src, void *buffer)
 	SDL_RenderCopyEx (memhdc, tex, src, &dst, 0, NULL, SDL_FLIP_VERTICAL) ;
 	SDL_RenderReadPixels (memhdc, &dst, SDL_PIXELFORMAT_BGR24, buffer, pitch) ;
 	SDL_SetRenderTarget (memhdc, tex) ;
+#endif
 }

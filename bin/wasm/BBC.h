@@ -1,9 +1,9 @@
 /******************************************************************\
-*       BBC BASIC for SDL 2.0 (32-bits or 64-bits)                 *
+*       BBC BASIC for SDL 2.0 (Emscripten / Web Assembly)          *
 *       Copyright (c) R. T. Russell, 2000-2020                     *
 *                                                                  *
-*       BBC.h constant, variable and structure declarations        *
-*       Version 1.15a, 27-Aug-2020                                 *
+*       BBC.h constant and variable declarations                   *
+*       Version 1.15w, 28-Aug-2020                                 *
 \******************************************************************/
 
 // Constants:
@@ -295,55 +295,65 @@ register signed char *esi asm ("r12") ;	// Program pointer
 register heapptr *esp asm ("r13") ;	// Stack pointer
 #endif
 #ifdef __aarch64__
-register signed char *esi asm ("x28") ;	// Program pointer
-register heapptr *esp asm ("x29") ;	// Stack pointer
+register signed char *esi asm ("r10") ;	// Program pointer
+register heapptr *esp asm ("r11") ;	// Stack pointer
 #endif
 #endif
 
-// Data locations (defined in bbdata_xxx_xx.nas):
-extern unsigned char errnum ;	// Error code number
-extern char *accs ;		// String accumulator
-extern char *buff ;		// Temporary line buffer
-extern heapptr *onersp ;	// ON ERROR LOCAL stack pointer
-extern heapptr vpage ;		// Value of PAGE
-extern heapptr errlin ;		// Pointer to error line
-extern heapptr curlin ;		// Pointer to current line
-extern heapptr errtrp ;		// Pointer to ON ERROR handler
-extern heapptr timtrp ;		// Pointer to ON TIME handler
-extern heapptr clotrp ;		// Pointer to ON CLOSE handler
-extern heapptr siztrp ;		// Pointer to ON MOVE handler
-extern heapptr systrp ;		// Pointer to ON SYS handler
-extern heapptr moutrp ;		// Pointer to ON MOUSE handler
-extern heapptr libase ;		// Base of libraries 
-extern heapptr datptr ;		// DATA pointer
-extern heapptr lomem ;		// Pointer to base of heap
-extern heapptr pfree ;		// Pointer to free space
-extern heapptr himem ;		// Pointer to top of stack
-extern const char *errtxt ;	// Most recent error message
+// Data locations (defined in bbcdata):
 extern int stavar[] ;		// Static integer variables
-extern heapptr dynvar[] ;	// Linked-list pointers
-extern heapptr fnptr[] ;	// Pointer to user FuNctions
-extern heapptr proptr[] ;	// Pointer to user PROCedures
+#define dynvar ((heapptr *)((char*)stavar + 108))	// Linked-list pointers
+#define fnptr  ((heapptr *)((char*)stavar + 324))	// Pointer to user FuNctions
+#define proptr ((heapptr *)((char*)stavar + 328))	// Pointer to user PROCedures
+#define accs   (*(char **)((char*)stavar + 332))	// String accumulator
+#define buff   (*(char **)((char*)stavar + 336))	// Temporary line buffer
+#define vpage  (*(heapptr *)((char*)stavar + 340))	// Value of PAGE
+#define tracen (*(unsigned short *)((char*)stavar + 344))	// TRACE maximum line number
+#define lomem  (*(heapptr *)((char*)stavar + 348))	// Pointer to base of heap
+#define pfree  (*(heapptr *)((char*)stavar + 352))	// Pointer to free space
+#define himem  (*(heapptr *)((char*)stavar + 356))	// Pointer to top of stack
+#define libase (*(heapptr *)((char*)stavar + 360))	// Base of libraries 
+#define errtxt (*(const char **)((char*)stavar + 364))	// Most recent error message
+#define onersp (*(heapptr **)((char*)stavar + 368))	// ON ERROR LOCAL stack pointer
+#define errtrp (*(heapptr *)((char*)stavar + 372))	// Pointer to ON ERROR handler
+#define datptr (*(heapptr *)((char*)stavar + 376))	// DATA pointer
+#define vcount (*(unsigned int *)((char*)stavar + 380))	// Character count since newline
+#define curlin (*(heapptr *)((char*)stavar + 384))	// Pointer to current line
+#define timtrp (*(heapptr *)((char*)stavar + 388))	// Pointer to ON TIME handler
+#define clotrp (*(heapptr *)((char*)stavar + 392))	// Pointer to ON CLOSE handler
+#define siztrp (*(heapptr *)((char*)stavar + 396))	// Pointer to ON MOVE handler
+#define systrp (*(heapptr *)((char*)stavar + 400))	// Pointer to ON SYS handler
+#define moutrp (*(heapptr *)((char*)stavar + 404))	// Pointer to ON MOUSE handler
+#define errlin (*(heapptr *)((char*)stavar + 408))	// Pointer to error line
+#define prand  (*(unsigned int *)((char*)stavar + 412))	// Pseudo-random number
+#define vwidth (*(unsigned char *)((char*)stavar + 417))// Width for auto-newline
+#define errnum (*(unsigned char *)((char*)stavar + 418))// Error code number
+#define liston (*(unsigned char *)((char*)stavar + 419))// *FLOAT/*HEX/*LOWERCASE/OPT
+#define lstopt (*(char *)((char*)stavar + 444))		// LISTO value
+
 extern node *flist[] ;		// String free-lists
 extern STR tmps ;		// Temporary string descriptor
-extern unsigned char liston ;	// *FLOAT/*HEX/*LOWERCASE/OPT
-extern unsigned char lstopt ;	// LISTO value (indentation)
-extern unsigned int vcount ;    // Character count since newline
-extern unsigned char vwidth ;	// Width for auto-newline
-extern int link00 ;		// Terminating link in @ list
-extern heapptr vduptr ;		// @vdu{} structure pointer
-extern heapptr vdufmt ;		// @vdu{} structure format
-extern unsigned char evtqw ;	// Event queue write pointer
-extern unsigned char evtqr ;	// Event queue read pointer
-extern void *sysvar ;		// Start of @ variables linked list
-extern unsigned short tracen ;	// TRACE maximum line number
-extern unsigned char flags ;	// BASIC's Boolean flags byte
-extern unsigned int prand ;	// Pseudo-random number
 extern unsigned char fvtab[] ;	// Table of 'fast' variable types
-extern char modeno ;		// MODE number
-extern size_t memhdc ;		// SDL Renderer
-extern heapptr cmdadr, diradr, libadr, usradr, tmpadr ;
-extern int     cmdlen, dirlen, liblen, usrlen, tmplen ;
+
+extern int vduvar[] ;		// VDU variables
+#define modeno (*(char *)((char*)vduvar + 72))		// MODE number
+#define evtqw (*(unsigned char *)((char*)vduvar + 205))	// Event queue write pointer
+#define evtqr (*(unsigned char *)((char*)vduvar + 206))	// Event queue read pointer
+
+extern int sysvar[] ;		// @ variables linked list
+#define memhdc (*(size_t *)((char*)sysvar + 12))	// SDL Renderer
+#define flags  (*(unsigned char *)((char*)sysvar + 199))// BASIC's Boolean flags byte
+#define link00 (*(int *)((char*)sysvar + 538))		// Terminating link in @ list
+#define diradr (*(heapptr *)((char*)sysvar + 276))
+#define dirlen (*(int *)((char*)sysvar + 280))
+#define libadr (*(heapptr *)((char*)sysvar + 296))
+#define liblen (*(int *)((char*)sysvar + 300))
+#define cmdadr (*(heapptr *)((char*)sysvar + 316))
+#define cmdlen (*(int *)((char*)sysvar + 320))
+#define usradr (*(heapptr *)((char*)sysvar + 336))
+#define usrlen (*(int *)((char*)sysvar + 340))
+#define tmpadr (*(heapptr *)((char*)sysvar + 356))
+#define tmplen (*(int *)((char*)sysvar + 360))
 
 // Defined in bbcsdl.c:
 extern char *szCmdLine ;	// @cmd$

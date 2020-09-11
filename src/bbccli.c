@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
-*       Version 1.14a, 22-Jul-2020                                *
+*       Version 1.15a, 30-Aug-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -210,7 +210,7 @@ void oscli (char *cmd)
 {
 	int b = 0, h = POWR2, n ;
 	char cpy[256] ;
-	char path[MAX_PATH], path2[MAX_PATH] ;
+	char path1[MAX_PATH], path2[MAX_PATH] ;
 	SDL_RWops *srcfile, *dstfile ;
 	DIR *d ;
 	char *p, *q, dd ;
@@ -275,25 +275,25 @@ void oscli (char *cmd)
 
 		case CD:			// *CD [directory]
 		case CHDIR:			// *CHDIR [directory]
-			setup (path, p, "", ' ', &flag) ;
+			setup (path1, p, "", ' ', &flag) ;
 			if (flag == 0)
 			    {
-				getcwd (path, MAX_PATH) ;
-				text (path) ;
+				getcwd (path1, MAX_PATH) ;
+				text (path1) ;
 				crlf () ;
 				return ;
 			    }
-			if (chdir (path))
+			if (chdir (path1))
 				error (206, "Bad directory") ;
 			return ;
 
 		case COPY:			// *COPY oldfile newfile
-			p = setup (path, p, ".bbc", ' ', NULL) ;
-			srcfile = SDL_RWFromFile (path, "rb") ;
+			p = setup (path1, p, ".bbc", ' ', NULL) ;
+			srcfile = SDL_RWFromFile (path1, "rb") ;
 			if (srcfile == NULL)
 				error (214, "File or path not found") ;
-			setup (path, p, ".bbc", ' ', NULL) ;
-			dstfile = SDL_RWFromFile (path, "wb") ;
+			setup (path1, p, ".bbc", ' ', NULL) ;
+			dstfile = SDL_RWFromFile (path1, "wb") ;
 			if (dstfile == NULL)
 			    {
 				SDL_RWclose (srcfile) ;
@@ -318,21 +318,21 @@ void oscli (char *cmd)
 		case DELETE:			// *DELETE filename
 		case ERA:			// *ERA filename
 		case ERASE:			// *ERASE filename
-			setup (path, p, ".bbc", ' ', NULL) ;
-			if (remove (path))
+			setup (path1, p, ".bbc", ' ', NULL) ;
+			if (remove (path1))
 				error (254, "Bad command") ;	// Bad command
 			return ;
 
 		case DIRCMD:
-			setup (path, p, ".bbc", ' ', &flag) ;
+			setup (path1, p, ".bbc", ' ', &flag) ;
 			if ((flag & BIT0) == 0)
-				strcat (path, "*.bbc") ;
+				strcat (path1, "*.bbc") ;
 			if (flag & BIT1)
 			    {
-				p = path + strlen (path) ;
-				q = path ;
+				p = path1 + strlen (path1) ;
+				q = path1 ;
 				while ((*p != '/') && (*p != '\\')) p-- ;
-				if ((p == path) || (*(p - 1) == ':'))
+				if ((p == path1) || (*(p - 1) == ':'))
 				    {
 					dd = 0 ;
 					*++p = 0 ;	// root
@@ -351,7 +351,7 @@ void oscli (char *cmd)
 #else
 				dd = '/' ;
 #endif
-				p = path ;
+				p = path1 ;
 				q = path2 ;
 			    }
 			text ("Directory of ") ;
@@ -382,9 +382,9 @@ void oscli (char *cmd)
 				text (r -> d_name) ;
 				do
 					outchr (' ') ;
-				while ( (count != 0) && (count != 20) &&
-					(count != 40) && (count < 60)) ;
-				if (count > 60)
+				while ( (vcount != 0) && (vcount != 20) &&
+					(vcount != 40) && (vcount < 60)) ;
+				if (vcount > 60)
 					crlf () ;
 			    }
 			closedir (d) ;
@@ -397,7 +397,7 @@ void oscli (char *cmd)
 				SDL_Rect rect = {0, 0, 0, 0} ;
 				SDL_Surface *bmp ;
 
-				p = setup (path, p, ".bmp", ' ', NULL) ;
+				p = setup (path1, p, ".bmp", ' ', NULL) ;
 
 				p += cpy - cmd ;
 				sscanf (p, "%i, %i, %i, %i, %x",
@@ -410,7 +410,7 @@ void oscli (char *cmd)
 				rect.w /= 2 ;
 				rect.h /= 2 ;
 
-				srcfile = SDL_RWFromFile (path, "rb") ;
+				srcfile = SDL_RWFromFile (path1, "rb") ;
 				if (srcfile == 0)
 					error (214, "File or path not found") ;
 				bmp = SDL_LoadBMP_RW (srcfile, 0) ;
@@ -450,10 +450,10 @@ void oscli (char *cmd)
 				SDL_RWclose (exchan) ;
 				exchan = NULL ;
 			    }
-			setup (path, p, ".bbc", ' ', NULL) ;
-			if (*path == 0)
+			setup (path1, p, ".bbc", ' ', NULL) ;
+			if (*path1 == 0)
 				return ;
-			exchan = SDL_RWFromFile (path, "rb") ;
+			exchan = SDL_RWFromFile (path1, "rb") ;
 			if (exchan == NULL)
 				error (214, "File or path not found") ;
 			return ;
@@ -487,7 +487,7 @@ void oscli (char *cmd)
 				int size = 0, style = 0 ;
 				unsigned char attr = 0 ;
 				unsigned char flag ;
-				p = setup (path, p, ".ttf", ' ', &flag) ;
+				p = setup (path1, p, ".ttf", ' ', &flag) ;
 				if (*p == ',') p++ ;
 				if (*p != 0x0D)
 					size = (strtol (p, &p, 10) * 21845 + 8192) >> 14 ;
@@ -503,7 +503,7 @@ void oscli (char *cmd)
 					style |= TTF_STYLE_ITALIC ;
 				if (attr & BIT1)
 					style |= TTF_STYLE_BOLD ;
-				pushev (EVT_FONT, path, (void *)(intptr_t)((style << 16) | size)) ;
+				pushev (EVT_FONT, path1, (void *)(intptr_t)((style << 16) | size)) ;
 				if ((waitev() == 0) && (size != 0))
 					error (246, "No such font") ;
 				return ;
@@ -537,7 +537,7 @@ void oscli (char *cmd)
 				int bfSize ;
 				SDL_Rect rect = {0, 0, 0, 0} ;
 
-				p = setup (path, p, ".bmp", ' ', NULL) ;
+				p = setup (path1, p, ".bmp", ' ', NULL) ;
 
 				p += cpy - cmd ;
 				sscanf (p, "%i, %i, %i, %i",
@@ -569,7 +569,7 @@ void oscli (char *cmd)
 				pushev (EVT_PIXELS, &rect, p + 54) ;
 				waitev () ;
 
-				dstfile = SDL_RWFromFile (path, "wb") ;
+				dstfile = SDL_RWFromFile (path1, "wb") ;
 				if (dstfile == NULL)
 				    {
 					free (p) ;
@@ -623,8 +623,8 @@ void oscli (char *cmd)
 			return ;
 
 		case LIST:
-			setup (path, p, ".bbc", ' ', NULL) ;
-			srcfile = SDL_RWFromFile (path, "rb") ;
+			setup (path1, p, ".bbc", ' ', NULL) ;
+			srcfile = SDL_RWFromFile (path1, "rb") ;
 			if (srcfile == NULL)
 				error (214, "File or path not found") ;
 			b = 0 ;
@@ -650,7 +650,7 @@ void oscli (char *cmd)
 			return ;
 
 		case LOAD:		// *LOAD filename hexaddr [+maxlen]
-			p = setup (path, p, ".bbc", ' ', NULL) ;
+			p = setup (path1, p, ".bbc", ' ', NULL) ;
 			n = 0 ;
 			q = 0 ;
 			if (*p != 0x0D)
@@ -666,7 +666,7 @@ void oscli (char *cmd)
 				error (8, NULL) ; // 'Address out of range'
 			if (n <= 0)
 				n = (char *)userTOP - q ;
-			srcfile = SDL_RWFromFile (path, "rb") ;
+			srcfile = SDL_RWFromFile (path1, "rb") ;
 			if (srcfile == NULL)
 				error (214, "File or path not found") ;
 			if (0 == SDL_RWread(srcfile, q, 1, n))
@@ -675,8 +675,8 @@ void oscli (char *cmd)
 			return ;
 
 		case LOCK:
-			setup (path, p, ".bbc", ' ', NULL) ;
-			if (0 != chmod (path, _S_IREAD))
+			setup (path1, p, ".bbc", ' ', NULL) ;
+			if (0 != chmod (path1, _S_IREAD))
 				error (254, "Bad command") ;
 			return ;
 
@@ -689,11 +689,11 @@ void oscli (char *cmd)
 
 		case MD:
 		case MKDIR:
-			setup (path, p, "", ' ', NULL) ;
+			setup (path1, p, "", ' ', NULL) ;
 #ifdef __WINDOWS__
-			if (0 != mkdir (path))
+			if (0 != mkdir (path1))
 #else
-			if (0 != mkdir (path, 0777))
+			if (0 != mkdir (path1, 0777))
 #endif
 				error (254, "Bad command") ;
 			return ;
@@ -748,8 +748,8 @@ void oscli (char *cmd)
 
 		case RD:
 		case RMDIR:
-			setup (path, p, "", ' ', NULL) ;
-			if (0 != rmdir (path))
+			setup (path1, p, "", ' ', NULL) ;
+			if (0 != rmdir (path1))
 				error (254, "Bad command") ;
 			return ;
 
@@ -772,7 +772,7 @@ void oscli (char *cmd)
 
 		case REN:
 		case RENAME:
-			p = setup (path, p, ".bbc", ' ', NULL) ;
+			p = setup (path1, p, ".bbc", ' ', NULL) ;
 			setup (path2, p, ".bbc", ' ', NULL) ;
 			dstfile = SDL_RWFromFile (path2, "rb") ;
 			if (dstfile != NULL)
@@ -780,27 +780,27 @@ void oscli (char *cmd)
 				SDL_RWclose (dstfile) ;
 				error (196, "File exists") ;
 			    }
-			if (0 != rename (path, path2))
+			if (0 != rename (path1, path2))
 				error (196, "File exists") ;
 			return ;
 
 		case RUN:
-			strncpy (path, p, MAX_PATH - 1) ;
-			q = memchr (path, 0x0D, MAX_PATH) ;
+			strncpy (path1, p, MAX_PATH - 1) ;
+			q = memchr (path1, 0x0D, MAX_PATH) ;
 			if (q != NULL) *q = 0 ;
-			q = path + strlen (path) - 1 ;
+			q = path1 + strlen (path1) - 1 ;
 			if (*q == ';')
 				*q = '&' ;
 #ifdef __IPHONEOS__
 			error (255, "Unsupported") ;
 #else
-			if (0 != system (path))
+			if (0 != system (path1))
 				error (254, "Bad command") ;
 #endif
 			return ;
 
 		case SAVE:		// *SAVE filename hexaddr +hexlen
-			p = setup (path, p, ".bbc", ' ', NULL) ;
+			p = setup (path1, p, ".bbc", ' ', NULL) ;
 			n = 0 ;
 			q = 0 ;
 			if (*p != 0x0D)
@@ -814,7 +814,7 @@ void oscli (char *cmd)
 			    }
 			if (n <= 0)
 				error (254, "Bad command") ;
-			dstfile = SDL_RWFromFile (path, "wb") ;
+			dstfile = SDL_RWFromFile (path1, "wb") ;
 			if (dstfile == NULL)
 				error (189, SDL_GetError ()) ;
 			if (0 == SDL_RWwrite(dstfile, q, 1, n))
@@ -831,8 +831,8 @@ void oscli (char *cmd)
 			while (*p == ' ') p++ ;
 			if (*p == 0x0D)
 				return ;
-			setup (path, p, ".bbc", ' ', NULL) ;
-			spchan = SDL_RWFromFile (path, "wb") ;
+			setup (path1, p, ".bbc", ' ', NULL) ;
+			spchan = SDL_RWFromFile (path1, "wb") ;
 			if (spchan == NULL)
 				error (189, SDL_GetError ()) ;
 			return ;
@@ -846,8 +846,8 @@ void oscli (char *cmd)
 			while (*p == ' ') p++ ;
 			if (*p == 0x0D)
 				return ;
-			setup (path, p, ".bbc", ' ', NULL) ;
-			spchan = SDL_RWFromFile (path, "ab") ;
+			setup (path1, p, ".bbc", ' ', NULL) ;
+			spchan = SDL_RWFromFile (path1, "ab") ;
 			if (spchan == NULL)
 				error (189, SDL_GetError ()) ;
 			return ;
@@ -879,16 +879,15 @@ void oscli (char *cmd)
 			sscanf (p, "%i", &n) ;
 			if (n == 0)
 				return ;
-			SDL_RemoveTimer (UserTimerID) ;
-			UserTimerID = SDL_AddTimer (n, UserTimerCallback, 0) ;
+			pushev (EVT_TIMER, (void *)(intptr_t) n, NULL) ;
 			return ;
 
 		case TV:
 			return ;		// ignored
 
 		case TYPE:
-			setup (path, p, ".bbc", ' ', NULL) ;
-			srcfile = SDL_RWFromFile (path, "rb") ;
+			setup (path1, p, ".bbc", ' ', NULL) ;
+			srcfile = SDL_RWFromFile (path1, "rb") ;
 			if (srcfile == NULL)
 				error (214, "File or path not found") ;
 			do
@@ -909,8 +908,8 @@ void oscli (char *cmd)
 			return ;
 
 		case UNLOCK:
-			setup (path, p, ".bbc", ' ', NULL) ;
-			if (0 != chmod (path, _S_IREAD | _S_IWRITE))
+			setup (path1, p, ".bbc", ' ', NULL) ;
+			if (0 != chmod (path1, _S_IREAD | _S_IWRITE))
 				error (254, "Bad command") ;
 			return ;
 
@@ -934,35 +933,35 @@ void oscli (char *cmd)
 			return ;
 
 		case DUMP:
-			setup (path, p, ".bbc", ' ', NULL) ;
-			srcfile = SDL_RWFromFile (path, "rb") ;
+			setup (path1, p, ".bbc", ' ', NULL) ;
+			srcfile = SDL_RWFromFile (path1, "rb") ;
 			if (srcfile == NULL)
 				error (214, "File or path not found") ;
 			b = 0 ;
 			do
 			    {
 				int i ;
-				unsigned char buff[16] ;
+				unsigned char dbuff[16] ;
 				if (flags & (ESCFLG | KILL))
 				    {
 					SDL_RWclose (srcfile) ;
 					trap () ;
 				    }
-				n = SDL_RWread (srcfile, buff, 1, 16) ;
+				n = SDL_RWread (srcfile, dbuff, 1, 16) ;
 				if (n)
 				    {
-					memset (path, ' ', 80) ;
-					sprintf (path, "%08X  ", b) ;
+					memset (path1, ' ', 80) ;
+					sprintf (path1, "%08X  ", b) ;
 					for (i = 0; i < n; i++)
 					    {
-						sprintf (path + 10 + 3 * i, "%02X ", buff[i]) ;
-						if ((buff[i] >= ' ') && (buff[i] <= '~'))
-							path[59+i] = buff[i] ;
+						sprintf (path1 + 10 + 3 * i, "%02X ", dbuff[i]) ;
+						if ((dbuff[i] >= ' ') && (dbuff[i] <= '~'))
+							path1[59+i] = dbuff[i] ;
 						else
-							path[59+i] = '.' ;
+							path1[59+i] = '.' ;
 					    }
-						path[10 + 3 * n] = ' ' ; path[75] = 0 ;
-					text (path) ;
+						path1[10 + 3 * n] = ' ' ; path1[75] = 0 ;
+					text (path1) ;
 					crlf () ;
 					b += n ;
 				    }

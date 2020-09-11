@@ -3,7 +3,7 @@
 ;*       Copyright (c) R. T. Russell, 2000-2020                    *
 ;*                                                                 *
 ;*       BBCDATA.NAS RAM data definitions                          *
-;*       Version 1.14a, 25-Jun-2020                                *
+;*       Version 1.15a, 27-Aug-2020                                *
 ;\*****************************************************************/
 ;
 MAX_PORTS       EQU     4       ; Maximum number of i/o ports
@@ -12,9 +12,9 @@ SOUNDQE         EQU     4       ; Number of bytes per sound entry
 SOUNDQL         EQU     5*SOUNDQE ; Number of bytes per channel
 ;
 	GLOBAL	stavar,lc,oc,pc,dynvar,fnptr,proptr,prand
-	GLOBAL	accs,buffer,vpage,flist,lomem,pfree,himem
+	GLOBAL	accs,buff,vpage,flist,lomem,pfree,himem
 	GLOBAL	errtxt,onersp,errtrp,datptr,curlin,errlin
-	GLOBAL	tracen,random,count,vwidth,errnum,liston,tmps
+	GLOBAL	tracen,random,vcount,vwidth,errnum,liston,tmps
 ;
 	GLOBAL	path,keystr,keybdq,keyptr,spchan,exchan,tweak
 	GLOBAL	fcbtab,timoff,usrchr,soundq,envels,waves,libase
@@ -80,7 +80,7 @@ errtxt:	dd	0		; Pointer to error text for REPORT
 	dd	0		; 64-bit pointer
 errtrp:	dd	0		; Pointer to ON ERROR statement
 datptr:	dd	0		; Pointer to DATA statements
-count:	dd	0		; Current value of COUNT
+vcount:	dd	0		; Current value of COUNT
 curlin:	dd	0		; Pointer to current statement
 alltrp:				; Start of trap pointers
 timtrp:	dd	0		; Pointer to ON TIME statement
@@ -132,7 +132,7 @@ tmps:	dd	0		; Temp string descriptor: address
 ;
 onersp:	dd	0		; ESP storage for ON ERROR LOCAL
 	dd	0		; 64-bit pointer
-buffer:	dd	0		; Pointer to string input buffer
+buff:	dd	0		; Pointer to string input buffer
 	dd	0		; 64-bit pointer
 keystr:	dd	0		; Pointer to user *KEY strings
 	dd	0		; 64-bit pointer

@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2018-2020                    *
 *                                                                 *
 *       BBCDAT.S RAM data definitions                             *
-*       Version 1.14a, 25-Jun-2020                                *
+*       Version 1.15a, 27-Aug-2020                                *
 \*****************************************************************/
 
 .equ	MAX_PORTS,4
@@ -19,7 +19,7 @@
 .global proptr
 .global prand
 .global accs
-.global buffer
+.global buff
 .global vpage
 .global flist
 .global lomem
@@ -32,7 +32,7 @@
 .global curlin
 .global errlin
 .global tracen
-.global count
+.global vcount
 .global vwidth
 .global errnum
 .global liston
@@ -190,7 +190,7 @@ dynvar:	.fill	54,4,0	/* Pointers to dynamic vars */
 fnptr:	.long	0	/* Pointer to user FuNctions */
 proptr:	.long	0	/* Pointer to user PROCedures */
 accs:	.long	0	/* Pointer to string accumulator */
-buffer:	.long	0	/* Pointer to string input buffer */
+buff:	.long	0	/* Pointer to string input buffer */
 vpage:	.long	0	/* Current value of PAGE */
 tracen:	.long	0	/* Maximum line number to trace */
 lomem:	.long	0	/* Current value of LOMEM */
@@ -201,7 +201,7 @@ errtxt:	.long	0	/* Pointer to error text for REPORT */
 onersp:	.long	0	/* ESP storage for ON ERROR LOCAL */
 errtrp:	.long	0	/* Pointer to ON ERROR statement */
 datptr:	.long	0	/* Pointer to DATA statements */
-count:	.long	0	/* Current value of COUNT */
+vcount:	.long	0	/* Current value of COUNT */
 curlin:	.long	0	/* Pointer to current statement */
 alltrp:			/* Start of trap pointers */
 timtrp:	.long	0	/* Pointer to ON TIME statement */

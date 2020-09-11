@@ -3,11 +3,12 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.15a, 04-Aug-2020                                *
+*       Version 1.15a, 27-Aug-2020                                *
 \*****************************************************************/
 
 #include <string.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <math.h>
 #include "BBC.h"
 
@@ -28,7 +29,7 @@ void braket (void) ;		// Check for closing parenthesis
 void comma (void) ;		// Check for a comma
 void clear (void) ;		// Clear dynamic variables etc.
 void clrtrp (void) ;		// Clear ON event handlers
-signed char *findl (int) ;	// Find a specified line number or label
+signed char *findl (unsigned int) ;	// Find a specified line number or label
 int arrlen (void **) ;		// Count elements in an array
 void *getvar (unsigned char*) ;	// Get a variable's pointer and type
 void *getdim (unsigned char*) ;
@@ -115,11 +116,11 @@ static void dotab (void)
 		return ;
 	    }
 	braket () ;
-	if (count == x)
+	if (vcount == x)
 		return ;
-	if (count > x)
+	if (vcount > x)
 		crlf () ;
-	spaces (x - count) ;
+	spaces (x - vcount) ;
 }
 
 static int format (signed char al)
@@ -1113,8 +1114,8 @@ void procfn (signed char flag)
 	if ((found == 0) || (*(int *)ptr == 0))
 	    {
 		if (libase)
-			defscan (libase + zero) ;
-		defscan (vpage + zero) ;
+			defscan (libase + (signed char *) zero) ;
+		defscan (vpage + (signed char *) zero) ;
 		esi = oldesi ;
 		ptr = getdef (&found) ;
 		if ((found == 0) || (*(int *)ptr == 0))
@@ -1243,7 +1244,7 @@ VAR xeq (void)
 				esp -= STRIDE ;
 				*(void **)esp = esi ;
 				*--esp = GOSCHK ;
-				esi = jump + zero ;
+				esi = jump + (signed char *) zero ;
 			    }
 		    }
 	xeq1:
@@ -1640,7 +1641,8 @@ VAR xeq (void)
 					datptr = search (edi, TDATA) - (signed char *) zero ;
 				    }
 				else
-					datptr = search (vpage + zero, TDATA) - (signed char *) zero ;
+					datptr = search (vpage + (signed char *) zero, TDATA) -
+							(signed char *) zero ;
 
 				if ((int) datptr == 0)
 					error (42, NULL) ; // 'Out of DATA'
@@ -1655,7 +1657,7 @@ VAR xeq (void)
 				    {
 					size_t n = v.i.n ;
 					void (*func) (int,int,int,int,int,int,char *) ;
-					char *p = buffer + 1 ;
+					char *p = buff + 1 ;
 					unsigned char count = 0 ;
 
 					if (v.i.t != 0)
@@ -1678,15 +1680,15 @@ VAR xeq (void)
 						p += sizeof(void *) ; // GCC extension 
 						count += 1 ;
 					    } ;
-					*buffer = count ;
+					*buff = count ;
 
-					if (n < 0x10000)
+					if ((n >= 0x8000) && (n <= 0xFFFF))
 						oscall (n) ;
 					else
 					    {
 						func = (void *) n ;
 						func (stavar[1], stavar[2], stavar[3],
-						      stavar[4], stavar[5], stavar[6], buffer) ;
+						      stavar[4], stavar[5], stavar[6], buff) ;
 					    }
 					break ;
 				    }
@@ -1702,7 +1704,7 @@ VAR xeq (void)
 				VAR v ;
 				void *chan ;
 				int size ;
-				signed char *edi = libase + zero ;
+				signed char *edi = libase + (signed char *) zero ;
 				signed char *newtop ;
 				if (al == TINSTALL)
 				    {
@@ -1712,9 +1714,9 @@ VAR xeq (void)
 				else
 					v.s.l = (char *) memchr (accs, 0x0D, 255) - accs ;
 
-				if (edi == zero)
+				if (edi == (signed char *) zero)
 				    {
-					edi = himem + zero ;
+					edi = himem + (signed char *) zero ;
 					oshwm (edi + 1, 0) ;
 					libase = edi - (signed char *) zero ;
 					*edi = 0 ;
@@ -1741,8 +1743,8 @@ VAR xeq (void)
 					error (52, NULL) ; // 'Bad library'
 				if (al == TINSTALL)
 				    {
-					defscan (libase + zero) ;
-					defscan (vpage + zero) ;
+					defscan (libase + (signed char *) zero) ;
+					defscan (vpage + (signed char *) zero) ;
 				    }
 				else
 				    {
@@ -1806,7 +1808,7 @@ VAR xeq (void)
 				else
 				    {
 					int i ;
-					char *p = v.s.p + zero ;
+					char *p = v.s.p + (char *) zero ;
 					for (i = 0; i < v.s.l; i++)
 						osbput (chan, *p++) ;
 					if (nxt () == ';')
@@ -1820,13 +1822,36 @@ VAR xeq (void)
 /************************************  PTR  ************************************/
 
 			case TPTRL:
-				{
-				long long n ;
-				void *chan = channel () ;
-				equals () ;
-				n = expri () ;
-				setptr (chan, n) ;
-				}
+				if (*esi == '(')
+				    {
+					void *ptr ;
+					unsigned char type ;
+					esi++ ;
+					nxt () ;
+					ptr = getvar (&type) ;
+					if (ptr == NULL)
+						error (16, NULL) ; // 'Syntax error'
+					if (type == 0)
+						error (26, NULL) ; // 'No such variable'
+					braket () ;
+					equals () ;
+					if (type == 136)
+						*(heapptr *)ptr = expri () - (size_t) zero ;
+					else if (type & 0x40)
+						*(intptr_t *)ptr = expri () ;
+					else if (type == STYPE)
+						*(intptr_t*)(ptr + sizeof(void *)) = expri () ;
+					else
+						error (6, NULL) ; // 'Type mismatch'
+				    }
+				else
+				    {
+					long long n ;
+					void *chan = channel () ;
+					equals () ;
+					n = expri () ;
+					setptr (chan, n) ;
+				    }
 				break ;
 
 /************************************  EXT  ************************************/
@@ -1871,7 +1896,7 @@ VAR xeq (void)
 				if ((n < (pfree + zero + STACK_NEEDED)) ||
 						(oshwm (n, 1) == 0))
 					error (0, NULL) ; // 'No room'
-				if (esp == himem + zero)
+				if ((void *) esp == himem + zero)
 					esp = n ;
 				himem = n - zero ;
 				if ((libase != 0) && (himem > libase))
@@ -1899,8 +1924,9 @@ VAR xeq (void)
 				    }
 				clrtrp () ;
 				clear () ;
-				datptr = search (vpage + zero, TDATA) - (signed char *) zero ;
-				esi = vpage + zero ;
+				datptr = search (vpage + (signed char *) zero, TDATA) -	
+							(signed char *) zero ;
+				esi = vpage + (signed char *) zero ;
 				esp = (heapptr *)((himem & -4) + zero) ; // align
 				newlin () ;
 				break ;
@@ -1912,7 +1938,7 @@ VAR xeq (void)
 				    {
 					unsigned char type ;
 					void *ptr ;
-					signed char *edx = datptr + zero ;
+					signed char *edx = datptr + (signed char *) zero ;
 					if (edx == NULL)
 						error (42, NULL) ; // 'Out of DATA'
 					while (1)
@@ -1988,7 +2014,7 @@ VAR xeq (void)
 						if (type < 128)
 						    {
 							VAR v ;
-							char *p = pfree + zero ;
+							char *p = pfree + (char *) zero ;
 							int i, size = 5 ;
 							if (liston & BIT0) size = 8 ;
 							if (liston & BIT1) size = 10 ;
@@ -2023,7 +2049,7 @@ VAR xeq (void)
 				    }
 				{
 				unsigned char flag = 0 ;
-				char *bufptr = buffer ;
+				char *bufptr = buff ;
 				*bufptr = 0x0D ;
 
 				if (*esi == TLINE)
@@ -2047,7 +2073,7 @@ VAR xeq (void)
 					else if (al == '"')
 					    {
 						v = cons () ;
-						ptext (v.s.p + zero, v.s.l) ;
+						ptext (v.s.p + (char *) zero, v.s.l) ;
 						flag |= BIT0 ;
 					    }
 					else if (format (al))
@@ -2069,10 +2095,9 @@ VAR xeq (void)
 								outchr ('?') ;
 								outchr (' ') ;
 							    }
-							osline (buffer) ;
+							osline (buff) ;
 							crlf () ;
-							count = 0 ;
-							bufptr = buffer ;
+							bufptr = buff ;
 						    }
 						if (flag & BIT7)
 						    {
@@ -2110,7 +2135,7 @@ VAR xeq (void)
 						v = expr () ;
 						if (v.s.t != -1)
 						    {
-							char *p = pfree + zero ;
+							char *p = pfree + (char *) zero ;
 							int i, size = 5 ;
 							if (liston & BIT0) size = 8 ;
 							if (liston & BIT1) size = 10 ;
@@ -2121,7 +2146,7 @@ VAR xeq (void)
 						else
 						    {
 							int i ;
-							char *p = v.s.p + zero ;
+							char *p = v.s.p + (char *) zero ;
 							for (i = 0; i < v.s.l; i++)
 								osbput (chan, *p++) ;
 							osbput (chan, 0x0D) ;
@@ -2158,7 +2183,7 @@ VAR xeq (void)
 						mode &= ~2 ;
 						field = stavar[0] & 0xFF ;
 						if (field == 0) field = 10 ;
-						while (count % field)
+						while (vcount % field)
 							outchr (' ') ;
 					    }
 					else if (!format(al))
@@ -2167,7 +2192,7 @@ VAR xeq (void)
 						v = expr () ;
 						if (v.s.t == -1)
 						    {
-							ptext (v.s.p + zero, v.s.l) ;
+							ptext (v.s.p + (char *) zero, v.s.l) ;
 						    }
 						else
 						    {
@@ -2211,16 +2236,17 @@ VAR xeq (void)
 				int n = expri () ;
 				comma () ;
 				v = exprs () ;
-				memcpy (buffer, v.s.p + zero, v.s.l) ;
-				*(buffer + v.s.l) = 0 ;
-				error (n, buffer) ;
+				memcpy (buff, v.s.p + zero, v.s.l) ;
+				*(buff + v.s.l) = 0 ;
+				error (n, buff) ;
 				}
 
 /*********************************** CLEAR *************************************/
 
 			case TCLEAR:
 				clear () ;
-				datptr = search (vpage + zero, TDATA) - (signed char *) zero ;
+				datptr = search (vpage + (signed char *) zero, TDATA) -
+						(signed char *) zero ;
 				break ;
 
 /***********************************  VDU  *************************************/
@@ -2251,7 +2277,7 @@ VAR xeq (void)
 
 			case TCLS:
 				oswrch (12) ;
-				count = 0 ;
+				vcount = 0 ;
 				break ;
 
 /***********************************  CLG  *************************************/
@@ -3294,8 +3320,10 @@ VAR xeq (void)
 				else
 					func = (void *)(size_t) v.f ;
 
+#ifndef __EMSCRIPTEN__
 				if ((size_t)func < 0x10000)
 					error (8, NULL) ; // 'Address out of range'
+#endif
 
 				while (*esi == ',')
 				    {
@@ -3465,7 +3493,7 @@ VAR xeq (void)
 						braket () ;
 					    }
 
-					edx = pfree + zero ; // Must be after getdim and expri!
+					edx = pfree + (char *) zero ; // Must be after getdim and expri!
 
 					// Build structure descriptor:
 					if ((type == STYPE) && (*esi != '.'))
@@ -3628,7 +3656,7 @@ VAR xeq (void)
 					else if (*(void **)ebp == (void *)1)
 					    {
 						int n ;
-						char *edi = pfree + zero ;
+						char *edi = pfree + (char *) zero ;
 						int eax = 0 ;
 
 						if ((edx > edi) && (edx < (char *)esp))

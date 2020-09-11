@@ -3,7 +3,7 @@
 *       (c) 2018-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbasmb.c: Simple ARM 4 assembler                          *
-*       Version 1.14a, 25-Jul-2020                                *
+*       Version 1.15a, 27-Aug-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -265,11 +265,11 @@ static int offset (unsigned char *pimm, unsigned char *pplus)
 
 static void tabit (int x)
 {
-	if (count == x) 
+	if (vcount == x) 
 		return ;
-	if (count > x)
+	if (vcount > x)
 		crlf () ;
-	spaces (x - count) ;
+	spaces (x - vcount) ;
 }
 
 static void poke (void *p, int n) 

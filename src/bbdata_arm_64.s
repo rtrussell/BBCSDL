@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2000-2020                    *
 *                                                                 *
 *       BBCDAT.S RAM data definitions                             *
-*       Version 1.14a, 25-Jun-2020                                *
+*       Version 1.15a, 27-Aug-2020                                *
 \*****************************************************************/
 
 .equ	MAX_PORTS,4
@@ -19,7 +19,7 @@
 .global _proptr
 .global _prand
 .global _accs
-.global _buffer
+.global _buff
 .global _vpage
 .global _flist
 .global _lomem
@@ -32,7 +32,7 @@
 .global _curlin
 .global _errlin
 .global _tracen
-.global _count
+.global _vcount
 .global _vwidth
 .global _errnum
 .global _liston
@@ -203,7 +203,7 @@ _errtxt:.long	0		/* Pointer to error text for REPORT */
 	.long	0		/* 64-bit pointer */
 _errtrp:.long	0		/* Pointer to ON ERROR statement */
 _datptr:.long	0		/* Pointer to DATA statements */
-_count:	.long	0		/* Current value of COUNT */
+_vcount:.long	0		/* Current value of COUNT */
 _curlin:.long	0		/* Pointer to current statement */
 _alltrp:			/* Start of trap pointers */
 _timtrp:.long	0		/* Pointer to ON TIME statement */
@@ -255,7 +255,7 @@ _tmps:	.long	0		/* Temp string descriptor: address */
 
 _onersp:.long	0		/* ESP storage for ON ERROR LOCAL */
 	.long	0		/* 64-bit pointer */
-_buffer:.long	0		/* Pointer to string input buffer */
+_buff:	.long	0		/* Pointer to string input buffer */
 	.long	0		/* 64-bit pointer */
 _keystr:.long	0		/* Pointer to user *KEY strings */
 	.long	0		/* 64-bit pointer */

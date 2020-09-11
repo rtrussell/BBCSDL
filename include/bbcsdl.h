@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2000-2020                     *
 *                                                                  *
 *       BBCSDL.H constant definitions                              *
-*       Version 1.12a 27-Apr-2020                                  *
+*       Version 1.15a 30-Aug-2020                                  *
 \******************************************************************/
 
 // System constants :
@@ -55,6 +55,7 @@
 #define EVT_MOUSETO	0x200D	// Move mouse pointer
 #define EVT_OSK		0x200E	// En/disable On Screen Keyboard
 #define EVT_OSWORD	0x200F	// OSWORD call
+#define EVT_TIMER	0x2010	// Set new timer period
 
 // Bit names:
 
@@ -218,7 +219,7 @@ extern int stavar[] ;		// Static integer variables
 extern SDL_RWops *exchan ;	// EXEC channel
 extern SDL_RWops *spchan ;	// SPOOL channel
 extern char* accs ;		// String accumulator
-extern char* buffer ;		// Temporary string buffer
+extern char* buff ;		// Temporary string buffer
 extern char* path ;		// File path buffer
 extern signed char *envels ;	// Envelope storage (16 x 16)
 extern short* waves ;
@@ -260,13 +261,14 @@ extern unsigned int fasize ;	// @hfile%() number of elements
 extern unsigned char keyexp ;	// *KEY expansion counter
 extern unsigned char optval ;	// I/O redirection
 extern unsigned char liston ;	// *FLOAT/*HEX/*LOWERCASE/OPT
-extern unsigned int count ;     // Character count since newline
+extern unsigned int vcount ;    // Character count since newline
 
 // Declared in bbcsdl.c:
 extern size_t iResult ;		// Result from user event
 extern int nUserEv ;		// Number of pending user events
 extern int OSKtime ;		// On-screen keyboard timeout
 extern SDL_sem *Sema4 ;		// Semaphore for user event wait
+extern SDL_mutex *Mutex ;	// Mutex to protect event queue
 extern void *userRAM ;		// Base of user memory
 extern void *progRAM ;		// Default LOMEM
 extern void *userTOP ;		// Default HIMEM

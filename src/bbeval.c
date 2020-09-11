@@ -3,7 +3,7 @@
 *       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.14a, 15-Jun-2020                                *
+*       Version 1.15a, 27-Aug-2020                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -17,7 +17,7 @@
 #include <setjmp.h>
 #include "BBC.h"
 
-#if defined __arm__ || defined __aarch64__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__
 #define powl pow
 #define sqrtl sqrt
 #define sinl sin
@@ -88,11 +88,12 @@ unsigned char osbget (void*, int*) ; // Get a byte from a file
 long long getptr (void*) ;	// Get file pointer
 long long getext (void*) ;	// Get file length
 long long geteof (void*) ;	// Get EOF status
+void *sysadr (char *) ;		// Get the address of an API function
 
 // Global jump buffer:
 extern jmp_buf env ;
 
-#if defined __arm__ || defined __aarch64__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__
 void setfpu(void) {}
 static double xpower[9] = {1.0e1, 1.0e2, 1.0e4, 1.0e8, 1.0e16, 1.0e32, 1.0e64,
 			   1.0e128, 1.0e256} ;
@@ -199,7 +200,7 @@ int strhex (VAR v, char *dst, int field)
 }
 
 // Multiply by an integer-power of 10:
-#if defined __arm__ || defined __aarch64__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__
 static double xpow10 (double n, int p)
 {
 	int f = 0, i = 0 ;
@@ -1008,7 +1009,7 @@ VAR item (void)
 					memcpy (&env, &savenv, sizeof(env)) ;
 					longjmp (env, errcode) ;
 				    }
-				esi = errtrp + zero ;
+				esi = errtrp + (signed char *) zero ;
 				esp = onersp ;
 			    }
 
@@ -1025,7 +1026,7 @@ VAR item (void)
 			size_t n = itemi () ;
 
 			v.i.t = 0 ;
-			if (n < 0x10000)
+			if ((n >= 0x8000) && (n <= 0xFFFF))
 				v.i.n = oscall (n) ;
 			else
 			    {
@@ -1085,16 +1086,22 @@ VAR item (void)
 				void *ptr ;
 				unsigned char type ;
 				esi++ ;
+				nxt () ;
 				ptr = getvar (&type) ;
 				if (ptr == NULL)
 					error (16, NULL) ; // 'Syntax error'
 				if (type == 0)
 					error (26, NULL) ; // 'No such variable'
-				if (type != 136)
-					error (6, NULL) ; // 'Type mismatch'
-				braket() ;
+				braket () ;
 				v.i.t = 0 ;
-				v.i.n = *(heapptr *)ptr + (size_t) zero ;
+				if (type == 136)
+					v.i.n = *(heapptr *)ptr + (size_t) zero ;
+				else if (type & 0x40)
+					v.i.n = *(intptr_t *)ptr ;
+				else if (type == STYPE)
+					v.i.n = *(intptr_t *)(ptr + sizeof (void *)) ;
+				else
+					error (6, NULL) ; // 'Type mismatch'
 			    }
 			else
 			    {
@@ -1147,7 +1154,7 @@ VAR item (void)
 			if ((*esi == 'P') || (((liston & BIT3) != 0) && (*esi == 'p')))
 			    {
 				esi++ ;
-				v.i.n = (size_t) gettop (vpage + zero, NULL) + 3 ;
+				v.i.n = (size_t) gettop (vpage + (signed char *) zero, NULL) + 3 ;
 				v.i.t = 0 ;
 				return v ;
 			    }
@@ -1193,7 +1200,7 @@ VAR item (void)
 				v.s.l = getims () ;
 				return v ;
 			    }
-			v.i.n = (unsigned int) getime () ;
+			v.i.n = (int) getime () ; // Must not overflow 32-bit int
 			v.i.t = 0 ;
 			return v ;
 
@@ -1207,7 +1214,7 @@ VAR item (void)
 /************************************ COUNT ************************************/
 
 		case TCOUNT:
-			v.i.n = count ;
+			v.i.n = vcount ;
 			v.i.t = 0 ;
 			return v ;
 
@@ -1221,7 +1228,7 @@ VAR item (void)
 				braket () ;
 				if (v.s.l > ((char *)esp - (char *)zero - pfree - STACK_NEEDED))
 					error (0, NULL) ; // 'No room'
-				v.i.n = widths (v.s.p + zero, v.s.l) ;
+				v.i.n = widths (v.s.p + (char *) zero, v.s.l) ;
 				v.i.t = 0 ;
 				return v ;
 			    }
@@ -1276,7 +1283,7 @@ VAR item (void)
 					term = itemi () ;
 				    }
 				allocs (&tmps, 0) ; // Free tmps (may change pfree)	
-				p = pfree + zero ;
+				p = pfree + (char *) zero ;
 				while (count--)
 				    {
 					int eof ;
@@ -1400,7 +1407,7 @@ VAR item (void)
 		case TASC:
 			v = items () ;
 			if (v.s.l)
-				v.i.n = *(unsigned char*)(v.s.p + zero) ;
+				v.i.n = *(v.s.p + (unsigned char *) zero) ;
 			else
 				v.i.n = -1 ;
 			v.i.t = 0 ;
@@ -1416,7 +1423,7 @@ VAR item (void)
 /************************************* ERL *************************************/
 
 		case TERL:
-			v.i.n = setlin (errlin + zero , NULL) ;
+			v.i.n = setlin (errlin + (signed char *) zero , NULL) ;
 			v.i.t = 0 ;
 			return v ;
 
@@ -1424,7 +1431,7 @@ VAR item (void)
 
 		case TPI:
 			if (*esi == '#') esi++ ;
-#if defined __arm__ || defined __aarch64__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__
 			v.i.n = 0x400921FB54442D18L ;
 			v.i.t = 1 ;
 #else
@@ -1480,7 +1487,7 @@ VAR item (void)
 		case TDEG:
 			{
 			VAR xdeg ;
-#if defined __arm__ || defined __aarch64__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__
 			xdeg.i.n = 0x404CA5DC1A63C1F8L ;
 			xdeg.i.t = 1 ;
 #else
@@ -1495,7 +1502,7 @@ VAR item (void)
 		case TRAD:
 			{
 			VAR xrad ;
-#if defined __arm__ || defined __aarch64__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__
 			xrad.i.n = 0x3F91DF46A2529D39L ;
 			xrad.i.t = 1 ;
 #else
@@ -1528,7 +1535,7 @@ VAR item (void)
 		case TLOG:
 			{
 			VAR loge ;
-#if defined __arm__ || defined __aarch64__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__
 			loge.i.n = 0x3FDBCB7B1526E50EL ;
 			loge.i.t = 1 ;
 #else
@@ -1976,7 +1983,7 @@ VAR item (void)
 				return v ;
 			    }
 
-			p = x.s.p + n + zero ;
+			p = x.s.p + n + (char *) zero ;
 			while (p != NULL)
 			    {
 				if (0 == memcmp (p, v.s.p + zero, v.s.l))
@@ -1986,7 +1993,7 @@ VAR item (void)
 					esp = oldesp ;
 					return v ;
 				    }
-				p = memchr (p + 1, *(char *)(v.s.p + zero),
+				p = memchr (p + 1, *(v.s.p + (char *) zero),
 						x.s.p + x.s.l - v.s.l + (char *) zero - p) ;
 			    }
 			v.i.t = 0 ;
@@ -2018,6 +2025,18 @@ VAR item (void)
 			} 
 			return v ;
 
+
+/************************************ SYS **************************************/
+
+		case TSYS:
+			v = items () ;
+			if (v.s.l > 255)
+				error (19, NULL) ; // 'String too long'
+			memcpy (accs, v.s.p + zero, v.s.l) ;
+			*(accs + v.s.l) = 0 ;
+			v.i.t = 0 ;
+			v.i.n = (intptr_t) sysadr (accs) ;
+			return v ;
 
 /*********************************** PROC **************************************/
 
@@ -2119,7 +2138,7 @@ VAR item (void)
 				error (16, NULL) ; // 'Syntax error'
 			if (type == 0)
 			    {
-				signed char *edi = vpage + zero ;
+				signed char *edi = vpage + (signed char *) zero ;
 				if ((liston & BIT5) == 0)
 				    {
 					while (range0 (*++esi)) ;
@@ -2437,9 +2456,9 @@ int expra (void *ebp, int ecx, unsigned char type)
 		esi++ ;
 		VAR v = items () ;
 		fixs (v) ;
-		lexan (accs, buffer, 0) ;
+		lexan (accs, buff, 0) ;
 		tmpesi = esi ;
-		esi = (signed char *) buffer ;
+		esi = (signed char *) buff ;
 		count = expra (ebp, ecx, type) ; // recursive call
 		esi = tmpesi ;
 		if (nxt () != ',')

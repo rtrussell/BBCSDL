@@ -3,7 +3,7 @@
 *       Copyright (c) 2020 R.T.Russell http://www.rtrussell.co.uk *
 *                                                                 *
 *       bbasmb_x86_64.c: x86-64 assembler                         *
-*       Version 1.14a, 25-Jul-2020                                *
+*       Version 1.15a, 27-Aug-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1317,11 +1317,11 @@ static void *function (char *addr, int len)
 
 static void tabit (int x)
 {
-	if (count == x) 
+	if (vcount == x) 
 		return ; 
-	if (count > x)
+	if (vcount > x)
 		crlf () ; 
-	spaces (x - count) ; 
+	spaces (x - vcount) ; 
 }
 
 static char *poke (void *p, int n) 

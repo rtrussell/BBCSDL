@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2015-2020                     *
 *                                                                  *
 *       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.15a, 04-Aug-2020                                 *
+*       Version 1.15a, 07-Sep-2020                                 *
 \******************************************************************/
 
 #include <stdlib.h>
@@ -39,12 +39,17 @@ int GetTempPath(size_t, char *) ;
 #endif
 #ifdef __ANDROID__
 #include <sys/mman.h>
-unsigned int DIRoff = 19 ;
+unsigned int DIRoff = 19 ; // Used by Android x86-32 build
 #define PLATFORM "Android"
 #endif
 #ifdef __IPHONEOS__
 #include <sys/mman.h>
 #define PLATFORM "iOS"
+#endif
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#include <sys/mman.h>
+#define PLATFORM "Wasm"
 #endif
 
 #undef MAX_PATH
@@ -133,9 +138,10 @@ SDL_Rect DestRect ;
 SDL_TimerID PollTimerID ;
 SDL_TimerID UserTimerID ;
 SDL_TimerID BlinkTimerID ;
-SDL_Event UserEvent ;
+SDL_Event UserEvent ; // Used by Android x86-32 build
 SDL_Joystick * Joystick = NULL ;
 SDL_sem * Sema4 ;
+SDL_mutex * Mutex ;
 SDL_sem * Idler ;
 int bBackground = 0 ;
 
@@ -159,8 +165,16 @@ static SDL_Renderer *renderer ;
 static SDL_Thread *Thread ;
 static int blink = 0 ;
 static signed char oldscroln = 0 ;
+static const Uint8* keystate ;
+static int exitcode = 0, running = 1 ;
+static int MaximumRAM = MAXIMUM_RAM ;
+static SDL_AudioSpec want, have ;
+static SDL_Rect backbutton = {0} ;
+static SDL_Texture *buttexture ;
 
-#if defined __WINDOWS__
+#if defined __EMSCRIPTEN__
+// dlsym implemented locally
+#elif defined __WINDOWS__
 void *dlsym (void *handle, const char *symbol)
 {
 	void *procaddr ;
@@ -207,13 +221,15 @@ static void *mymap (unsigned int size)
 
 static Uint32 BlinkTimerCallback(Uint32 interval, void *param)
 {
-	if (((platform & 7) >= 3) && (--OSKtime == 0) && SDL_IsTextInputActive())
+#if defined __ANDROID__ || defined __IPHONEOS__
+	if ((--OSKtime == 0) && SDL_IsTextInputActive())
 	    {
 		SDL_Event event = {0} ;
 		event.type = SDL_USEREVENT ;
 		event.user.code = EVT_OSK ;
 		SDL_PushEvent(&event) ;
 	    }
+#endif
 	if (flags & KILL)
 	    {
 		if (!SDL_SemValue(Sema4))
@@ -237,7 +253,9 @@ Uint32 UserTimerCallback(Uint32 interval, void *param)
 	event.user.code = WMU_TIMER ;
 
 	SDL_AtomicAdd ((SDL_atomic_t*)&nUserEv, 1) ; // Before PushEvent
+	SDL_LockMutex (Mutex) ;
 	SDL_PushEvent(&event) ;
+	SDL_UnlockMutex (Mutex) ;
 	return(interval) ;
 }
 
@@ -335,11 +353,11 @@ static void CaptureScreen (void)
 	return ;
 }
 
-static void SetDir (char *path)
+static void SetDir (char *newpath)
 {
 	char temp[MAX_PATH] ;
 	char *p ;
-	strcpy (temp, path) ;
+	strcpy (temp, newpath) ;
 	p = strrchr (temp, '/') ;
 	if (p == NULL) p = strrchr (temp, '\\') ;
 	if (p)
@@ -373,7 +391,8 @@ static void ShutDown ()
 	reflag = 0 ;          // Worker thread may be waiting on reflag
 	bBackground = 0 ;     // Worker thread may be waiting on bBackground
 	SDL_WaitThread (Thread, &i) ;
-	SDL_DestroySemaphore(Sema4) ; 
+	SDL_DestroySemaphore (Sema4) ;
+	SDL_DestroyMutex (Mutex) ; 
 
 	SDL_RemoveTimer(PollTimerID) ;
 	SDL_RemoveTimer(UserTimerID) ;
@@ -412,23 +431,23 @@ static int myEventFilter(void* userdata, SDL_Event* pev)
 	return 0 ;
 }
 
+static int maintick (void) ;
+
+void mainloop (void)
+{
+	while (maintick()) ;
+}
+
 int main(int argc, char* argv[])
 {
-int c, i ;
+int i ;
 size_t immediate ;
-int exitcode = 0, running = 1 ;
 int fullscreen = 0, fixedsize = 0, hidden = 0 ;
-SDL_Event ev ;
-SDL_Rect caret ;
 SDL_RWops *ProgFile ;
-SDL_AudioSpec want, have ;
-int MaximumRAM = MAXIMUM_RAM ;
 const SDL_version *TTFversion ;
 SDL_version SDLversion ;
-const Uint8* keystate ;
+SDL_Event ev ;
 
-SDL_Rect backbutton = {0} ;
-SDL_Texture *buttexture ;
 unsigned int *pixels ;
 int pitch ;
 
@@ -469,6 +488,9 @@ if (platform < 0x2000200)
 	platform |= 4 ;
 	fullscreen = 1 ;
 #endif
+#ifdef __EMSCRIPTEN__
+	platform |= 5 ;
+#endif
 #if defined __x86_64__ || defined __aarch64__ 
 	platform |= 0x40 ;
 #endif
@@ -501,7 +523,7 @@ if (SDLNet_Init() == -1)
 }
 
 // Setting quality to "linear" can break flood-fill, affecting 'jigsaw.bbc' etc.
-#if defined (__ANDROID__) || defined(__IPHONEOS__)
+#if defined __ANDROID__ || defined __IPHONEOS__
 	SDL_SetHint ("SDL_RENDER_BATCHING", "1") ;
 	SDL_SetHint (SDL_HINT_RENDER_DRIVER, "opengles") ;
 	SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "nearest") ;
@@ -571,7 +593,7 @@ if (!SDL_RenderTargetSupported(renderer))
 
 SDL_GL_GetDrawableSize (window, &sizex, &sizey) ; // Window may not be the requested size
 
-#if defined(__ANDROID__) || defined(__IPHONEOS__)
+#if defined __ANDROID__ || defined __IPHONEOS__
 {
 	int size = MAX (sizex, sizey) ;
 	SDL_SetRenderTarget(renderer, SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, 
@@ -622,7 +644,7 @@ for (i--; i < 32 - 5; i++)
 SDL_UnlockTexture (buttexture) ;
 SDL_SetTextureBlendMode(buttexture, SDL_BLENDMODE_BLEND) ;
 
-#if defined(__WINDOWS__)
+#if defined __WINDOWS__
 	// Allocate the program buffer
 	// First reserve the maximum amount:
 
@@ -639,7 +661,7 @@ SDL_SetTextureBlendMode(buttexture, SDL_BLENDMODE_BLEND) ;
 		userRAM = (char*) VirtualAlloc (pstrVirtual, DEFAULT_RAM,
 						MEM_COMMIT, PAGE_EXECUTE_READWRITE) ;
 
-#elif defined(__APPLE__)
+#elif defined __APPLE__ || defined __EMSCRIPTEN__
 
 	while ((MaximumRAM > DEFAULT_RAM) &&
 				(NULL == (userRAM = mmap ((void *)0x10000000, MaximumRAM, 
@@ -673,14 +695,14 @@ if ((userRAM == NULL) || (userRAM == (void *)-1))
 }
 
 userTOP = userRAM + DEFAULT_RAM ;
-progRAM = userRAM + PAGE_OFFSET ;
-szCmdLine = progRAM - 0x100 ;
-szTempDir = szCmdLine - 0x100 ; // Must be allocated on 'heap'
+progRAM = userRAM + PAGE_OFFSET ; // Will be raised if @cmd$ exceeds 255 bytes
+szCmdLine = progRAM - 0x100 ;     // Must be immediately below default progRAM
+szTempDir = szCmdLine - 0x100 ;   // Strings must be allocated on BASIC's heap
 szUserDir = szTempDir - 0x100 ;
 szLibrary = szUserDir - 0x100 ;
 szLoadDir = szLibrary - 0x100 ;
 
-#ifdef __IPHONEOS__
+#if defined __IPHONEOS__ || defined __EMSCRIPTEN__
 SDL_RenderFlushBBC = SDL_GL_GetProcAddress ("SDL_RenderFlush") ;
 #else
 SDL_RenderFlushBBC = dlsym ((void *) -1, "SDL_RenderFlush") ;
@@ -690,6 +712,7 @@ glTexParameteriBBC = SDL_GL_GetProcAddress ("glTexParameteri") ;
 glLogicOpBBC = SDL_GL_GetProcAddress("glLogicOp") ;
 glEnableBBC  = SDL_GL_GetProcAddress("glEnable") ;
 glDisableBBC = SDL_GL_GetProcAddress("glDisable") ;
+#ifndef __EMSCRIPTEN__
 if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NULL) || (glDisableBBC == NULL))
 {
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
@@ -699,6 +722,7 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 	SDL_Quit() ;
 	return 10 ;
 }
+#endif
 
 #ifdef __WINDOWS__
 	wchar_t widepath[MAX_PATH] ;
@@ -769,6 +793,11 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 	if (p) strcpy (p + 1, "lib/") ;
 #endif
 
+#ifdef __EMSCRIPTEN__
+	strcpy (szTempDir, "/tmp/") ;
+	strcpy (szUserDir, "/home/web_user/") ;
+#endif
+
 	if (argc >= 2)
 		strcpy (szAutoRun, argv[1]) ;
 	if ((argc == 1) || (*argv[1] == '-'))
@@ -801,11 +830,16 @@ if (argc >= 2)
 			strcat (szCmdLine, argv[i]) ;
 		}
 		SDL_SetWindowTitle (window, szCmdLine) ;
+		progRAM = (void *)(((intptr_t) szCmdLine + strlen(szCmdLine) + 256) & -256) ;
 	}
 
 #ifdef __IPHONEOS__
 	strcpy (szAutoRun, SDL_GetBasePath()) ;
 	strcat (szAutoRun, "autorun.bbc") ;
+#endif
+
+#ifdef __EMSCRIPTEN__
+	strcpy (szAutoRun, "lib/autorun.bbc") ;
 #endif
 
 SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
@@ -838,14 +872,6 @@ if (argc < 2)
 	*szCmdLine = 0 ;
 
 chrmap = (short*) malloc (2 * ((XSCREEN + 7) >> 3) * ((YSCREEN + 7) >> 3)) ;
-
-for (i = 0; i < PALETTE_SIZE; i++)
-{
-	unsigned char r = ((i & 1) != 0) * 0xC8 | ((i & 8) != 0) * 0x38 ;
-	unsigned char g = ((i & 2) != 0) * 0xC8 | ((i & 8) != 0) * 0x38 ;
-	unsigned char b = ((i & 4) != 0) * 0xC8 | ((i & 8) != 0) * 0x38 ;
-	palette[i] = r | (g << 8) | (b << 16) | 0xFF000000 ;
-}
 
 // Audio buffer should be <= 40 ms (total queued SOUNDs at min. duration)  
 SDL_memset(&want, 0, sizeof(want)) ;
@@ -890,15 +916,17 @@ UserTimerID = SDL_AddTimer(250, UserTimerCallback, 0) ;
 // Caret timer:
 BlinkTimerID = SDL_AddTimer(400, BlinkTimerCallback, 0) ;
 
-// Semaphores:
+// Semaphores and mutexes:
 Sema4 = SDL_CreateSemaphore (0) ;
 Idler = SDL_CreateSemaphore (0) ;
+Mutex = SDL_CreateMutex () ;
 
 // Copies of window and renderer:
 hwndProg = window ;
 memhdc = renderer ;
 
 // Start interpreter thread:
+
 Thread = SDL_CreateThread(entry, "Interpreter", (void *) immediate) ;
 
 // Get global keyboard state:
@@ -911,16 +939,42 @@ SDL_AddEventWatch(myEventFilter, 0) ;
 flags = 0 ;
 
 // Main polling loop:
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(mainloop, -1, 1);
+#else
 while (running)
+    {
+	mainloop () ;
+	SDL_SemWait (Idler) ;
+    }
+#endif
+
+ShutDown () ;
+exit(exitcode) ;
+}
+
+static int BBC_PeepEvents(SDL_Event* ev, int nev, SDL_eventaction action, Uint32 min, Uint32 max)
 {
-	int ptsx, ptsy, winx, winy, iWheel ;
+	int ret ;
+	SDL_LockMutex (Mutex) ;
+	ret = SDL_PeepEvents (ev, nev, action, min, max) ;
+	SDL_UnlockMutex (Mutex) ;
+	return ret ;
+}
+
+static int maintick (void)
+{
+	int ptsx, ptsy, winx, winy, iWheel, i, c ;
 	static float oldx, oldy ;
 	static int oldtextx, oldtexty ;
 	static unsigned int lastpaint, lastusrev, lastpump ;
 	unsigned int now = SDL_GetTicks () ;
-	float scale = (float)(zoom) / 32768.0 ; // must be float
+	volatile unsigned int temp = zoom ;
+	float scale = (float)(temp) / 32768.0 ; // must be float
 	SDL_GetWindowSize (window, &ptsx, &ptsy) ;
 	SDL_GL_GetDrawableSize (window, &winx, &winy) ;
+	SDL_Rect caret ;
+	SDL_Event ev ;
 
 #define PAINT1 (((unsigned int)(now - lastpaint) >= PACER) && (nUserEv < MAXEV)) // Time window
 #define PAINT2 (reflag & 1) // Interpreter thread is waiting for refresh (vSync)
@@ -941,7 +995,7 @@ while (running)
 		DestRect.y = -pany * scale ;
 		DestRect.w = sizex * scale ;
 		DestRect.h = sizey * scale ;
-#if defined(__ANDROID__) || defined(__IPHONEOS__)
+#if defined __ANDROID__ || defined __IPHONEOS__
 		DestRect.x += (winx - DestRect.w) >> 1 ;
 #endif
 		oldtextx = textx ;
@@ -955,19 +1009,25 @@ while (running)
 		SDL_SetRenderTarget(renderer, NULL) ;
 		SDL_SetRenderDrawColor (renderer, 0, 0, 0, 255) ;
 		SDL_RenderClear (renderer) ;
-		SDL_GL_BindTexture (bitmap, NULL, NULL) ;
-		glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR) ;
-		glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR) ;
-		SDL_GL_UnbindTexture (bitmap) ;
+		if (glTexParameteriBBC)
+		    {
+			SDL_GL_BindTexture (bitmap, NULL, NULL) ;
+			glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR) ;
+			glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR) ;
+			SDL_GL_UnbindTexture (bitmap) ;
+		    }
 		SDL_RenderCopy(renderer, bitmap, &SrcRect, &DestRect) ;
 #ifdef __IPHONEOS__
 		if ((flags & ESCDIS) == 0)
 			SDL_RenderCopy (renderer, buttexture, NULL, &backbutton) ;
 #endif
-		SDL_GL_BindTexture (bitmap, NULL, NULL) ;
-		glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) ;
-		glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST) ;
-		SDL_GL_UnbindTexture (bitmap) ;
+		if (glTexParameteriBBC)
+		    {
+			SDL_GL_BindTexture (bitmap, NULL, NULL) ;
+			glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) ;
+			glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST) ;
+			SDL_GL_UnbindTexture (bitmap) ;
+		    }
 		if (careton) FlipCaret (renderer, &caret) ;
 		SDL_RenderPresent(renderer) ;
 		SDL_SetRenderTarget(renderer, bitmap);
@@ -976,6 +1036,7 @@ while (running)
 		now = lastpaint ;
 		bChanged = 0 ;
 		reflag &= 2 ;
+		return 0 ; // Must yield back to Browser after RenderPresent
 	    }
 
 	// SDL_PumpEvents is very slow on iOS (more than 2 microseconds!) so run it only
@@ -1005,8 +1066,8 @@ while (running)
 			scroln = 0 ;        // exit paged mode
 	    }
 
-	if (((scroln <= 0) && SDL_PeepEvents(&ev, 1, SDL_GETEVENT, 0, SDL_LASTEVENT)) ||
-	    ((scroln > 0)  && SDL_PeepEvents(&ev, 1, SDL_GETEVENT, 0, SDL_USEREVENT-1)))
+	if (((scroln <= 0) && BBC_PeepEvents(&ev, 1, SDL_GETEVENT, 0, SDL_LASTEVENT)) ||
+	    ((scroln > 0)  && BBC_PeepEvents(&ev, 1, SDL_GETEVENT, 0, SDL_USEREVENT-1)))
 	{
 		switch (ev.type)
 		{
@@ -1032,7 +1093,8 @@ while (running)
 			if ((ev.user.code >= 0x0100) && (ev.user.code <= 0x1FFF))
 			{
 				xeqvdu_ (ev.user.data2, ev.user.data1, ev.user.code) ;
-				lastusrev = SDL_GetTicks() ;
+				if ((ev.user.code >> 8) == 25)
+					lastusrev = SDL_GetTicks() ;
 				break ;
 			}
 			else switch (ev.user.code)
@@ -1178,6 +1240,17 @@ while (running)
 				hwo = SDL_OpenAudioDevice (NULL, 0, &want, &have, 0) ;
 				SDL_PauseAudioDevice(hwo, 0) ;
 				SDL_SemPost (Sema4) ;
+				break ;
+
+				case WMU_WAVECLOSE :
+				if (hwo)
+					SDL_CloseAudioDevice (hwo) ;
+				hwo = 0 ;
+				break ;
+
+				case EVT_TIMER :
+				SDL_RemoveTimer (UserTimerID) ;
+				UserTimerID = SDL_AddTimer ((intptr_t) ev.user.data1, UserTimerCallback, 0) ;
 				break ;
 
 				case WMU_TIMER :
@@ -1453,14 +1526,8 @@ while (running)
 			}
 			break ;
 		}
+		return 1 ; // Must not yield if outstanding events
 	}
-	else
-	{
-		if ((unsigned int)(now - lastusrev) >= BUSYT)
-			SDL_SemWait (Idler) ;
-	}
-}
 
-ShutDown () ;
-exit(exitcode) ;
+	return ((unsigned int)(now - lastusrev) < BUSYT) ; // Yield if idle
 }

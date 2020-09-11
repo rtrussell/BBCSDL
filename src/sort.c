@@ -2,12 +2,20 @@
 // iOS does not permit arbitrary code execution so the code which would normally
 // go in 'sortlib.bbc' is put here to be compiled with the BBC Basic application
 
+#include "SDL2/SDL.h"
+
 // Base address for 32-bit offsets into heap:
 #if defined(__x86_64__) || defined(__aarch64__)
 extern char *userRAM ;
 #define zero userRAM
 #else
 #define zero (char*) 0
+#endif
+
+#if defined(__arm__) || defined(__aarch64__) || defined(__EMSCRIPTEN__)
+typedef double variant ;
+#else
+typedef long double variant ;
 #endif
 
 typedef struct tagSTR
@@ -29,15 +37,15 @@ static int compare (void *src, void *dst, unsigned char type)
 			if ((*(short*)(dst+8) == 0) && (*(short*)(src+8) == 0))
 				goto case40 ;
 		    {
-			long double d, s ;
+			variant d, s ;
 			if (*(short*)(dst+8) == 0)
 				d = *(long long *)dst ;
 			else
-				d = *(long double *)dst ;
+				d = *(variant *)dst ;
 			if (*(short*)(src+8) == 0)
 				s = *(long long *)src ;
 			else
-				s = *(long double *)src ;
+				s = *(variant *)src ;
 			return (d > s) - (d < s) ;
 		    }
 		    
@@ -228,12 +236,12 @@ void sortdn (int eax, int ebx, int ecx, unsigned int edx, unsigned int esi, unsi
 // go in 'timerlib.bbc' is put here to be compiled with the BBC Basic application
 
 int putevt (int, int, int, int) ;
-extern unsigned char flags ;
-typedef struct {char *handler; char *proc; } timerparam ;
+typedef struct {char *handler; char *proc; unsigned char *flags; } timerparam ;
 
-int hook(int interval, timerparam *param)
+unsigned int hook(unsigned int interval, timerparam *param)
 {
-	putevt (param->handler - zero, param->proc - zero, interval, 0x113) ;
-	flags |= 0x20 ;
-	return(interval);
+	while (putevt (param->handler - zero, param->proc - zero, interval, 0x113) == 0)
+		SDL_Delay(1) ;
+	*(param->flags) |= 0x20 ;
+	return interval ;
 }

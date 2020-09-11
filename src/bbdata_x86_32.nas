@@ -3,7 +3,7 @@
 ;*       Copyright (c) R. T. Russell, 2000-2020                    *
 ;*                                                                 *
 ;*       BBCDATA.NAS RAM data definitions                          *
-;*       Version 1.14a, 25-Jun-2020                                *
+;*       Version 1.15a, 27-Aug-2020                                *
 ;\*****************************************************************/
 ;
 MAX_PORTS       EQU     4       ; Maximum number of i/o ports
@@ -12,9 +12,9 @@ SOUNDQE         EQU     4       ; Number of bytes per sound entry
 SOUNDQL         EQU     5*SOUNDQE ; Number of bytes per channel
 ;
 	GLOBAL	stavar,lc,oc,pc,dynvar,fnptr,proptr,prand
-	GLOBAL	accs,buffer,vpage,flist,lomem,pfree,himem
+	GLOBAL	accs,buff,vpage,flist,lomem,pfree,himem
 	GLOBAL	errtxt,onersp,errtrp,datptr,curlin,errlin
-	GLOBAL	tracen,random,count,vwidth,errnum,liston,tmps
+	GLOBAL	tracen,random,vcount,vwidth,errnum,liston,tmps
 ;
 	GLOBAL	path,keystr,keybdq,keyptr,spchan,exchan,tweak
 	GLOBAL	fcbtab,timoff,usrchr,soundq,envels,waves,libase
@@ -63,7 +63,7 @@ dynvar:	times 54 dd 0		; ( Pointers to dynamic vars   )
 fnptr:	dd	0		; ( Pointer to user FuNctions  ) grouped
 proptr:	dd	0		; ( Pointer to user PROCedures )
 accs:	dd	0		; Pointer to string accumulator
-buffer:	dd	0		; Pointer to string input buffer
+buff:	dd	0		; Pointer to string input buffer
 vpage:	dd	0		; Current value of PAGE
 tracen:	dd	0		; Maximum line number to trace
 lomem:	dd	0		; Current value of LOMEM
@@ -74,7 +74,7 @@ errtxt:	dd	0		; Pointer to error text for REPORT
 onersp:	dd	0		; ESP storage for ON ERROR LOCAL
 errtrp:	dd	0		; Pointer to ON ERROR statement
 datptr:	dd	0		; Pointer to DATA statements
-count:	dd	0		; Current value of COUNT
+vcount:	dd	0		; Current value of COUNT
 curlin:	dd	0		; Pointer to current statement
 alltrp:				; Start of trap pointers
 timtrp:	dd	0		; Pointer to ON TIME statement
