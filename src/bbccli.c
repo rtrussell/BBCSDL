@@ -1,9 +1,13 @@
 /*****************************************************************\
-*       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
+*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*                                                                 *
+*       The name 'BBC BASIC' is the property of the British       *
+*       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
-*       Version 1.15a, 30-Aug-2020                                *
+*       This module runs in the context of the interpreter thread *
+*       Version 1.16a, 12-Sep-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -56,6 +60,13 @@ enum {
 		MD, MDISPLAY, MKDIR, NOEGA, OSK, OUTPUT, QUIT, RD, REFRESH,
 		REN, RENAME, RMDIR, RUN, SAVE, SCREENSAVE, SPOOL, SPOOLON,
 		STEREO, SYS, TEMPO, TIMER, TV, TYPE, UNLOCK, VOICE} ;
+
+static int BBC_RWclose (struct SDL_RWops* context)
+{
+	int ret = SDL_RWclose (context) ;
+	pushev (EVT_FSSYNC, NULL, NULL) ;
+	return ret ;
+}
 
 // Parse a filespec, return pointer to terminator.
 // Note that source string is CR-terminated
@@ -309,7 +320,7 @@ void oscli (char *cmd)
 			while (SDL_RWwrite (dstfile, p, 1, n)) ;
 			free (p) ;
 			SDL_RWclose (srcfile) ;
-			SDL_RWclose (dstfile) ;
+			BBC_RWclose (dstfile) ;
 			if (n)
 				error (189, SDL_GetError ()) ;
 			return ;
@@ -579,7 +590,7 @@ void oscli (char *cmd)
 				free (p) ;
 				if (n != bfSize)
 					error (189, SDL_GetError ()) ;
-				SDL_RWclose (dstfile) ;
+				BBC_RWclose (dstfile) ;
 				return ;
 			    }
 
@@ -777,7 +788,7 @@ void oscli (char *cmd)
 			dstfile = SDL_RWFromFile (path2, "rb") ;
 			if (dstfile != NULL)
 			    {
-				SDL_RWclose (dstfile) ;
+				BBC_RWclose (dstfile) ;
 				error (196, "File exists") ;
 			    }
 			if (0 != rename (path1, path2))
@@ -819,13 +830,13 @@ void oscli (char *cmd)
 				error (189, SDL_GetError ()) ;
 			if (0 == SDL_RWwrite(dstfile, q, 1, n))
 				error (189, SDL_GetError ()) ;
-			SDL_RWclose (dstfile ) ;
+			BBC_RWclose (dstfile ) ;
 			return ;
 
 		case SPOOL:
 			if (spchan != NULL)
 			    {
-				SDL_RWclose (spchan) ;
+				BBC_RWclose (spchan) ;
 				spchan = NULL ;
 			    }
 			while (*p == ' ') p++ ;
@@ -840,7 +851,7 @@ void oscli (char *cmd)
 		case SPOOLON:
 			if (spchan != NULL)
 			    {
-				SDL_RWclose (spchan) ;
+				BBC_RWclose (spchan) ;
 				spchan = NULL ;
 			    }
 			while (*p == ' ') p++ ;

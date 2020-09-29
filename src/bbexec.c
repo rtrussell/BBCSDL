@@ -1,9 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*                                                                 *
+*       The name 'BBC BASIC' is the property of the British       *
+*       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.15a, 27-Aug-2020                                *
+*       Version 1.16a, 12-Sep-2020                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -1276,8 +1279,8 @@ VAR xeq (void)
 				}
 
 			case TEND:
-				osshut (0) ;
 			case 0:
+				osshut (0) ;
 				error (256, NULL) ;
 
 /************************************ WHEN *************************************/

@@ -1,8 +1,11 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       Copyright (c) R. T. Russell, 2016-2020                    *
+*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
-*       BBCVTX.C  MODE 7 (teletext / videotex) emulator           *
+*       The name 'BBC BASIC' is the property of the British       *
+*       Broadcasting Corporation and used with their permission   *
+*                                                                 *
+*       bbcvtx.c  MODE 7 (teletext / videotex) emulator           *
 *       This module runs in the context of the GUI thread         *
 *       Version 1.15a, 06-Sep-2020                                *
 \*****************************************************************/

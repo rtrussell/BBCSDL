@@ -1,6 +1,9 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (c) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*                                                                 *
+*       The name 'BBC BASIC' is the property of the British       *
+*       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
 *       Version 1.15a, 27-Aug-2020                                *

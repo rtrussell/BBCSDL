@@ -46,10 +46,10 @@ bbcvtx.o: bbcvtx.c bbcsdl.h
 bbcsdl.o: bbcsdl.c bbcsdl.h version.h
 	$(CXX) -Wno-unused-result $(CXXFLAGS) -O2 $< -o $@
 
-SDL2_gfxPrimitives.o: SDL2_gfxPrimitives.c
+SDL2_gfxPrimitives.o: SDL2_gfxPrimitives.c SDL2_gfxPrimitives.h
 	$(CXX) $(CXXFLAGS) -O2 $< -o $@
 
-SDL2_rotozoom.o: SDL2_rotozoom.c SDL_stbimage.h stb_image.h dr_mp3.h
+SDL2_rotozoom.o: SDL2_rotozoom.c SDL2_rotozoom.h SDL2_gfxPrimitives.h SDL_stbimage.h stb_image.h dr_mp3.h
 	$(CXX) $(CXXFLAGS) -Os -fPIC $< -o $@
 
 flood.o: flood.c

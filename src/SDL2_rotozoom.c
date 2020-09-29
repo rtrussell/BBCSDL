@@ -44,9 +44,11 @@ Andreas Schiffler -- aschiffler at ferzkopp dot net
 #define DR_MP3_IMPLEMENTATION
 #include "dr_mp3.h"
 
-SDL_STBIMG_DEF int GFX_bezierColor(SDL_Renderer* renderer, const Sint16* vx, const Sint16* vy,
-							int n, int s, Uint32 color)
+SDL_STBIMG_DEF int GFX_bezierColor(SDL_Renderer* renderer, const Sint16* vx, const Sint16* vy, int n, int s, Uint32 color)
 {	return bezierColor(renderer, vx, vy, n, s, color) ; }
+
+SDL_STBIMG_DEF int GFX_filledPolyBezierColor(SDL_Renderer * renderer, const Sint16 *x, const Sint16 *y, int n, int s, int color)
+{	return filledPolyBezierColor(renderer, x, y, n, s, color) ; }
 
 SDL_STBIMG_DEF int GFX_aaFilledEllipseColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, Uint32 color)
 {	return aaFilledEllipseColor(renderer, cx, cy, rx, ry, color) ; }

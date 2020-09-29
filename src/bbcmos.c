@@ -1,10 +1,13 @@
 /*****************************************************************\
-*       BBC BASIC for SDL 2.0 (32-bit or 64-bit)                  *
-*       Copyright (c) R. T. Russell, 2016-2020                    *
+*       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
+*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
-*       BBCMOS.C  Machine Operating System emulation              *
+*       The name 'BBC BASIC' is the property of the British       *
+*       Broadcasting Corporation and used with their permission   *
+*                                                                 *
+*       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.15a, 30-Aug-2020                                *
+*       Version 1.16a, 17-Sep-2020                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -897,11 +900,21 @@ void pushev (int code, void *data1, void *data2)
 	event.user.data1 = data1 ;
 	event.user.data2 = data2 ;
 
+	while (SDL_SemValue (Sema4))
+		SDL_SemWait (Sema4) ;
+
 	SDL_AtomicIncRef ((SDL_atomic_t*) &nUserEv) ;
 	while (BBC_PushEvent (&event) <= 0)
 		SDL_Delay (1) ;
 	while (nUserEv >= MAX_EVENTS)
 		SDL_Delay (1) ;
+}
+
+static int BBC_RWclose (struct SDL_RWops* context)
+{
+	int ret = SDL_RWclose (context) ;
+	pushev (EVT_FSSYNC, NULL, NULL) ;
+	return ret ;
 }
 
 // Wait for an event to be acknowledged:
@@ -1228,7 +1241,7 @@ void oswrch (unsigned char vdu)
 	{
 		if (0 == SDL_RWwrite (spchan, &vdu, 1, 1))
 		    {
-			SDL_RWclose (spchan) ;
+			BBC_RWclose (spchan) ;
 			spchan = NULL ;
 		    }
 	}
@@ -2093,7 +2106,7 @@ void ossave (char *p, void *addr, int len)
 	if (file == NULL)
 		error (214, "Couldn't create file") ;
 	n = SDL_RWwrite(file, addr, 1, len) ;
-	SDL_RWclose (file) ;
+	BBC_RWclose (file) ;
 	if (n < len)
 		error (189, SDL_GetError ()) ;
 }
@@ -2135,7 +2148,7 @@ void *osopen (int type, char *p)
 			return (void *)(size_t)chan ;
 		    }
 	    }
-	SDL_RWclose (file) ;
+	BBC_RWclose (file) ;
 	error (192, "Too many open files") ;
 	return NULL ; // never happens
 }
@@ -2191,7 +2204,7 @@ static int closeb (void *chan)
 		if (writeb (handle, buffer, pfcb))
 			return 1 ;
 	    }
-	result = SDL_RWclose (lookup (chan)) ;
+	result = BBC_RWclose (lookup (chan)) ;
 	if ((chan >= (void *)1) && (chan <= (void *)(MAX_PORTS + MAX_FILES)))
 		filbuf[(size_t)chan] = 0 ;
 	return result ;

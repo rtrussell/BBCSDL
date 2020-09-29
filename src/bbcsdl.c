@@ -1,10 +1,13 @@
-/******************************************************************\
-*       BBC BASIC for SDL 2.0 (32-bit or 64-bit)                   *
-*       Copyright (c) R. T. Russell, 2015-2020                     *
-*                                                                  *
-*       BBCSDL.C Main program: Initialisation, Polling Loop        *
-*       Version 1.15a, 07-Sep-2020                                 *
-\******************************************************************/
+/*****************************************************************\
+*       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
+*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*                                                                 *
+*       The name 'BBC BASIC' is the property of the British       *
+*       Broadcasting Corporation and used with their permission   *
+*                                                                 *
+*       bbcsdl.c Main program: Initialisation, Polling Loop       *
+*       Version 1.16a, 22-Sep-2020                                *
+\*****************************************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -144,6 +147,7 @@ SDL_sem * Sema4 ;
 SDL_mutex * Mutex ;
 SDL_sem * Idler ;
 int bBackground = 0 ;
+int bYield = 0 ;
 
 int useGPA = 0 ;
 
@@ -411,6 +415,15 @@ static void ShutDown ()
 	return ;
 }
 
+static int BBC_PeepEvents(SDL_Event* ev, int nev, SDL_eventaction action, Uint32 min, Uint32 max)
+{
+	int ret ;
+	SDL_LockMutex (Mutex) ;
+	ret = SDL_PeepEvents (ev, nev, action, min, max) ;
+	SDL_UnlockMutex (Mutex) ;
+	return ret ;
+}
+
 static int myEventFilter(void* userdata, SDL_Event* pev)
 {
 	if (!SDL_SemValue(Idler))
@@ -428,6 +441,12 @@ static int myEventFilter(void* userdata, SDL_Event* pev)
 		bBackground = 0 ;
 		break ;
 	    }
+
+#ifdef __EMSCRIPTEN__
+	if ((pev->type == SDL_USEREVENT) || (pev->type == SDL_WINDOWEVENT))
+		return 1;
+	BBC_PeepEvents (pev, 1, SDL_ADDEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT) ;
+#endif
 	return 0 ;
 }
 
@@ -795,7 +814,12 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 
 #ifdef __EMSCRIPTEN__
 	strcpy (szTempDir, "/tmp/") ;
-	strcpy (szUserDir, "/home/web_user/") ;
+	strcpy (szUserDir, "/usr/") ;
+	EM_ASM(
+	    FS.mkdir('/usr');
+            FS.mount(IDBFS, {}, '/usr');
+            FS.syncfs(true, function (err) {});
+	);
 #endif
 
 	if (argc >= 2)
@@ -933,10 +957,11 @@ Thread = SDL_CreateThread(entry, "Interpreter", (void *) immediate) ;
 keystate = SDL_GetKeyboardState(NULL) ;
 
 // Set up to monitor enter/exit background events:
+#ifdef __EMSCRIPTEN__
+SDL_SetEventFilter(myEventFilter, 0) ;
+#else
 SDL_AddEventWatch(myEventFilter, 0) ;
-
-// Android can restart main without initialising globals:
-flags = 0 ;
+#endif
 
 // Main polling loop:
 #ifdef __EMSCRIPTEN__
@@ -953,15 +978,6 @@ ShutDown () ;
 exit(exitcode) ;
 }
 
-static int BBC_PeepEvents(SDL_Event* ev, int nev, SDL_eventaction action, Uint32 min, Uint32 max)
-{
-	int ret ;
-	SDL_LockMutex (Mutex) ;
-	ret = SDL_PeepEvents (ev, nev, action, min, max) ;
-	SDL_UnlockMutex (Mutex) ;
-	return ret ;
-}
-
 static int maintick (void)
 {
 	int ptsx, ptsy, winx, winy, iWheel, i, c ;
@@ -975,6 +991,14 @@ static int maintick (void)
 	SDL_GL_GetDrawableSize (window, &winx, &winy) ;
 	SDL_Rect caret ;
 	SDL_Event ev ;
+
+	DestRect.x = -panx * scale ;
+	DestRect.y = -pany * scale ;
+	DestRect.w = sizex * scale ;
+	DestRect.h = sizey * scale ;
+#if defined __ANDROID__ || defined __IPHONEOS__
+	DestRect.x += (winx - DestRect.w) >> 1 ;
+#endif
 
 #define PAINT1 (((unsigned int)(now - lastpaint) >= PACER) && (nUserEv < MAXEV)) // Time window
 #define PAINT2 (reflag & 1) // Interpreter thread is waiting for refresh (vSync)
@@ -991,13 +1015,6 @@ static int maintick (void)
 		SrcRect.w = sizex ;
 		SrcRect.h = sizey ;
 
-		DestRect.x = -panx * scale ;
-		DestRect.y = -pany * scale ;
-		DestRect.w = sizex * scale ;
-		DestRect.h = sizey * scale ;
-#if defined __ANDROID__ || defined __IPHONEOS__
-		DestRect.x += (winx - DestRect.w) >> 1 ;
-#endif
 		oldtextx = textx ;
 		oldtexty = texty ;
 		int careton = blink && (cursa < 32) ;
@@ -1045,7 +1062,9 @@ static int maintick (void)
 
 	if ((unsigned int)(now - lastpump) >= PUMPT)
 	    {
+		SDL_LockMutex (Mutex) ;
 		SDL_PumpEvents() ;
+		SDL_UnlockMutex (Mutex) ;
 		lastpump = SDL_GetTicks() ;
 	    }
 
@@ -1166,6 +1185,11 @@ static int maintick (void)
 				iResult = apicall_ (ev.user.data1, ev.user.data2) ;
 				SDL_SemPost (Sema4) ;
 				lastusrev = SDL_GetTicks() ;
+				if (bYield)
+				    {
+					bYield = 0 ;
+					return 0 ; // Force yield when SDL_GL_SwapWindow
+				    }
 				break ;
 
 				case EVT_MOUSE :
@@ -1261,6 +1285,14 @@ static int maintick (void)
 					putevt (timtrp, WM_TIMER, 0, 0) ;
 					flags |= ALERT ;
 				}
+				break ;
+
+				case EVT_FSSYNC:
+#ifdef __EMSCRIPTEN__
+				EM_ASM(
+				    FS.syncfs(function (err) {});
+				);
+#endif
 				break ;
 
 			}

@@ -1,10 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (c) 2017-2020  R.T.Russell, http://www.rtrussell.co.uk/   *
+*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
-*       BBCVDU.C  VDU emulator and graphics drivers               *
+*       The name 'BBC BASIC' is the property of the British       *
+*       Broadcasting Corporation and used with their permission   *
+*                                                                 *
+*       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.15a, 18-Aug-2020                                *
+*       Version 1.15b, 15-Sep-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1291,10 +1294,12 @@ static void newmode (short wx, short wy, short cx, short cy, short nc, signed ch
 // Initialise VDU system:
 static void vduinit (void)
 {
+#ifdef __EMSCRIPTEN__
 	blendop[3] = SDL_ComposeCustomBlendMode (SDL_BLENDFACTOR_ONE_MINUS_DST_COLOR, 
 			SDL_BLENDFACTOR_ONE_MINUS_SRC_COLOR, SDL_BLENDOPERATION_ADD, 
 			SDL_BLENDFACTOR_ZERO, SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD) ;
 	blendop[4] = blendop[3] ;
+#endif
 	hfont = NULL ;
 	modeno = -1 ;
 	cursb = chary ;

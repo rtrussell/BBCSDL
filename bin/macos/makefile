@@ -44,10 +44,10 @@ bbcsdl.o: bbcsdl.c bbcsdl.h version.h
 bbctmp.o: bbctmp.m
 	$(CXX) -c -Os $< -o $@
 
-SDL2_gfxPrimitives.o: SDL2_gfxPrimitives.c
+SDL2_gfxPrimitives.o: SDL2_gfxPrimitives.c SDL2_gfxPrimitives.h
 	$(CXX) -c -O2 $< -o $@
 
-SDL2_rotozoom.o: SDL2_rotozoom.c SDL_stbimage.h stb_image.h dr_mp3.h
+SDL2_rotozoom.o: SDL2_rotozoom.c SDL2_rotozoom.h SDL2_gfxPrimitives.h SDL_stbimage.h stb_image.h dr_mp3.h
 	$(CXX) -c -Os -fPIC $< -o $@
 
 flood.o: flood.c

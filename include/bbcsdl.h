@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2000-2020                     *
 *                                                                  *
 *       BBCSDL.H constant definitions                              *
-*       Version 1.15a 30-Aug-2020                                  *
+*       Version 1.16a 17-Sep-2020                                  *
 \******************************************************************/
 
 // System constants :
@@ -56,6 +56,7 @@
 #define EVT_OSK		0x200E	// En/disable On Screen Keyboard
 #define EVT_OSWORD	0x200F	// OSWORD call
 #define EVT_TIMER	0x2010	// Set new timer period
+#define EVT_FSSYNC	0x2011  // Sync filesystem (Emscripten)
 
 // Bit names:
 
@@ -79,7 +80,7 @@
 #define	UFONT		BIT6	// User font selected
 #define	UTF8		BIT7	// UTF-8 mode selected
 
-// Bits in _flags byte (must be the same as in BBCEQUS.INC):
+// Bits in _flags byte:
 
 #define ESCFLG          0x80
 #define ESCDIS          0x40

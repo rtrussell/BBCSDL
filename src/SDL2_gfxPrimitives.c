@@ -3,7 +3,7 @@
 SDL2_gfxPrimitives.c: graphics primitives for SDL2 renderers
 
 Copyright (C) 2012-2014  Andreas Schiffler
-Modifications and additions for BBC BASIC (C) 2016-2019 Richard Russell
+Modifications and additions for BBC BASIC (C) 2016-2020 Richard Russell
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -4554,6 +4554,98 @@ int thickCircleColor(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Ui
 	return thickEllipseRGBA(renderer, x, y, rad, rad, c[0], c[1], c[2], c[3], thick);
 }
 
+/*!
+\brief Fill a region bounded by cubic Bezier curves, with alpha blending.
+
+\param renderer The renderer to draw on.
+\param vx Vertex array containing X coordinates of the points of the bezier curves.
+\param vy Vertex array containing Y coordinates of the points of the bezier curves.
+\param n Number of points in the vertex array. Should be 3n + 1 for n bezier curves.
+\param s Number of steps for the interpolation. Minimum number is 2.
+\param r The red value of the bezier curve to draw. 
+\param g The green value of the bezier curve to draw. 
+\param b The blue value of the bezier curve to draw. 
+\param a The alpha value of the bezier curve to draw.
+
+\returns Returns 0 on success, -1 on failure.
+*/
+int filledPolyBezierRGBA(SDL_Renderer * renderer, const Sint16 *x, const Sint16 *y, int n, int s, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+{
+	int i, j, nbeziers, nverts, result;
+	double t, stepsize;
+	double x1, y1, x2, y2 ;
+	double *dx, *dy ;
+	Sint16 *vx, *vy ;
+
+	// Sanity check 
+	if ((n < 7) || (s < 2))
+		return -1 ;
+
+	/* Transfer vertices into float arrays */
+	if ((dx=(double *)malloc(sizeof(double)*n))==NULL) {
+		return(-1);
+	}
+	if ((dy=(double *)malloc(sizeof(double)*n))==NULL) {
+		free(dx);
+		return(-1);
+	}    
+	for (i=0; i<n; i++) {
+		dx[i]=(double)x[i];
+		dy[i]=(double)y[i];
+	}      
+
+	// Create combined vertex array:
+	nbeziers = (n - 1) / 3 ;
+	nverts = nbeziers * 4 * s + 1 ;
+	vx = (Sint16 *) malloc (nverts * 2 * sizeof(Sint16)) ;
+	if (vx == NULL)
+	{
+		free(dy) ;
+		free(dx) ;		
+		return -1 ;
+	}
+	vy = vx + nverts ;
+
+	// Draw Beziers
+	stepsize = 1.0 / (double)s ;
+	for (j = 0; j < nbeziers; j++)
+	    {
+		t = 0.0 ;
+		x1 = _evaluateBezier(dx + j * 3, 4, t) ;
+		y1 = _evaluateBezier(dy + j * 3, 4, t) ;
+		for (i = 0; i < 4*s; i++)
+		    {
+			t += stepsize ;
+			x2 = _evaluateBezier(dx + j * 3, 4, t) ;
+			y2 = _evaluateBezier(dy + j * 3, 4, t) ;
+
+			vx[i + j * s * 4] = floor(x1 + 0.5) ;
+			vy[i + j * s * 4] = floor(y1 + 0.5) ;
+
+			x1 = x2 ;
+			y1 = y2 ;
+	    }
+	}
+
+	vx[j * s * 4] = floor(x1 + 0.5) ;
+	vy[j * s * 4] = floor(y1 + 0.5) ;
+
+	free(dy) ;
+	free(dx) ;
+
+	result = filledPolygonRGBA(renderer, vx, vy, nverts, r, g, b, a);
+
+	free(vx) ;
+	return (result);
+}
+
+// returns Returns 0 on success, -1 on failure.
+int filledPolyBezierColor(SDL_Renderer * renderer, const Sint16 *x, const Sint16 *y, int n, int s, Uint32 color)
+{
+	Uint8 *c = (Uint8 *)&color; 
+	return filledPolyBezierRGBA(renderer, x, y, n, s, c[0], c[1], c[2], c[3]);
+}
+
 // Extensions for anti-aliased filled ellipses and polygons by Richard Russell 20-Aug-2019
 
 /*!
@@ -5158,14 +5250,14 @@ int aaBezierRGBA(SDL_Renderer * renderer, double *x, double *y, int n, int s, fl
 }
 
 // returns Returns 0 on success, -1 on failure.
-int aaBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, float thick, int color)
+int aaBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, float thick, Uint32 color)
 {
 	Uint8 *c = (Uint8 *)&color; 
 	return aaBezierRGBA(renderer, x, y, n, s, thick, c[0], c[1], c[2], c[3]);
 }
 
 /*!
-\brief Fill a region bounded by cubic Bezier curves, with alpha blending.
+\brief Fill an anti-aliased region bounded by cubic Bezier curves, with alpha blending.
 
 \param renderer The renderer to draw on.
 \param vx Vertex array containing X coordinates of the points of the bezier curves.
@@ -5229,7 +5321,7 @@ int aaFilledPolyBezierRGBA(SDL_Renderer * renderer, double *x, double *y, int n,
 }
 
 // returns Returns 0 on success, -1 on failure.
-int aaFilledPolyBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, int color)
+int aaFilledPolyBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, Uint32 color)
 {
 	Uint8 *c = (Uint8 *)&color; 
 	return aaFilledPolyBezierRGBA(renderer, x, y, n, s, c[0], c[1], c[2], c[3]);

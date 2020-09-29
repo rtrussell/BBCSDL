@@ -562,6 +562,7 @@ _drmp3_open_file_and_read_f32
 _drmp3_free
 _drmp3dec_f32_to_s16
 _GFX_bezierColor
+_GFX_filledPolyBezierColor
 _GFX_aaFilledEllipseColor
 _GFX_aaFilledPolygonColor
 _GFX_aaFilledPieColor
