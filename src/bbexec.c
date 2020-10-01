@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.16a, 12-Sep-2020                                *
+*       Version 1.16a, 30-Sep-2020                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -2724,6 +2724,8 @@ VAR xeq (void)
 						    }
 						if (al == TPROC)
 						    {
+							if (nxt () == TPROC)
+								esi++ ;
 							procfn (TON) ;
 							break ;
 						    }
