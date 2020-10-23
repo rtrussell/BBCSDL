@@ -47,7 +47,7 @@ Andreas Schiffler -- aschiffler at ferzkopp dot net
 SDL_STBIMG_DEF int GFX_bezierColor(SDL_Renderer* renderer, const Sint16* vx, const Sint16* vy, int n, int s, Uint32 color)
 {	return bezierColor(renderer, vx, vy, n, s, color) ; }
 
-SDL_STBIMG_DEF int GFX_filledPolyBezierColor(SDL_Renderer * renderer, const Sint16 *x, const Sint16 *y, int n, int s, int color)
+SDL_STBIMG_DEF int GFX_filledPolyBezierColor(SDL_Renderer * renderer, const Sint16 *x, const Sint16 *y, int n, int s, Uint32 color)
 {	return filledPolyBezierColor(renderer, x, y, n, s, color) ; }
 
 SDL_STBIMG_DEF int GFX_aaFilledEllipseColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, Uint32 color)
@@ -62,10 +62,10 @@ SDL_STBIMG_DEF int GFX_aaFilledPieColor(SDL_Renderer * renderer, float cx, float
 SDL_STBIMG_DEF int GFX_aaArcColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, float start, float end, float thick, Uint32 color)
 {	return aaArcColor(renderer, cx, cy, rx, ry, start, end, thick, color) ; }
 
-SDL_STBIMG_DEF int GFX_aaBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, float thick, int color)
+SDL_STBIMG_DEF int GFX_aaBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, float thick, Uint32 color)
 {	return aaBezierColor(renderer, x, y, n, s, thick, color) ; }
 
-SDL_STBIMG_DEF int GFX_aaFilledPolyBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, int color)
+SDL_STBIMG_DEF int GFX_aaFilledPolyBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, Uint32 color)
 {	return aaFilledPolyBezierColor(renderer, x, y, n, s, color) ; }
 
 /* ---- Internally used structures */

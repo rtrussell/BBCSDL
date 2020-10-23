@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.16a, 17-Sep-2020                                *
+*       Version 1.17a, 19-Oct-2020                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -2148,7 +2148,7 @@ void *osopen (int type, char *p)
 			return (void *)(size_t)chan ;
 		    }
 	    }
-	BBC_RWclose (file) ;
+	SDL_RWclose (file) ;
 	error (192, "Too many open files") ;
 	return NULL ; // never happens
 }

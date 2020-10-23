@@ -4313,7 +4313,7 @@ static int renderdrawline(SDL_Renderer *renderer, int x1, int y1, int x2, int y2
 	int result ;
 	if ((x1 == x2) && (y1 == y2))
 		result = SDL_RenderDrawPoint (renderer, x1, y1) ;
-	else if ((y1 == y2) && (x1 != x2))
+	else if (y1 == y2)
 	    {
 		int x ;
 		if (x1 > x2) { x = x1 ; x1 = x2 ; x2 = x ; }
@@ -4327,7 +4327,7 @@ static int renderdrawline(SDL_Renderer *renderer, int x1, int y1, int x2, int y2
 		result = SDL_RenderDrawPoints (renderer, points, x2 - x1 + 1) ;
 		free (points) ;
 	    }
-	else if ((x1 == x2) && (y1 != y2))
+	else if (x1 == x2)
 	    {
 		int y ;
 		if (y1 > y2) { y = y1 ; y1 = y2 ; y2 = y ; }
@@ -4558,8 +4558,8 @@ int thickCircleColor(SDL_Renderer * renderer, Sint16 x, Sint16 y, Sint16 rad, Ui
 \brief Fill a region bounded by cubic Bezier curves, with alpha blending.
 
 \param renderer The renderer to draw on.
-\param vx Vertex array containing X coordinates of the points of the bezier curves.
-\param vy Vertex array containing Y coordinates of the points of the bezier curves.
+\param x Vertex array containing X coordinates of the points of the bezier curves.
+\param y Vertex array containing Y coordinates of the points of the bezier curves.
 \param n Number of points in the vertex array. Should be 3n + 1 for n bezier curves.
 \param s Number of steps for the interpolation. Minimum number is 2.
 \param r The red value of the bezier curve to draw. 
@@ -4953,7 +4953,7 @@ int aaFilledPolygonRGBA(SDL_Renderer * renderer, const double * vx, const double
 		free (list) ;
 		return -1 ;
 	    }
-	memset (strip, 0, (maxx - minx + 1) * sizeof(float)) ;
+	memset (strip, 0, (maxx - minx + 2) * sizeof(float)) ;
 	n = yi ;
 	yi = list[1] ;
 	j = 0 ;
@@ -5008,7 +5008,7 @@ int aaFilledPolygonRGBA(SDL_Renderer * renderer, const double * vx, const double
 					    }
 				    }
 			    }
-			memset (strip, 0, (maxx - minx + 1) * sizeof(float)) ;
+			memset (strip, 0, (maxx - minx + 2) * sizeof(float)) ;
 			yi++ ;
 
 		    }
@@ -5182,8 +5182,8 @@ int aaArcColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, 
 \brief Draw an anti-aliased bezier curve with alpha blending.
 
 \param renderer The renderer to draw on.
-\param vx Vertex array containing X coordinates of the points of the bezier curve.
-\param vy Vertex array containing Y coordinates of the points of the bezier curve.
+\param x Vertex array containing X coordinates of the points of the bezier curve.
+\param y Vertex array containing Y coordinates of the points of the bezier curve.
 \param n Number of points in the vertex array. Minimum number is 3.
 \param s Number of steps for the interpolation. Minimum number is 2.
 \param thick Thickness of line in pixels.
@@ -5260,8 +5260,8 @@ int aaBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, f
 \brief Fill an anti-aliased region bounded by cubic Bezier curves, with alpha blending.
 
 \param renderer The renderer to draw on.
-\param vx Vertex array containing X coordinates of the points of the bezier curves.
-\param vy Vertex array containing Y coordinates of the points of the bezier curves.
+\param x Vertex array containing X coordinates of the points of the bezier curves.
+\param y Vertex array containing Y coordinates of the points of the bezier curves.
 \param n Number of points in the vertex array. Should be 3n + 1 for n bezier curves.
 \param s Number of steps for the interpolation. Minimum number is 2.
 \param r The red value of the bezier curve to draw. 

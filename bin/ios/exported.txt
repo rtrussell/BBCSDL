@@ -650,3 +650,6 @@ _b2RopeJointGetAnchorB
 _b2GetLinearVelocity
 _b2GetAngularVelocity
 _b2GetMass
+_SDL_malloc
+_SDL_memset
+_SDL_free

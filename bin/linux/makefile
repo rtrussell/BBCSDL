@@ -1,7 +1,11 @@
-# On Debian / Ubuntu / Mint download SDL 2.0 from the repository:
+# On Debian / Ubuntu / Mint download SDL 2.0 and NASM from the repository:
+# sudo apt-get install libsdl2-dev
+# sudo apt-get install libsdl2-ttf-dev
+# sudo apt-get install libsdl2-net-dev
 # sudo apt-get install libsdl2-2.0-0
 # sudo apt-get install libsdl2-ttf-2.0-0
 # sudo apt-get install libsdl2-net-2.0-0
+# sudo apt-get install nasm
 
 SDL_LIB = -L/usr/include -lSDL2 -lSDL2main -lSDL2_ttf -lSDL2_net -ldl -lm
 LBITS := $(shell getconf LONG_BIT)
@@ -22,13 +26,13 @@ bbexec.o: bbexec.c BBC.h
 	$(CXX) -c -O2 $< -o $@
 
 bbeval.o: bbeval.c BBC.h
-	$(CXX) -c -O2 $< -o $@
+	$(CXX) -Wno-array-bounds -c -O2 $< -o $@
 
 bbasmb.o: bbasmb_x86_64.c BBC.h
 	$(CXX) -c -Os $< -o $@
 
 bbcmos.o: bbcmos.c bbcsdl.h
-	$(CXX) -c -msse2 -O2 $< -o $@
+	$(CXX) -Wno-array-bounds -c -msse2 -O2 $< -o $@
 
 bbccli.o: bbccli.c bbcsdl.h
 	$(CXX) -Wno-unused-result -c -Os $< -o $@

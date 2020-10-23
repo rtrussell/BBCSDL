@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.16a, 30-Sep-2020                                *
+*       Version 1.17a, 17-Oct-2020                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -1279,8 +1279,8 @@ VAR xeq (void)
 				}
 
 			case TEND:
-			case 0:
 				osshut (0) ;
+			case 0:
 				error (256, NULL) ;
 
 /************************************ WHEN *************************************/
@@ -3309,6 +3309,7 @@ VAR xeq (void)
 				void *ptr = NULL ;
 				unsigned char type = 0 ;
 				parm.f[0] = 0.0 ;
+				parm.i[0] = 0 ;
 
 				if (v.s.t == -1)
 				    {
@@ -3384,9 +3385,9 @@ VAR xeq (void)
 						error (31, NULL) ; // 'Incorrect arguments'
 				    }
 
-				for (ni = 0; ni < 16; ni++)
+				while (ni)
 				    {
-					if (parm.i[ni] == memhdc)
+					if (parm.i[--ni] == memhdc)
 						break ; 
 				    }
 
@@ -3398,7 +3399,7 @@ VAR xeq (void)
 				    }
 
 				v.i.t = 0 ;
-				if ((ni < 16) && (parm.i[ni] == memhdc))
+				if (parm.i[ni] == memhdc)
 					v.i.n = guicall (func, &parm) ;
 				else if (type != 8)
 					v.i.n = apicall_ (func, &parm) ;

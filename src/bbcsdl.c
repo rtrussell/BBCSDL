@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.16a, 22-Sep-2020                                *
+*       Version 1.17a, 19-Oct-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -897,7 +897,9 @@ if (argc < 2)
 
 chrmap = (short*) malloc (2 * ((XSCREEN + 7) >> 3) * ((YSCREEN + 7) >> 3)) ;
 
-// Audio buffer should be <= 40 ms (total queued SOUNDs at min. duration)  
+// Audio buffer should be <= 40 ms (total queued SOUNDs at min. duration)
+// but must be >= 20ms (minimum likely frame rate) because in Emscripten /
+// Web Assembly the browser can only service audio interrupts at frame rate.  
 SDL_memset(&want, 0, sizeof(want)) ;
 want.freq = 44100 ;
 want.format = AUDIO_S16LSB ;
@@ -980,7 +982,7 @@ exit(exitcode) ;
 
 static int maintick (void)
 {
-	int ptsx, ptsy, winx, winy, iWheel, i, c ;
+	int ptsx, ptsy, winx, winy, i, c ;
 	static float oldx, oldy ;
 	static int oldtextx, oldtexty ;
 	static unsigned int lastpaint, lastusrev, lastpump ;
@@ -1004,7 +1006,7 @@ static int maintick (void)
 #define PAINT2 (reflag & 1) // Interpreter thread is waiting for refresh (vSync)
 #define PAINT3 ((unsigned int)(now - lastpaint) >= MAXFP) // Fallback minimum frame rate
 
-	if ((PAINT1 || PAINT2 || PAINT3) && (reflag != 2) && 
+	if ((reflag != 2) && (PAINT1 || PAINT2 || PAINT3) && 
 	    (bChanged || (reflag & 1) || (textx != oldtextx) || (texty != oldtexty)))
 	    {
 		SDL_Rect SrcRect ;
@@ -1535,18 +1537,10 @@ static int maintick (void)
 			break ;
 
 		case SDL_MOUSEWHEEL:
-			iWheel = ev.wheel.y ;
-
-			while (iWheel > 0)
-			{
+			if (ev.wheel.y > 0)
 				putkey (0x8D) ;
-				iWheel-- ;
-			}
-			while (iWheel < 0)
-			{
+			if (ev.wheel.y < 0)
 				putkey (0x8C) ;
-				iWheel++ ;
-			}
 			break ;
 
 		case SDL_APP_DIDENTERFOREGROUND:

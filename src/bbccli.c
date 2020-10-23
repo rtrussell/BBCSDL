@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.16a, 12-Sep-2020                                *
+*       Version 1.17a, 17-Oct-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -629,7 +629,7 @@ void oscli (char *cmd)
 			b = parse (NULL, p, 0) ;
 			if (b == 0)
 				return ;
-			*(keystr + n) = malloc (b) ;
+			*(keystr + n) = malloc (b + 1) ;
 			parse (*(keystr + n), p, 0) ;
 			return ;
 

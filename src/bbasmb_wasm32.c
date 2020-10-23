@@ -1,9 +1,12 @@
 /*****************************************************************\
-*       32-bit BBC BASIC Interpreter                              *
+*       32-bit BBC BASIC Interpreter (Emscripten / Web Assembly)  *
 *       (c) 2018-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
+*       The name 'BBC BASIC' is the property of the British       *
+*       Broadcasting Corporation and used with their permission   *
+*                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.15g, 27-Sep-2020                                *
+*       Version 1.16b, 16-Oct-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -12,6 +15,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
 #include <emscripten.h>
 #include <GLES2/gl2.h>
 #include "SDL2/SDL.h"
@@ -33,9 +37,13 @@ typedef struct
 
 // External routines:
 void error (int, const char *) ;
+void stbi_set_flip_vertically_on_load(int) ;
 float* drmp3_open_file_and_read_f32 (const char*, drmp3_config*, uint64_t *) ;
 void drmp3dec_f32_to_s16 (const float*, int16_t *, int) ;
 void drmp3_free (void*) ;
+long long B2D_GetProcAddress (st, st, st, st, st, st, st, st, st, st, st, st, db, db, db, db, db, db, db, db) ;
+
+// Global variables:
 extern int bYield ;
 
 void assemble (void)
@@ -100,7 +108,7 @@ long long BBC_aaFilledPolyBezierColor(st renderer, st x, st y, st n, st s, st co
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return aaFilledPolyBezierColor((SDL_Renderer*) renderer, (double *) x, (double *) y, n, s, color); }
 
-// Textures (e.g. used by imglib.bbc):
+// 2D Surfaces and Textures (e.g. used by imglib.bbc):
 
 long long BBC_CreateTextureFromSurface(st renderer, st surface, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -210,15 +218,31 @@ long long BBC_LoadBMP_RW(st src, st freesrc, st i2, st i3, st i4, st i5, st i6, 
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) SDL_LoadBMP_RW((SDL_RWops*) src, freesrc); }
 
+long long BBC_SetPaletteColors(st palette, st colors, st first, st ncolors, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_SetPaletteColors((SDL_Palette*) palette, (const SDL_Color*) colors, first, ncolors); }
+
+long long BBC_stbi_set_flip_vertically_on_load(st flip, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ stbi_set_flip_vertically_on_load(flip); return 0; }
+
 // 3D (OpenGL) graphics:
 
 long long BBC_GL_CreateContext(st window, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) SDL_GL_CreateContext((SDL_Window*) window); }
 
+long long BBC_GL_DeleteContext(st context, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ SDL_GL_DeleteContext((SDL_GLContext) context); return 0; }
+
 long long BBC_GL_GetCurrentContext(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) SDL_GL_GetCurrentContext(); }
+
+long long BBC_GL_GetDrawableSize(st window, st pw, st ph, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ SDL_GL_GetDrawableSize((SDL_Window*) window, (int*) pw, (int*) ph); return 0; }
 
 long long BBC_GL_GetProcAddress(st, st, st, st, st, st, st, st, st, st, st, st, db, db, db, db, db, db, db, db) ;
 
@@ -296,15 +320,31 @@ long long BBC_FreeWAV(st audio_buf, st i1, st i2, st i3, st i4, st i5, st i6, st
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ SDL_FreeWAV((Uint8*) audio_buf); return 0; }
 
-// Miscellaneous:
+// Time-related functions:
+
+long long BBC_asctime(st tm, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) asctime((const struct tm*) tm); }
+
+long long BBC_gmtime(st timep, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) gmtime((const time_t*) timep); }
+
+long long BBC_localtime(st timep, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) localtime((const time_t*) timep); }
+
+long long BBC_mktime(st tm, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) mktime((struct tm*) tm); }
+
+long long BBC_time(st tloc, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) time((time_t*) tloc); }
 
 long long BBC_GetTicks(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_GetTicks(); }
-
-long long BBC_SetHint(st name, st value, st i2, st i3, st i4, st i5, st i6, st i7,
-	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
-	{ return SDL_SetHint((const char*) name, (const char*) value); }
 
 long long BBC_AddTimer(st interval, st callback, st param, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -313,6 +353,12 @@ long long BBC_AddTimer(st interval, st callback, st param, st i3, st i4, st i5, 
 long long BBC_RemoveTimer(st id, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_RemoveTimer(id); }
+
+// Miscellaneous:
+
+long long BBC_SetHint(st name, st value, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_SetHint((const char*) name, (const char*) value); }
 
 long long BBC_GetWindowFlags(st window, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -354,13 +400,71 @@ long long BBC_memset(st dest, st c, st n, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) SDL_memset((void*) dest, c, n); }
 
-long long BBC_NET_Linked_Version(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
-	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
-	{ return (intptr_t) SDLNet_Linked_Version(); }
-
 long long BBC_TTF_Linked_Version(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) TTF_Linked_Version(); }
+
+// Networking (web sockets)
+
+long long BBC_Net_AddSocket(st set, st sock, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDLNet_AddSocket((SDLNet_SocketSet) set, (SDLNet_GenericSocket) sock); }
+
+long long BBC_Net_AllocSocketSet(st maxsockets, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDLNet_AllocSocketSet(maxsockets); }
+
+long long BBC_Net_CheckSockets(st set, st timeout, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDLNet_CheckSockets((SDLNet_SocketSet) set, timeout); }
+
+long long BBC_Net_DelSocket(st set, st sock, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDLNet_DelSocket((SDLNet_SocketSet) set, (SDLNet_GenericSocket) sock); }
+
+long long BBC_Net_FreeSocketSet(st set, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ SDLNet_FreeSocketSet((SDLNet_SocketSet) set); return 0; }
+
+long long BBC_Net_GetError(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDLNet_GetError(); }
+
+long long BBC_Net_Linked_Version(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDLNet_Linked_Version(); }
+
+long long BBC_Net_ResolveHost(st addr, st host, st port, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDLNet_ResolveHost((IPaddress*) addr, (const char*) host, port); }
+
+long long BBC_Net_ResolveIP(st addr, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDLNet_ResolveIP((IPaddress*) addr); }
+
+long long BBC_Net_TCP_Accept(st server, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDLNet_TCP_Accept((TCPsocket) server); }
+
+long long BBC_Net_TCP_Close(st sock, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ SDLNet_TCP_Close((TCPsocket) sock); return 0; }
+
+long long BBC_Net_TCP_GetPeerAddress(st sock, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDLNet_TCP_GetPeerAddress((TCPsocket) sock); }
+
+long long BBC_Net_TCP_Open(st ip, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDLNet_TCP_Open((IPaddress*) ip); }
+
+long long BBC_Net_TCP_Recv(st sock, st data, st maxlen, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDLNet_TCP_Recv((TCPsocket) sock, (void*) data, maxlen); }
+
+long long BBC_Net_TCP_Send(st sock, st data, st len, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDLNet_TCP_Send((TCPsocket) sock, (const void*) data, len); }
 
 // Emscripten:
 
@@ -376,10 +480,11 @@ long long BBC_emscripten_async_wget(st url, st file, st i2, st i3, st i4, st i5,
 	return 0 ;
 }
 
-#define NSYS 72
+#define NSYS 96
 #define POW2 128 // smallest power-of-2 >= NSYS
 
-static char *sysname[NSYS] = {
+static const char *sysname[NSYS] = {
+	"B2D_GetProcAddress",
 	"GFX_aaArcColor",
 	"GFX_aaBezierColor",
 	"GFX_aaFilledEllipseColor",
@@ -388,7 +493,21 @@ static char *sysname[NSYS] = {
 	"GFX_aaFilledPolygonColor",
 	"GFX_bezierColor",
 	"GFX_filledPolyBezierColor",
+	"SDLNet_AddSocket",
+	"SDLNet_AllocSocketSet",
+	"SDLNet_CheckSockets",
+	"SDLNet_DelSocket",
+	"SDLNet_FreeSocketSet",
+	"SDLNet_GetError",
 	"SDLNet_Linked_Version",
+	"SDLNet_ResolveHost",
+	"SDLNet_ResolveIP",
+	"SDLNet_TCP_Accept",
+	"SDLNet_TCP_Close",
+	"SDLNet_TCP_GetPeerAddress",
+	"SDLNet_TCP_Open",
+	"SDLNet_TCP_Recv",
+	"SDLNet_TCP_Send",
 	"SDL_AddTimer",
 	"SDL_ClearQueuedAudio",
 	"SDL_CloseAudioDevice",
@@ -399,7 +518,9 @@ static char *sysname[NSYS] = {
 	"SDL_FreeSurface",
 	"SDL_FreeWAV",
 	"SDL_GL_CreateContext",
+	"SDL_GL_DeleteContext",
 	"SDL_GL_GetCurrentContext",
+	"SDL_GL_GetDrawableSize",
 	"SDL_GL_GetProcAddress",
 	"SDL_GL_MakeCurrent",
 	"SDL_GL_SetAttribute",
@@ -431,6 +552,7 @@ static char *sysname[NSYS] = {
 	"SDL_RenderSetClipRect",
 	"SDL_SetColorKey",
 	"SDL_SetHint",
+	"SDL_SetPaletteColors",
 	"SDL_SetRenderDrawBlendMode",
 	"SDL_SetRenderDrawColor",
 	"SDL_SetRenderTarget",
@@ -448,12 +570,19 @@ static char *sysname[NSYS] = {
 	"STBIMG_Load",
 	"STBIMG_LoadTexture",
 	"TTF_Linked_Version",
+	"asctime",
 	"drmp3_free",
 	"drmp3_open_file_and_read_f32",
 	"drmp3dec_f32_to_s16",
-	"emscripten_async_wget"} ;
+	"emscripten_async_wget",
+	"gmtime",
+	"localtime",
+	"mktime",
+	"stbi_set_flip_vertically_on_load",
+	"time"} ;
 
 static void *sysfunc[NSYS] = {
+	B2D_GetProcAddress,
 	BBC_aaArcColor,
 	BBC_aaBezierColor,
 	BBC_aaFilledEllipseColor,
@@ -462,7 +591,21 @@ static void *sysfunc[NSYS] = {
 	BBC_aaFilledPolygonColor,
 	BBC_bezierColor,
 	BBC_filledPolyBezierColor,
-	BBC_NET_Linked_Version,
+	BBC_Net_AddSocket,
+	BBC_Net_AllocSocketSet,
+	BBC_Net_CheckSockets,
+	BBC_Net_DelSocket,
+	BBC_Net_FreeSocketSet,
+	BBC_Net_GetError,
+	BBC_Net_Linked_Version,
+	BBC_Net_ResolveHost,
+	BBC_Net_ResolveIP,
+	BBC_Net_TCP_Accept,
+	BBC_Net_TCP_Close,
+	BBC_Net_TCP_GetPeerAddress,
+	BBC_Net_TCP_Open,
+	BBC_Net_TCP_Recv,
+	BBC_Net_TCP_Send,
 	BBC_AddTimer,
 	BBC_ClearQueuedAudio,
 	BBC_CloseAudioDevice,
@@ -473,7 +616,9 @@ static void *sysfunc[NSYS] = {
 	BBC_FreeSurface,
 	BBC_FreeWAV,
 	BBC_GL_CreateContext,
+	BBC_GL_DeleteContext,
 	BBC_GL_GetCurrentContext,
+	BBC_GL_GetDrawableSize,
 	BBC_GL_GetProcAddress,
 	BBC_GL_MakeCurrent,
 	BBC_GL_SetAttribute,
@@ -505,6 +650,7 @@ static void *sysfunc[NSYS] = {
 	WASM_RenderSetClipRect,
 	BBC_SetColorKey,
 	BBC_SetHint,
+	BBC_SetPaletteColors,
 	BBC_SetRenderDrawBlendMode,
 	BBC_SetRenderDrawColor,
 	BBC_SetRenderTarget,
@@ -522,10 +668,16 @@ static void *sysfunc[NSYS] = {
 	BBC_STBIMG_Load,
 	BBC_STBIMG_LoadTexture,
 	BBC_TTF_Linked_Version,
+	BBC_asctime,
 	BBC_drmp3_free,
 	BBC_drmp3_open_file_and_read_f32,
 	BBC_drmp3dec_f32_to_s16,
-	BBC_emscripten_async_wget} ;
+	BBC_emscripten_async_wget,
+	BBC_gmtime,
+	BBC_localtime,
+	BBC_mktime,
+	BBC_stbi_set_flip_vertically_on_load,
+	BBC_time } ;
 
 void *dlsym (void *handle, const char *symbol)
 {
@@ -555,6 +707,10 @@ long long BBC_glBindBuffer(st target, st buffer, st i2, st i3, st i4, st i5, st 
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glBindBuffer((GLenum) target, buffer); return 0; }
 
+long long BBC_glBlendFunc(st sfactor, st dfactor, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glBlendFunc((GLenum) sfactor,(GLenum) dfactor); return 0; }
+
 long long BBC_glBufferData(st target, st size, st data, st usage, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glBufferData((GLenum) target, size, (const void*) data, (GLenum) usage); return 0; }
@@ -563,13 +719,18 @@ long long BBC_glClear(st mask, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glClear((GLbitfield) mask); return 0; }
 
-long long BBC_glClearColor(st red, st green, st blue, st alpha, st i4, st i5, st i6, st i7,
+long long BBC_glClearColor(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
-	{ glClearColor((GLclampf) red, (GLclampf) green, (GLclampf) blue, (GLclampf) alpha); return 0; }
+	{
+		float r = *(float *)&i0 ; float g = *(float *)&i1 ;
+		float b = *(float *)&i2 ; float a = *(float *)&i3 ;
+		glClearColor((GLclampf) r, (GLclampf) g, (GLclampf) b, (GLclampf) a);
+		return 0;
+	}
 
-long long BBC_glClearDepthf(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
-	  st i8, st i9, st i10, st i11, db depth, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
-	{ glClearDepthf(depth); return 0; }
+long long BBC_glClearDepthf(st depth, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glClearDepthf(*(float *)&depth); return 0; }
 
 long long BBC_glCompileShader(st shader, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -583,6 +744,10 @@ long long BBC_glCreateShader(st type, st i1, st i2, st i3, st i4, st i5, st i6, 
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return glCreateShader((GLenum) type); }
 
+long long BBC_glCullFace(st mode, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glCullFace((GLenum) mode); return 0; }
+
 long long BBC_glDeleteBuffers(st num, st buffers, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glDeleteBuffers(num, (const GLuint*) buffers); return 0; }
@@ -595,6 +760,14 @@ long long BBC_glDeleteShader(st shader, st i1, st i2, st i3, st i4, st i5, st i6
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glDeleteShader(shader); return 0; }
 
+long long BBC_glDeleteTextures(st ntex, st textures, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glDeleteTextures(ntex, (const GLuint*) textures); return 0; }
+
+long long BBC_glDisable(st cap, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glDisable(cap); return 0; }
+
 long long BBC_glDisableVertexAttribArray(st index, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glDisableVertexAttribArray(index); return 0; }
@@ -603,6 +776,10 @@ long long BBC_glDrawArrays(st mode, st first, st count, st i3, st i4, st i5, st 
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glDrawArrays((GLenum) mode, first, count); return 0; }
 
+long long BBC_glEnable(st cap, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glEnable(cap); return 0; }
+
 long long BBC_glEnableVertexAttribArray(st index, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glEnableVertexAttribArray(index); return 0; }
@@ -610,6 +787,14 @@ long long BBC_glEnableVertexAttribArray(st index, st i1, st i2, st i3, st i4, st
 long long BBC_glGenBuffers(st num, st buffers, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glGenBuffers(num, (GLuint*) buffers); return 0; }
+
+long long BBC_glGetAttribLocation(st program, st name, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return glGetAttribLocation(program, (const GLchar*) name); }
+
+long long BBC_glGetIntegerv(st pname, st data, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glGetIntegerv(pname, (GLint *) data); return 0; }
 
 long long BBC_glGetProgramInfoLog(st program, st maxLength, st length, st infoLog, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -631,6 +816,14 @@ long long BBC_glGetUniformLocation(st program, st name, st i2, st i3, st i4, st 
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return glGetUniformLocation(program, (const GLchar*) name); }
 
+long long BBC_glIsBuffer(st buffer, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return glIsBuffer(buffer); }
+
+long long BBC_glIsTexture(st texture, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return glIsTexture(texture); }
+
 long long BBC_glLinkProgram(st program, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glLinkProgram(program); return 0; }
@@ -647,6 +840,18 @@ long long BBC_glUniform2fv(st location, st count, st value, st i3, st i4, st i5,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glUniform2fv(location, count,	(const GLfloat*) value); return 0; }
 
+long long BBC_glUniform3fv(st location, st count, st value, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glUniform3fv(location, count,	(const GLfloat*) value); return 0; }
+
+long long BBC_glUniform4fv(st location, st count, st value, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glUniform4fv(location, count,	(const GLfloat*) value); return 0; }
+
+long long BBC_glUniformMatrix4fv(st location, st count, st transpose, st value, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glUniformMatrix4fv(location, count, transpose, (const GLfloat*) value); return 0; }
+
 long long BBC_glUseProgram(st program, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glUseProgram(program); return 0; }
@@ -659,13 +864,40 @@ long long BBC_glViewport(st x, st y, st w, st h, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glViewport(x, y, w, h); return 0; }
 
-#define GLNSYS 29
-#define GLPOW2 32 // smallest power-of-2 >= GLNSYS
+long long BBC_glActiveTexture(st texture, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glActiveTexture(texture); return 0; }
 
-static char *GLname[GLNSYS] = {
+long long BBC_glBindTexture(st target, st texture, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glBindTexture(target, texture); return 0; }
+
+long long BBC_glGenTextures(st ntex, st textures, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glGenTextures(ntex, (GLuint*) textures); return 0; }
+
+long long BBC_glTexImage2D(st target, st level, st internalformat, st width, st height, st border, st format, st type,
+	  st data, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glTexImage2D(target, level, internalformat, width, height, border, format, type, (const void*) data); return 0; }
+
+long long BBC_glTexParameteri(st target, st pname, st param, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glTexParameteri(target, pname, param); return 0; }
+
+long long BBC_glUniform1i(st location, st v0, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glUniform1i(location, v0); return 0; }
+
+#define GLNSYS 47
+#define GLPOW2 64 // smallest power-of-2 >= GLNSYS
+
+static const char *GLname[GLNSYS] = {
+	"glActiveTexture",
 	"glAttachShader",
 	"glBindAttribLocation",
 	"glBindBuffer",
+	"glBindTexture",
+	"glBlendFunc",
 	"glBufferData",
 	"glClear",
 	"glClearColor",
@@ -673,30 +905,48 @@ static char *GLname[GLNSYS] = {
 	"glCompileShader",
 	"glCreateProgram",
 	"glCreateShader",
+	"glCullFace",
 	"glDeleteBuffers",
 	"glDeleteProgram",
 	"glDeleteShader",
+	"glDeleteTextures",
+	"glDisable",
 	"glDisableVertexAttribArray",
 	"glDrawArrays",
+	"glEnable",
 	"glEnableVertexAttribArray",
 	"glGenBuffers",
+	"glGenTextures",
+	"glGetAttribLocation",
+	"glGetIntegerv",
 	"glGetProgramInfoLog",
 	"glGetProgramiv",
 	"glGetShaderInfoLog",
 	"glGetShaderiv",
 	"glGetUniformLocation",
+	"glIsBuffer",
+	"glIsTexture",
 	"glLinkProgram",
 	"glShaderSource",
+	"glTexImage2D",
+	"glTexParameteri",
 	"glUniform1fv",
+	"glUniform1i",
 	"glUniform2fv",
+	"glUniform3fv",
+	"glUniform4fv",
+	"glUniformMatrix4fv",
 	"glUseProgram",
 	"glVertexAttribPointer",
 	"glViewport"} ;
 
 static void *GLfunc[GLNSYS] = {
+	BBC_glActiveTexture,
 	BBC_glAttachShader,
 	BBC_glBindAttribLocation,
 	BBC_glBindBuffer,
+	BBC_glBindTexture,
+	BBC_glBlendFunc,
 	BBC_glBufferData,
 	BBC_glClear,
 	BBC_glClearColor,
@@ -704,22 +954,37 @@ static void *GLfunc[GLNSYS] = {
 	BBC_glCompileShader,
 	BBC_glCreateProgram,
 	BBC_glCreateShader,
+	BBC_glCullFace,
 	BBC_glDeleteBuffers,
 	BBC_glDeleteProgram,
 	BBC_glDeleteShader,
+	BBC_glDeleteTextures,
+	BBC_glDisable,
 	BBC_glDisableVertexAttribArray,
 	BBC_glDrawArrays,
+	BBC_glEnable,
 	BBC_glEnableVertexAttribArray,
 	BBC_glGenBuffers,
+	BBC_glGenTextures,
+	BBC_glGetAttribLocation,
+	BBC_glGetIntegerv,
 	BBC_glGetProgramInfoLog,
 	BBC_glGetProgramiv,
 	BBC_glGetShaderInfoLog,
 	BBC_glGetShaderiv,
 	BBC_glGetUniformLocation,
+	BBC_glIsBuffer,
+	BBC_glIsTexture,
 	BBC_glLinkProgram,
 	BBC_glShaderSource,
+	BBC_glTexImage2D,
+	BBC_glTexParameteri,
 	BBC_glUniform1fv,
+	BBC_glUniform1i,
 	BBC_glUniform2fv,
+	BBC_glUniform3fv,
+	BBC_glUniform4fv,
+	BBC_glUniformMatrix4fv,
 	BBC_glUseProgram,
 	BBC_glVertexAttribPointer,
 	BBC_glViewport} ;

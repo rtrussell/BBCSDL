@@ -1,7 +1,9 @@
 # Requires Python and the Emscripten SDK to be installed.
 
-VPATH = ../BBCSDL/src ../BBCSDL/include
+VPATH  = ../BBCSDL/src ../BBCSDL/include
+
 CXX = emcc -s USE_PTHREADS=1 -s PTHREAD_POOL_SIZE=1 -s ALLOW_MEMORY_GROWTH=1 -s WASM=1 \
+      -s ASSERTIONS=0 \
       -s USE_SDL=2 -s USE_SDL_TTF=2 -s USE_SDL_NET=2 -I . -I ../BBCSDL/include -Wall
 
 OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
@@ -52,7 +54,6 @@ sort.o: sort.c
 bbdata.o: bbdata_wasm32.c
 	$(CXX) -c $< -o $@
 
-bbcsdl.html: $(OBJ) bbcsdl_shell.html
-	$(CXX) --emrun --no-heap-copy --shell-file bbcsdl_shell.html $(OBJ) \
+bbcsdl.html: $(OBJ) Box2D231.o bbcsdl_shell.html
+	$(CXX) --emrun --no-heap-copy --shell-file bbcsdl_shell.html $(OBJ) Box2D231.o \
 	-lidbfs.js -o bbcsdl.html --preload-file examples/ --preload-file lib/
-

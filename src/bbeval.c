@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.15a, 27-Aug-2020                                *
+*       Version 1.17a, 07-Oct-2020                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -999,15 +999,17 @@ VAR item (void)
 			{
 			int errcode = 0 ;
 			jmp_buf savenv ;
-			memcpy (&savenv, &env, sizeof(env)) ;
+			heapptr* savesp ;
 
 			procfn (TFN) ;
 
+			memcpy (&savenv, &env, sizeof(env)) ;
+			savesp = esp;
 			errcode = (setjmp (env)) ; // <0 : QUIT, >0 : error, 256: END
 			if (errcode)
 			    {
-				if ((errcode < 0) || (errcode > 255) ||
-					(errtrp == 0) || (onersp == NULL))
+				if ((errcode < 0) || (errcode > 255) || (errtrp == 0) ||
+					(onersp == NULL) || (onersp > savesp))
 				    {
 					memcpy (&env, &savenv, sizeof(env)) ;
 					longjmp (env, errcode) ;
