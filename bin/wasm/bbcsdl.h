@@ -56,6 +56,7 @@
 #define EVT_OSK		0x200E	// En/disable On Screen Keyboard
 #define EVT_OSWORD	0x200F  // OSWORD call
 #define EVT_TIMER	0x2010	// Set timer to new period
+#define EVT_FSSYNC	0x2011  // Sync filesystem (Emscripten)
 
 // Bit names:
 

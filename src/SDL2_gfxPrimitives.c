@@ -4311,6 +4311,7 @@ int RedefineChar(SDL_Renderer *renderer, char c, unsigned char *charpos, Uint32 
 static int renderdrawline(SDL_Renderer *renderer, int x1, int y1, int x2, int y2)
 {
 	int result ;
+#ifndef __EMSCRIPTEN__
 	if ((x1 == x2) && (y1 == y2))
 		result = SDL_RenderDrawPoint (renderer, x1, y1) ;
 	else if (y1 == y2)
@@ -4342,6 +4343,7 @@ static int renderdrawline(SDL_Renderer *renderer, int x1, int y1, int x2, int y2
 		free (points) ;
 	    }
 	else
+#endif
 		result = SDL_RenderDrawLine (renderer, x1, y1, x2, y2) ;
 	return result ;
 }

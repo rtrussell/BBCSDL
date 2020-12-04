@@ -4,7 +4,7 @@ It was designed to be simple enough to be used by a complete beginner yet powerf
 
 During the intervening years BBC BASIC has been extended and ported onto at least seven different CPUs and more than thirty different platforms.
 
-BBC BASIC for SDL 2.0 is an advanced cross-platform implementation of BBC BASIC which will run on Windows™, Linux® (x86), Mac OS-X®, Raspberry Pi, Android™ and iOS™.  It supports a number of major enhancements over early versions.
+BBC BASIC for SDL 2.0 is an advanced cross-platform implementation of BBC BASIC which will run on Windows™, Linux® (x86), Mac OS-X®, Raspberry Pi, Android™, iOS™ and in a browser.  It supports a number of major enhancements over early versions.
 
 These include data structures, an EXIT statement, PRIVATE variables, long strings, event interrupts, an 'address of' operator, byte variables and arrays, a line continuation character, indirect procedure and function calls and improved numeric accuracy.
 

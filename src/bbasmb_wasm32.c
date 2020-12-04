@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.16b, 16-Oct-2020                                *
+*       Version 1.18a, 30-Nov-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -201,6 +201,18 @@ long long BBC_RenderDrawPoints(st renderer, st points, st count, st i3, st i4, s
 long long BBC_RenderClear(st renderer, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_RenderClear((SDL_Renderer*) renderer); }
+
+long long BBC_LockTexture(st texture, st rect, st pixels, st pitch, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_LockTexture((SDL_Texture*) texture, (const SDL_Rect*) rect, (void**) pixels, (int*) pitch); }
+
+long long BBC_UnlockTexture(st texture, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ SDL_UnlockTexture((SDL_Texture*) texture); return 0; }
+
+long long BBC_ConvertSurfaceFormat(st surf, st pixel_format, st flgs, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDL_ConvertSurfaceFormat((SDL_Surface*) surf, pixel_format, flgs); }
 
 long long BBC_ComposeCustomBlendMode(st srcColor, st dstColor, st colorOp, st srcAlpha, st dstAlpha, st alphaOp, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -480,7 +492,7 @@ long long BBC_emscripten_async_wget(st url, st file, st i2, st i3, st i4, st i5,
 	return 0 ;
 }
 
-#define NSYS 96
+#define NSYS 99
 #define POW2 128 // smallest power-of-2 >= NSYS
 
 static const char *sysname[NSYS] = {
@@ -512,6 +524,7 @@ static const char *sysname[NSYS] = {
 	"SDL_ClearQueuedAudio",
 	"SDL_CloseAudioDevice",
 	"SDL_ComposeCustomBlendMode",
+	"SDL_ConvertSurfaceFormat",
 	"SDL_CreateTexture",
 	"SDL_CreateTextureFromSurface",
 	"SDL_DestroyTexture",
@@ -533,6 +546,7 @@ static const char *sysname[NSYS] = {
 	"SDL_LoadBMP_RW",
 	"SDL_LoadWAV_RW",
 	"SDL_LockAudioDevice",
+	"SDL_LockTexture",
 	"SDL_MixAudioFormat",
 	"SDL_OpenAudioDevice",
 	"SDL_PauseAudioDevice",
@@ -563,6 +577,7 @@ static const char *sysname[NSYS] = {
 	"SDL_SetWindowTitle",
 	"SDL_ShowSimpleMessageBox",
 	"SDL_UnlockAudioDevice",
+	"SDL_UnlockTexture",
 	"SDL_free",
 	"SDL_malloc",
 	"SDL_memcpy",
@@ -610,6 +625,7 @@ static void *sysfunc[NSYS] = {
 	BBC_ClearQueuedAudio,
 	BBC_CloseAudioDevice,
 	BBC_ComposeCustomBlendMode,
+	BBC_ConvertSurfaceFormat,
 	BBC_CreateTexture,
 	BBC_CreateTextureFromSurface,
 	BBC_DestroyTexture,
@@ -631,6 +647,7 @@ static void *sysfunc[NSYS] = {
 	BBC_LoadBMP_RW,
 	BBC_LoadWAV_RW,
 	BBC_LockAudioDevice,
+	BBC_LockTexture,
 	BBC_MixAudioFormat,
 	BBC_OpenAudioDevice,
 	BBC_PauseAudioDevice,
@@ -661,6 +678,7 @@ static void *sysfunc[NSYS] = {
 	BBC_SetWindowTitle,
 	BBC_ShowSimpleMessageBox,
 	BBC_UnlockAudioDevice,
+	BBC_UnlockTexture,
 	BBC_free,
 	BBC_malloc,
 	BBC_memcpy,
@@ -864,6 +882,10 @@ long long BBC_glViewport(st x, st y, st w, st h, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glViewport(x, y, w, h); return 0; }
 
+long long BBC_glScissor(st x, st y, st w, st h, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glScissor(x, y, w, h); return 0; }
+
 long long BBC_glActiveTexture(st texture, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glActiveTexture(texture); return 0; }
@@ -888,7 +910,7 @@ long long BBC_glUniform1i(st location, st v0, st i2, st i3, st i4, st i5, st i6,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glUniform1i(location, v0); return 0; }
 
-#define GLNSYS 47
+#define GLNSYS 48
 #define GLPOW2 64 // smallest power-of-2 >= GLNSYS
 
 static const char *GLname[GLNSYS] = {
@@ -927,6 +949,7 @@ static const char *GLname[GLNSYS] = {
 	"glIsBuffer",
 	"glIsTexture",
 	"glLinkProgram",
+	"glScissor",
 	"glShaderSource",
 	"glTexImage2D",
 	"glTexParameteri",
@@ -976,6 +999,7 @@ static void *GLfunc[GLNSYS] = {
 	BBC_glIsBuffer,
 	BBC_glIsTexture,
 	BBC_glLinkProgram,
+	BBC_glScissor,
 	BBC_glShaderSource,
 	BBC_glTexImage2D,
 	BBC_glTexParameteri,

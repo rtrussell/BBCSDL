@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.17a, 19-Oct-2020                                *
+*       Version 1.18a, 07-Nov-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -461,7 +461,7 @@ int main(int argc, char* argv[])
 {
 int i ;
 size_t immediate ;
-int fullscreen = 0, fixedsize = 0, hidden = 0 ;
+int fullscreen = 0, fixedsize = 0, hidden = 0, borderless = 0 ;
 SDL_RWops *ProgFile ;
 const SDL_version *TTFversion ;
 SDL_version SDLversion ;
@@ -563,6 +563,7 @@ for (i = 1; i < argc; i++)
 {
 	fixedsize |= (NULL != strstr (argv[i], "-fixedsize")) ;
 	fullscreen |= (NULL != strstr (argv[i], "-fullscreen")) ;
+	borderless |= (NULL != strstr (argv[i], "-borderless")) ;
 	hidden |= (NULL != strstr (argv[i], "-hidden")) ;
 }
 
@@ -576,6 +577,7 @@ window = SDL_CreateWindow("BBCSDL",  SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENT
 #endif
 				(fixedsize ? 0 : SDL_WINDOW_RESIZABLE) | 
 				(fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) | 
+				(borderless ? SDL_WINDOW_BORDERLESS : 0) | 
 				(hidden ? SDL_WINDOW_HIDDEN : 0)) ;
 if (window == NULL)
 {

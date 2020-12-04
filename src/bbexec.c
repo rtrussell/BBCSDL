@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.17a, 17-Oct-2020                                *
+*       Version 1.18a, 03-Nov-2020                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -1840,7 +1840,7 @@ VAR xeq (void)
 					equals () ;
 					if (type == 136)
 						*(heapptr *)ptr = expri () - (size_t) zero ;
-					else if (type & 0x40)
+					else if ((type == 36) || (type & 0x40))
 						*(intptr_t *)ptr = expri () ;
 					else if (type == STYPE)
 						*(intptr_t*)(ptr + sizeof(void *)) = expri () ;
@@ -3106,7 +3106,7 @@ VAR xeq (void)
 					error (26, NULL) ; // 'No such variable'
 				if (type1 != type2)
 					error (6, NULL) ; // 'Type mismatch'
-				if (type1 & BIT6)
+				if ((type1 == 36) || (type1 & BIT6))
 					n = sizeof(size_t) ; // whole array
 				else if (type1 == 128)
 				    {

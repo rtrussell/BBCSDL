@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.17a, 17-Oct-2020                                *
+*       Version 1.18a, 03-Dec-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -232,11 +232,11 @@ void oscli (char *cmd)
 	if ((*cmd == 0x0D) || (*cmd == '|'))
 		return ;
 
-	memcpy (cpy, cmd, 256) ;
-	q = memchr (cpy, 0x0D, 256) ;
+	q = memchr (cmd, 0x0D, 256) ;
 	if (q == NULL)
 		error (204, "Bad name") ;
-	*q = 0 ;
+	memcpy (cpy, cmd, q - cmd) ;
+	cpy[q - cmd] = 0 ;
 	p = cpy ;
 	while ((*p = tolower (*p)) != 0) p++ ;
 

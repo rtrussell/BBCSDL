@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.17a, 07-Oct-2020                                *
+*       Version 1.18a, 03-Nov-2020                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -1101,7 +1101,7 @@ VAR item (void)
 				v.i.t = 0 ;
 				if (type == 136)
 					v.i.n = *(heapptr *)ptr + (size_t) zero ;
-				else if (type & 0x40)
+				else if ((type == 36) || (type & 0x40))
 					v.i.n = *(intptr_t *)ptr ;
 				else if (type == STYPE)
 					v.i.n = *(intptr_t *)(ptr + sizeof (void *)) ;
