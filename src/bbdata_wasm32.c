@@ -3,7 +3,7 @@
 *   Copyright (c) R. T. Russell, 2000-2020                        *
 *                                                                 *
 *   BBDATA_WASM.C RAM data definitions                            *
-*   Version 1.15a, 07-Sep-2020                                    *
+*   Version 1.19a, 14-Dec-2020                                    *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -11,6 +11,7 @@
 #define MAX_PORTS 4
 #define MAX_FILES 8
 #define SOUNDQL 20
+#define STYPE 24
 
 // Variant:
 typedef union tagVAR
@@ -208,7 +209,7 @@ int sysvar[139] = {
 	0x00140000, 0x69730000, 0x007B657A, (int) ptfmt, (int) vduvar + 208, 	// 129  size{
 	0x00000000, 0x68630000, 0x007B7261, (int) ptfmt, (int) vduvar + 216};	// 134  char{
 
-unsigned char fvtab[7] = { 1, 4, 8, 10, 16, 40, 136 } ;	// Fast variable types
+unsigned char fvtab[7] = { 1, 4, 8, 10, STYPE, 40, 136 } ;	// Fast variable types
 
 unsigned char bbcfont[256*8] = {
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // NUL 

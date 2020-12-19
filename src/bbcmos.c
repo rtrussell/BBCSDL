@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.17a, 19-Oct-2020                                *
+*       Version 1.19a, 11-Dec-2020                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -2159,8 +2159,7 @@ static void readb (SDL_RWops *context, unsigned char *buffer, FCB *pfcb)
 	int amount ;
 	if (context == NULL)
 		error (222, "Invalid channel") ;
-	if (pfcb->p != pfcb->o)
-		SDL_RWseek (context, (pfcb->p - pfcb->o) & 0xFF, RW_SEEK_CUR) ;
+	SDL_RWseek (context, (pfcb->p - pfcb->o) & 0xFF, RW_SEEK_CUR) ;
 	amount = SDL_RWread (context, buffer, 1, 256) ;
 	pfcb->p = 0 ;
 	pfcb->o = amount & 0xFF ;

@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.18a, 30-Nov-2020                                *
+*       Version 1.19a, 13-Dec-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -217,6 +217,42 @@ long long BBC_ConvertSurfaceFormat(st surf, st pixel_format, st flgs, st i3, st 
 long long BBC_ComposeCustomBlendMode(st srcColor, st dstColor, st colorOp, st srcAlpha, st dstAlpha, st alphaOp, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) SDL_ComposeCustomBlendMode(srcColor, dstColor, colorOp, srcAlpha, dstAlpha, alphaOp); }
+
+long long BBC_GetDisplayUsableBounds(st displayIndex, st rect, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_GetDisplayUsableBounds(displayIndex, (SDL_Rect*) rect); }
+
+long long BBC_RenderDrawLine(st renderer, st x1, st y1, st x2, st y2, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_RenderDrawLine((SDL_Renderer*) renderer, x1, y1, x2, y2); }
+
+long long BBC_RenderDrawLines(st renderer, st points, st count, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_RenderDrawLines((SDL_Renderer*) renderer, (const SDL_Point*) points, count); }
+
+long long WASM_RenderReadPixels(st renderer, st rect, st format, st pixels, st pitch, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_RenderReadPixels((SDL_Renderer*) renderer, (const SDL_Rect*) rect, format, (void*) pixels, pitch); }
+
+long long BBC_CreateRGBSurface(st flgs, st width, st height, st depth, st Rmask, st Gmask, st Bmask, st Amask,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDL_CreateRGBSurface(flgs, width, height, depth, Rmask, Gmask, Bmask, Amask); }
+
+long long BBC_SetSurfaceAlphaMod(st surface, st alpha, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_SetSurfaceAlphaMod((SDL_Surface*) surface, alpha); }
+
+long long BBC_SetSurfaceColorMod(st surface, st r, st g, st b, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_SetSurfaceColorMod((SDL_Surface*) surface, r, g, b); }
+
+long long BBC_UpperBlit(st src, st srcrect, st dst, st dstrect, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_UpperBlit((SDL_Surface*) src, (const SDL_Rect*) srcrect, (SDL_Surface*) dst, (SDL_Rect*) dstrect); }
+
+long long BBC_FillRect(st surface, st rect, st color, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_FillRect((SDL_Surface*) surface, (const SDL_Rect*) rect, color); }
 
 long long BBC_STBIMG_Load(st file, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -492,7 +528,7 @@ long long BBC_emscripten_async_wget(st url, st file, st i2, st i3, st i4, st i5,
 	return 0 ;
 }
 
-#define NSYS 99
+#define NSYS 108
 #define POW2 128 // smallest power-of-2 >= NSYS
 
 static const char *sysname[NSYS] = {
@@ -525,9 +561,11 @@ static const char *sysname[NSYS] = {
 	"SDL_CloseAudioDevice",
 	"SDL_ComposeCustomBlendMode",
 	"SDL_ConvertSurfaceFormat",
+	"SDL_CreateRGBSurface",
 	"SDL_CreateTexture",
 	"SDL_CreateTextureFromSurface",
 	"SDL_DestroyTexture",
+	"SDL_FillRect",
 	"SDL_FreeSurface",
 	"SDL_FreeWAV",
 	"SDL_GL_CreateContext",
@@ -539,6 +577,7 @@ static const char *sysname[NSYS] = {
 	"SDL_GL_SetAttribute",
 	"SDL_GL_SetSwapInterval",
 	"SDL_GL_SwapWindow",
+	"SDL_GetDisplayUsableBounds",
 	"SDL_GetQueuedAudioSize",
 	"SDL_GetRenderTarget",
 	"SDL_GetTicks",
@@ -559,10 +598,13 @@ static const char *sysname[NSYS] = {
 	"SDL_RenderCopy",
 	"SDL_RenderCopyEx",
 	"SDL_RenderCopyExF",
+	"SDL_RenderDrawLine",
+	"SDL_RenderDrawLines",
 	"SDL_RenderDrawPoint",
 	"SDL_RenderDrawPoints",
 	"SDL_RenderFillRect",
 	"SDL_RenderFillRects",
+	"SDL_RenderReadPixels",
 	"SDL_RenderSetClipRect",
 	"SDL_SetColorKey",
 	"SDL_SetHint",
@@ -570,6 +612,8 @@ static const char *sysname[NSYS] = {
 	"SDL_SetRenderDrawBlendMode",
 	"SDL_SetRenderDrawColor",
 	"SDL_SetRenderTarget",
+	"SDL_SetSurfaceAlphaMod",
+	"SDL_SetSurfaceColorMod",
 	"SDL_SetTextureAlphaMod",
 	"SDL_SetTextureBlendMode",
 	"SDL_SetTextureColorMod",
@@ -578,6 +622,7 @@ static const char *sysname[NSYS] = {
 	"SDL_ShowSimpleMessageBox",
 	"SDL_UnlockAudioDevice",
 	"SDL_UnlockTexture",
+	"SDL_UpperBlit",
 	"SDL_free",
 	"SDL_malloc",
 	"SDL_memcpy",
@@ -626,9 +671,11 @@ static void *sysfunc[NSYS] = {
 	BBC_CloseAudioDevice,
 	BBC_ComposeCustomBlendMode,
 	BBC_ConvertSurfaceFormat,
+	BBC_CreateRGBSurface,
 	BBC_CreateTexture,
 	BBC_CreateTextureFromSurface,
 	BBC_DestroyTexture,
+	BBC_FillRect,
 	BBC_FreeSurface,
 	BBC_FreeWAV,
 	BBC_GL_CreateContext,
@@ -640,6 +687,7 @@ static void *sysfunc[NSYS] = {
 	BBC_GL_SetAttribute,
 	BBC_GL_SetSwapInterval,
 	BBC_GL_SwapWindow,
+	BBC_GetDisplayUsableBounds,
 	BBC_GetQueuedAudioSize,
 	BBC_GetRenderTarget,
 	BBC_GetTicks,
@@ -660,10 +708,13 @@ static void *sysfunc[NSYS] = {
 	BBC_RenderCopy,
 	BBC_RenderCopyEx,
 	BBC_RenderCopyExF,
+	BBC_RenderDrawLine,
+	BBC_RenderDrawLines,
 	BBC_RenderDrawPoint,
 	BBC_RenderDrawPoints,
 	BBC_RenderFillRect,
 	BBC_RenderFillRects,
+	WASM_RenderReadPixels,
 	WASM_RenderSetClipRect,
 	BBC_SetColorKey,
 	BBC_SetHint,
@@ -671,6 +722,8 @@ static void *sysfunc[NSYS] = {
 	BBC_SetRenderDrawBlendMode,
 	BBC_SetRenderDrawColor,
 	BBC_SetRenderTarget,
+	BBC_SetSurfaceAlphaMod,
+	BBC_SetSurfaceColorMod,
 	BBC_SetTextureAlphaMod,
 	BBC_SetTextureBlendMode,
 	BBC_SetTextureColorMod,
@@ -679,6 +732,7 @@ static void *sysfunc[NSYS] = {
 	BBC_ShowSimpleMessageBox,
 	BBC_UnlockAudioDevice,
 	BBC_UnlockTexture,
+	BBC_UpperBlit,
 	BBC_free,
 	BBC_malloc,
 	BBC_memcpy,

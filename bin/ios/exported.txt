@@ -469,6 +469,7 @@ _SDL_UpdateTexture
 _SDL_UpdateWindowSurface
 _SDL_UpdateWindowSurfaceRects
 _SDL_UpdateYUVTexture
+_SDL_UpperBlit
 _SDL_VideoInit
 _SDL_VideoQuit
 _SDL_WaitEvent
