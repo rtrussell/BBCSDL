@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.18a, 07-Nov-2020                                *
+*       Version 1.19a, 09-Jan-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -124,7 +124,7 @@ void *userTOP = NULL ;
 const int bLowercase = 0 ;    // Dummy
 const char szVersion[] = "BBC BASIC for "PLATFORM" version "VERSION ;
 const char szNotice[] = "(C) Copyright R. T. Russell, "YEAR ;
-char szAutoRun[MAX_PATH] = "autorun.bbc" ;
+char szAutoRun[MAX_PATH + 1] = "autorun.bbc" ;
 char *szLoadDir ;
 char *szLibrary ;
 char *szUserDir ;
@@ -825,7 +825,10 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 #endif
 
 	if (argc >= 2)
-		strcpy (szAutoRun, argv[1]) ;
+	{
+		strncpy (szAutoRun, argv[1], 256) ;
+		szAutoRun[255] = '\0';
+	}
 	if ((argc == 1) || (*argv[1] == '-'))
 	{
 		char *q ;

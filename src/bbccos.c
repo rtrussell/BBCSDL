@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2020                         *
 *                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.30a, 09-Dec-2020                                *
+*       Version 0.30b, 24-Dec-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -463,7 +463,7 @@ static int parse (char *dst, char *src, char term)
 {
 	int n = 0 ;
 
-	while (*src == ' ') src++ ;		// Skip leading spaces
+	while ((term != '"') && (*src == ' ')) src++ ;		// Skip leading spaces
 	if (*src == '"')
 		return parse (dst, src + 1, '"') ;
 	while ((*src != 0x0D) && (*src != term))
@@ -474,6 +474,7 @@ static int parse (char *dst, char *src, char term)
 			c = *src++ ;
 			if (c == '!')
 				c = *src++ | 0x80 ;
+			if (c == 0x0D) break ;
 			else if ((c >= '?') && (c < '`'))
 				c ^= 0x40 ;
 		}

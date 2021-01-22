@@ -1,4 +1,4 @@
-Copyright (c) 2018, Richard T. Russell, http://www.rtrussell.co.uk/
+Copyright (c) 2021, Richard T. Russell, http://www.rtrussell.co.uk/
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages

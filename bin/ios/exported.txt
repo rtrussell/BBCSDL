@@ -653,4 +653,6 @@ _b2GetAngularVelocity
 _b2GetMass
 _SDL_malloc
 _SDL_memset
+_SDL_memcpy
+_SDL_memcmp
 _SDL_free

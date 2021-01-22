@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.18a, 03-Dec-2020                                *
+*       Version 1.19a, 24-Dec-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -126,7 +126,7 @@ static int parse (char *dst, char *src, char term)
 {
 	int n = 0 ;
 
-	while (*src == ' ') src++ ;		// Skip leading spaces
+	while ((term != '"') && (*src == ' ')) src++ ;	// Skip leading spaces
 	if (*src == '"')
 		return parse (dst, src + 1, '"') ;
 	while ((*src != 0x0D) && (*src != term))
@@ -137,6 +137,7 @@ static int parse (char *dst, char *src, char term)
 			c = *src++ ;
 			if (c == '!')
 				c = *src++ | 0x80 ;
+			if (c == 0x0D) break ;
 			else if ((c >= '?') && (c < '`'))
 				c ^= 0x40 ;
 		}
@@ -944,11 +945,24 @@ void oscli (char *cmd)
 			return ;
 
 		case DUMP:
-			setup (path1, p, ".bbc", ' ', NULL) ;
+			p = setup (path1, p, ".bbc", ' ', NULL) ;
 			srcfile = SDL_RWFromFile (path1, "rb") ;
 			if (srcfile == NULL)
 				error (214, "File or path not found") ;
 			b = 0 ;
+			h = 0 ;
+			if (*p != 0x0D)
+			    {
+				long long s = strtoll (p, &p, 16) ;
+				if ((s != 0) && (-1 == SDL_RWseek (srcfile, s, RW_SEEK_SET)))
+					error (189, SDL_GetError ()) ;
+				while (*p == ' ') p++ ;
+				if (*p == '+')
+					h = strtol (p + 1, &p, 16) ;
+				else
+					h = strtoll (p, &p, 16) - s ;
+				b = s & 0xFFFFFFFF ;
+			    }
 			do
 			    {
 				int i ;
@@ -958,26 +972,26 @@ void oscli (char *cmd)
 					SDL_RWclose (srcfile) ;
 					trap () ;
 				    }
-				n = SDL_RWread (srcfile, dbuff, 1, 16) ;
-				if (n)
+				n = SDL_RWread (srcfile, dbuff, 1, 16 - (b & 15)) ;
+				if (n <= 0) break ;
+				if ((h > 0) && (n > h)) n = h ; 
+				memset (path1, ' ', 80) ;
+				sprintf (path1, "%08X  ", b) ;
+				for (i = 0; i < n; i++)
 				    {
-					memset (path1, ' ', 80) ;
-					sprintf (path1, "%08X  ", b) ;
-					for (i = 0; i < n; i++)
-					    {
-						sprintf (path1 + 10 + 3 * i, "%02X ", dbuff[i]) ;
-						if ((dbuff[i] >= ' ') && (dbuff[i] <= '~'))
-							path1[59+i] = dbuff[i] ;
-						else
-							path1[59+i] = '.' ;
-					    }
-						path1[10 + 3 * n] = ' ' ; path1[75] = 0 ;
-					text (path1) ;
-					crlf () ;
-					b += n ;
+					sprintf (path1 + 10 + 3 * i, "%02X ", dbuff[i]) ;
+					if ((dbuff[i] >= ' ') && (dbuff[i] <= '~'))
+						path1[59+i] = dbuff[i] ;
+					else
+						path1[59+i] = '.' ;
 				    }
+					path1[10 + 3 * n] = ' ' ; path1[75] = 0 ;
+				text (path1) ;
+				crlf () ;
+				b += n ;
+				h -= n ;
 			    }
-			while (n) ;
+			while (h) ;
 			SDL_RWclose (srcfile) ;
 			return ;
 	} ;

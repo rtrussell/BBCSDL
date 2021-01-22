@@ -1654,7 +1654,10 @@ int oscall (int addr)
 
 		case 0xFFE3: // OSASCI
 			if (al != 0x0D)
+			    {
 				oswrch (al) ;
+				return 0 ;
+			    }
 
 		case 0xFFE7: // OSNEWL
 			crlf () ;

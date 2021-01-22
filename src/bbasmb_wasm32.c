@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit BBC BASIC Interpreter (Emscripten / Web Assembly)  *
-*       (c) 2018-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2018-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.19a, 13-Dec-2020                                *
+*       Version 1.19a, 10-Jan-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -964,7 +964,23 @@ long long BBC_glUniform1i(st location, st v0, st i2, st i3, st i4, st i5, st i6,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ glUniform1i(location, v0); return 0; }
 
-#define GLNSYS 48
+long long BBC_glBindFramebuffer(st target, st fbo, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glBindFramebuffer(target, fbo); return 0; }
+
+long long BBC_glGenFramebuffers(st num, st framebuffers, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glGenFramebuffers(num, (GLuint*) framebuffers); return 0; }
+
+long long BBC_glFramebufferTexture2D(st target, st attach, st textarget, st texture, st level, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glFramebufferTexture2D(target, attach, textarget, texture, level); return 0; }
+
+long long BBC_glDeleteFramebuffers(st num, st framebuffers, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ glDeleteFramebuffers(num, (const GLuint*) framebuffers); return 0; }
+
+#define GLNSYS 52
 #define GLPOW2 64 // smallest power-of-2 >= GLNSYS
 
 static const char *GLname[GLNSYS] = {
@@ -972,6 +988,7 @@ static const char *GLname[GLNSYS] = {
 	"glAttachShader",
 	"glBindAttribLocation",
 	"glBindBuffer",
+	"glBindFramebuffer",
 	"glBindTexture",
 	"glBlendFunc",
 	"glBufferData",
@@ -983,6 +1000,7 @@ static const char *GLname[GLNSYS] = {
 	"glCreateShader",
 	"glCullFace",
 	"glDeleteBuffers",
+	"glDeleteFramebuffers",
 	"glDeleteProgram",
 	"glDeleteShader",
 	"glDeleteTextures",
@@ -991,7 +1009,9 @@ static const char *GLname[GLNSYS] = {
 	"glDrawArrays",
 	"glEnable",
 	"glEnableVertexAttribArray",
+	"glFramebufferTexture2D",
 	"glGenBuffers",
+	"glGenFramebuffers",
 	"glGenTextures",
 	"glGetAttribLocation",
 	"glGetIntegerv",
@@ -1022,6 +1042,7 @@ static void *GLfunc[GLNSYS] = {
 	BBC_glAttachShader,
 	BBC_glBindAttribLocation,
 	BBC_glBindBuffer,
+	BBC_glBindFramebuffer,
 	BBC_glBindTexture,
 	BBC_glBlendFunc,
 	BBC_glBufferData,
@@ -1033,6 +1054,7 @@ static void *GLfunc[GLNSYS] = {
 	BBC_glCreateShader,
 	BBC_glCullFace,
 	BBC_glDeleteBuffers,
+	BBC_glDeleteFramebuffers,
 	BBC_glDeleteProgram,
 	BBC_glDeleteShader,
 	BBC_glDeleteTextures,
@@ -1041,7 +1063,9 @@ static void *GLfunc[GLNSYS] = {
 	BBC_glDrawArrays,
 	BBC_glEnable,
 	BBC_glEnableVertexAttribArray,
+	BBC_glFramebufferTexture2D,
 	BBC_glGenBuffers,
+	BBC_glGenFramebuffers,
 	BBC_glGenTextures,
 	BBC_glGetAttribLocation,
 	BBC_glGetIntegerv,
