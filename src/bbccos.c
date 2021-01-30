@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2020                         *
 *                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.30b, 24-Dec-2020                                *
+*       Version 0.31a, 24-Dec-2020                                *
 \*****************************************************************/
 
 #include <stdlib.h>

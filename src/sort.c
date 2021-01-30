@@ -2,7 +2,7 @@
 // iOS does not permit arbitrary code execution so the code which would normally
 // go in 'sortlib.bbc' is put here to be compiled with the BBC Basic application
 
-#include "SDL2/SDL.h"
+#include <unistd.h>
 
 // Base address for 32-bit offsets into heap:
 #if defined(__x86_64__) || defined(__aarch64__)
@@ -241,7 +241,7 @@ typedef struct {char *handler; char *proc; unsigned char *flags; } timerparam ;
 unsigned int hook(unsigned int interval, timerparam *param)
 {
 	while (putevt (param->handler - zero, param->proc - zero, interval, 0x113) == 0)
-		SDL_Delay(1) ;
+		usleep(1000) ;
 	*(param->flags) |= 0x20 ;
 	return interval ;
 }

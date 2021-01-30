@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.19a, 09-Jan-2021                                *
+*       Version 1.20a, 30-Jan-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -685,9 +685,12 @@ SDL_SetTextureBlendMode(buttexture, SDL_BLENDMODE_BLEND) ;
 #elif defined __APPLE__ || defined __EMSCRIPTEN__
 
 	while ((MaximumRAM > DEFAULT_RAM) &&
-				(NULL == (userRAM = mmap ((void *)0x10000000, MaximumRAM, 
-					PROT_EXEC | PROT_READ | PROT_WRITE, 
-					MAP_PRIVATE | MAP_ANON, -1, 0))))
+			((void*)-1 == (userRAM = mmap ((void *)0x10000000, MaximumRAM, 
+						PROT_EXEC | PROT_READ | PROT_WRITE, 
+						MAP_PRIVATE | MAP_ANON, -1, 0))) &&
+			((void*)-1 == (userRAM = mmap ((void *)0x10000000, MaximumRAM, 
+						PROT_READ | PROT_WRITE, 
+						MAP_PRIVATE | MAP_ANON, -1, 0))))
 		MaximumRAM /= 2 ;
 
 #else // __LINUX__ and __ANDROID__

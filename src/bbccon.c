@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                          *
-*       Copyright (C) R. T. Russell, 2020                          *
+*       Copyright (C) R. T. Russell, 2021                          *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.30a, 11-Dec-2020                                 *
+*       Version 0.31a, 30-Jan-2021                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -1653,7 +1653,7 @@ HANDLE hThread = NULL ;
 #endif
 
 #ifdef __linux__
-struct termios orig_termios ;
+static struct termios orig_termios ;
 pthread_t hThread = 0 ;
 
 	platform = 1 ;
@@ -1672,14 +1672,17 @@ pthread_t hThread = 0 ;
 #endif
 
 #ifdef __APPLE__
-struct termios orig_termios ;
+static struct termios orig_termios ;
 pthread_t hThread = NULL ;
 
 	platform = 2 ;
 
 	while ((MaximumRAM > DEFAULT_RAM) &&
-				(NULL == (userRAM = mmap ((void *)0x10000000, MaximumRAM, 
+				((void*)-1 == (userRAM = mmap ((void *)0x10000000, MaximumRAM, 
 						PROT_EXEC | PROT_READ | PROT_WRITE, 
+						MAP_PRIVATE | MAP_ANON, -1, 0))) &&
+				((void*)-1 == (userRAM = mmap ((void *)0x10000000, MaximumRAM, 
+						PROT_READ | PROT_WRITE, 
 						MAP_PRIVATE | MAP_ANON, -1, 0))))
 		MaximumRAM /= 2 ;
 #endif
@@ -1695,9 +1698,9 @@ pthread_t hThread = NULL ;
 #endif
 
 	userTOP = userRAM + DEFAULT_RAM ;
-	progRAM = userRAM + PAGE_OFFSET ;
-	szCmdLine = progRAM - 0x100 ;
-	szTempDir = szCmdLine - 0x100 ; // Must be allocated on 'heap'
+	progRAM = userRAM + PAGE_OFFSET ; // Will be raised if @cmd$ exceeds 255 bytes
+	szCmdLine = progRAM - 0x100 ;     // Must be immediately below default progRAM
+	szTempDir = szCmdLine - 0x100 ;   // Strings must be allocated on BASIC's heap
 	szUserDir = szTempDir - 0x100 ;
 	szLibrary = szUserDir - 0x100 ;
 	szLoadDir = szLibrary - 0x100 ;
@@ -1751,6 +1754,7 @@ pthread_t hThread = NULL ;
 			if (i > 1) strcat (szCmdLine, " ") ;
 			strcat (szCmdLine, argv[i]) ;
 		    }
+		progRAM = (void *)(((intptr_t) szCmdLine + strlen(szCmdLine) + 256) & -256) ;
 	    }
 
 	if (*szAutoRun && (NULL != (ProgFile = fopen (szAutoRun, "rb"))))

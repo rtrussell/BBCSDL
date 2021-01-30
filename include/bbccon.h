@@ -1,15 +1,15 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                          *
-*       Copyright (c) R. T. Russell, 2000-2020                     *
+*       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       bbccon.h constant definitions                              *
-*       Version v0.30, 03-Dec-2020                                 *
+*       Version v0.31, 30-Jan-2021                                 *
 \******************************************************************/
 
 // System constants :
 
-#define YEAR    "2020"          // Copyright year
-#define VERSION "v0.30"         // Version string
+#define YEAR    "2021"          // Copyright year
+#define VERSION "v0.31"         // Version string
 #define PAGE_OFFSET    0x31C00  // Offset of PAGE from memory base
 #define DEFAULT_RAM PAGE_OFFSET+0x200000 // Initial amount of RAM to allocate
 #define MAXIMUM_RAM 0x10000000  // Maximum amount of RAM to allocate
