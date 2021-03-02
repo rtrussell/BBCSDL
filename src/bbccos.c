@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                         *
-*       Copyright (C) R. T. Russell, 2020                         *
+*       Copyright (C) R. T. Russell, 2021                         *
 *                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.31a, 24-Dec-2020                                *
+*       Version 0.32a, 02-Mar-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -468,17 +468,20 @@ static int parse (char *dst, char *src, char term)
 		return parse (dst, src + 1, '"') ;
 	while ((*src != 0x0D) && (*src != term))
 	{
-		char c = *src++ ;
-		if (c == '|')
+		char c, m = 0 ;
+		while ((c = *src++) == '|')
 		{
 			c = *src++ ;
 			if (c == '!')
-				c = *src++ | 0x80 ;
-			if (c == 0x0D) break ;
+			    {
+				m = 0x80 ;
+				continue ;
+			    }
 			else if ((c >= '?') && (c < '`'))
 				c ^= 0x40 ;
+			break ;
 		}
-		if (dst) *dst++ = c ;
+		if (dst) *dst++ = c | m ;
 		n++ ;
 	}
 	if (dst) *dst = 0 ;

@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.19a, 11-Dec-2020                                *
+*       Version 1.20a, 02-Mar-2021                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -876,7 +876,7 @@ void quiet (void) ;
 void reset (void)
 {
 	vduq[10] = 0 ;	// Flush VDU queue
-	keyexp = 0 ;	// Cancel *KEY expansion
+	keyptr = NULL ;	// Cancel *KEY expansion
 	optval = 0 ;	// Cancel I/O redirection
 	reflag = 0 ;	// *REFRESH ON
  }

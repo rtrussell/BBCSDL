@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.18a, 03-Nov-2020                                *
+*       Version 1.20a, 28-Feb-2021                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -2789,7 +2789,10 @@ VAR xeq (void)
 				esp -= 2 ;
 				*(long long *) esp = v.i.n ;
 
-				*--esp = (int) ((v.i.n >= 0) || (v.i.t > 0)) ;
+				if (v.i.t == 0)
+					*--esp = (int) (v.i.n >= 0) ;
+				else
+					*--esp = (int) (v.f >= 0.0) ;
 				esp -= STRIDE ;
 				*(void **)esp = esi ;
 				*--esp = FORCHK ;

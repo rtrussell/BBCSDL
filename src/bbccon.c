@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2021                          *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.31a, 30-Jan-2021                                 *
+*       Version 0.32a, 02-Feb-2021                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -777,7 +777,7 @@ void oswrch (unsigned char vdu)
 void reset (void)
 {
 	vduq[10] = 0 ;	// Flush VDU queue
-	keyexp = 0 ;	// Cancel *KEY expansion
+	keyptr = NULL ;	// Cancel *KEY expansion
 	optval = 0 ;	// Cancel I/O redirection
 	reflag = 0 ;	// *REFRESH ON
 }
@@ -1711,7 +1711,7 @@ pthread_t hThread = NULL ;
 	if (GetModuleFileName(NULL, szLibrary, 256) == 0)
 #endif
 #ifdef __linux__
-	i = readlink ("/proc/self/exe", szLibrary, 256) ;
+	i = readlink ("/proc/self/exe", szLibrary, 255) ;
 	if (i > 0)
 		szLibrary[i] = '\0' ;
 	else

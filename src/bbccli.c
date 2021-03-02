@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.19a, 24-Dec-2020                                *
+*       Version 1.20a, 02-Mar-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -131,17 +131,20 @@ static int parse (char *dst, char *src, char term)
 		return parse (dst, src + 1, '"') ;
 	while ((*src != 0x0D) && (*src != term))
 	{
-		char c = *src++ ;
-		if (c == '|')
+		char c, m = 0 ;
+		while ((c = *src++) == '|')
 		{
 			c = *src++ ;
 			if (c == '!')
-				c = *src++ | 0x80 ;
-			if (c == 0x0D) break ;
+			    {
+				m = 0x80 ;
+				continue ;
+			    }
 			else if ((c >= '?') && (c < '`'))
 				c ^= 0x40 ;
+			break ;
 		}
-		if (dst) *dst++ = c ;
+		if (dst) *dst++ = c | m ;
 		n++ ;
 	}
 	if (dst) *dst = 0 ;
