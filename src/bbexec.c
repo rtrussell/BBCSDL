@@ -2296,6 +2296,7 @@ VAR xeq (void)
 				int n = expri () ;
 				oswrch (22) ;
 				oswrch (n) ;
+				vcount = 0 ;
 				}
 				break ;
 
