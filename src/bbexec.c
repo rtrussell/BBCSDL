@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.20a, 28-Feb-2021                                *
+*       Version 1.21a, 10-Apr-2021                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -49,7 +49,6 @@ unsigned short setlin (signed char *, char **) ;
 VAR expr (void) ;		// Evaluate an expression
 VAR exprn (void) ;		// Evaluate a numeric expression
 VAR exprs (void) ;		// Evaluate a string expression
-VAR items (void) ;		// Evaluate a string item
 long long itemi (void) ;	// Evaluate an integer item
 long long expri (void) ;	// Evaluate an integer expression
 void fixs (VAR) ;		// Copy to accs and terminate with CR
@@ -2863,8 +2862,14 @@ VAR xeq (void)
 					v = loadn (ptr, type) ;
 					s.i.t = *(short *)(esp + 4 + STRIDE) ;
 					s.i.n = *(long long *)(esp + 2 + STRIDE) ;
-					if ((v.i.t == 0) && (s.i.t == 0))
-						 v.i.n += s.i.n ;
+#if defined __GNUC__ && __GNUC__ < 5
+					if ((v.i.t == 0) && (s.i.t == 0) && ((((L.i.n = v.i.n + s.i.n) ^
+						             v.i.n) >= 0) || ((int)(v.s.l ^ s.s.l) < 0)))
+#else
+					if ((v.i.t == 0) && (s.i.t == 0) &&
+					    (! __builtin_saddll_overflow (v.i.n, s.i.n, &L.i.n)))
+#endif
+						 v.i.n = L.i.n ;
 					else
 					    {
 						if (v.i.t == 0)
@@ -3403,15 +3408,15 @@ VAR xeq (void)
 				    }
 
 				v.i.t = 0 ;
-				if (parm.i[ni] == memhdc)
-					v.i.n = guicall (func, &parm) ;
-				else if (type != 8)
-					v.i.n = apicall_ (func, &parm) ;
-				else
+				if (type == 8)
 				    {
 					v.i.t = 1 ; // ARM
 					v.f = fltcall_ (func, &parm) ;
 				    }
+				else if (parm.i[ni] == memhdc)
+					v.i.n = guicall (func, &parm) ;
+				else
+					v.i.n = apicall_ (func, &parm) ;
 
 				esp = oldesp ;
 
@@ -3855,11 +3860,11 @@ VAR xeq (void)
 				braket () ;
 				equals () ;
 				r = exprs () ;
-				if (n > (int) r.s.l) // careful with signedness!
-					n = r.s.l ;
 
 				if (n == -1)
 					n = v.s.l - 1 ;
+				if (n > (int) r.s.l) // careful with signedness!
+					n = r.s.l ;
 				if ((s < 0) || (s >= v.s.l) || (n == 0))
 					break ;
 				if (al == TRIGHT)

@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.20a, 30-Jan-2021                                *
+*       Version 1.21a, 04-Apr-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1410,8 +1410,12 @@ static int maintick (void)
 					if (ev.key.keysym.mod & KMOD_CTRL)
 						c += 32 ;
 				    }
-				else if ((c >= SDLK_a) && (c <= SDLK_z) &&
-					 (ev.key.keysym.mod & KMOD_CTRL))
+				else if ((ev.key.keysym.mod & KMOD_CTRL) &&
+					 (c >= SDLK_a) && (c <= SDLK_z))
+					c = c - SDLK_a + 1 ;
+				else if ((ev.key.keysym.mod & KMOD_GUI) &&
+					 ((c == SDLK_a) || (c == SDLK_c) || (c == SDLK_f) ||
+					  (c == SDLK_v) || (c == SDLK_x) || (c == SDLK_z)))
 					c = c - SDLK_a + 1 ;
 				else if (ev.key.keysym.scancode == SDL_SCANCODE_AUDIOREWIND)
 					c = 128 ;

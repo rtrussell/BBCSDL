@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.15b, 15-Sep-2020                                *
+*       Version 1.21a, 05-Apr-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1186,7 +1186,7 @@ static void minit (signed char bc)
 	for (p = chrmap; p < chrmap + ((XSCREEN + 7) >> 3) * ((YSCREEN + 7) >> 3); p++)
 		*p = L' ' ;
 
-	SDL_Delay (80) ;
+	//SDL_Delay (80) ;
 	SDL_RenderClear (memhdc) ;
 	bChanged = 1 ;
 }

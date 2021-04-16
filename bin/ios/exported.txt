@@ -651,6 +651,9 @@ _b2RopeJointGetAnchorB
 _b2GetLinearVelocity
 _b2GetAngularVelocity
 _b2GetMass
+_b2DebugInit
+_b2DebugMatrix
+_b2DrawDebugData
 _SDL_malloc
 _SDL_memset
 _SDL_memcpy
