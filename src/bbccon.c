@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2021                          *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.32a, 02-Feb-2021                                 *
+*       Version 0.33a, 18-Apr-2021                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -1461,8 +1461,7 @@ int entry (void *immediate)
 		crlf () ;
 	    }
 
-	basic (progRAM, userTOP, immediate) ;
-	return 0 ;
+	return basic (progRAM, userTOP, immediate) ;
 }
 
 #ifdef __WIN32__
@@ -1834,7 +1833,7 @@ pthread_t hThread = NULL ;
 	UserTimerID = StartTimer (250) ;
 
 	flags = 0 ;
-	entry (immediate) ;
+	exitcode = entry (immediate) ;
 
 	if (UserTimerID)
 		StopTimer (UserTimerID) ;

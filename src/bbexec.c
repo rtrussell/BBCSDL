@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.21a, 10-Apr-2021                                *
+*       Version 1.22a, 18-Apr-2021                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -1293,10 +1293,10 @@ VAR xeq (void)
 
 			case TQUIT:
 				{
-				int n = 1 ;
+				int n = 0 ;
 				if (!termq ())
 					n = expri () ;
-				error (-n, NULL) ;
+				error (~n, NULL) ;
 				}
 
 /************************************* REM *************************************/

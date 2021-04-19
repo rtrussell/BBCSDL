@@ -3,13 +3,13 @@
 *       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       bbccon.h constant definitions                              *
-*       Version v0.32, 02-Mar-2021                                 *
+*       Version v0.33, 12-Apr-2021                                 *
 \******************************************************************/
 
 // System constants :
 
 #define YEAR    "2021"          // Copyright year
-#define VERSION "v0.32"         // Version string
+#define VERSION "v0.33"         // Version string
 #define PAGE_OFFSET    0x31C00  // Offset of PAGE from memory base
 #define DEFAULT_RAM PAGE_OFFSET+0x200000 // Initial amount of RAM to allocate
 #define MAXIMUM_RAM 0x10000000  // Maximum amount of RAM to allocate

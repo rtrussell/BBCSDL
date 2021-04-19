@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.15a, 27-Aug-2020                                *
+*       Version 1.22a, 18-Apr-2021                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -1491,10 +1491,10 @@ int basic (void *ecx, void *edx, void *prompt)
 	esi = vpage + 3 + (signed char *) zero ;
 	esp = (heapptr *)((himem + (size_t) zero) & -4) ;
 
-	errcode = (setjmp (env)) ; // 1 = error, -1 = QUIT, 256 = END/STOP
+	errcode = (setjmp (env)) ; // >=0 = error, <0 = QUIT, 256 = END/STOP
 
 	if (errcode < 0)
-		return -errcode ;
+		return ~errcode ;
 
 	if (errcode)
 		prompt = (void *) 1 ;
