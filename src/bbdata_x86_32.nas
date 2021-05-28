@@ -1,9 +1,9 @@
 ;/*****************************************************************\
 ;*       BBC BASIC for SDL 2.0 (x86_32)                            *
-;*       Copyright (c) R. T. Russell, 2000-2020                    *
+;*       Copyright (c) R. T. Russell, 2000-2021                    *
 ;*                                                                 *
 ;*       BBCDATA.NAS RAM data definitions                          *
-;*       Version 1.15a, 27-Aug-2020                                *
+;*       Version 1.22a, 15-May-2021                                *
 ;\*****************************************************************/
 ;
 MAX_PORTS       EQU     4       ; Maximum number of i/o ports
@@ -32,14 +32,14 @@ SOUNDQL         EQU     5*SOUNDQE ; Number of bytes per channel
 	GLOBAL	eenvel,escale,epsect,easect,epitch,elevel,ecount
 ;
 	GLOBAL	hwndProg,zoom,offsetx,offsety,platform
-	GLOBAL	memhdc,prthdc,MidiId,reflag,sysflg,panx,pany
+	GLOBAL	memhdc,reflag,sysflg,panx,pany
 	GLOBAL	prntx,prnty,prchx,prchy,cursx,bPaletted
 	GLOBAL	paperl,paperr,papert,paperb,lstopt
 ;
 	GLOBAL	datend,sysvar,savesp,bbcfont,lastick,link00
 	GLOBAL	cmdlen,cmdadr,dirlen,diradr,liblen,libadr
 	GLOBAL	usrlen,usradr,tmplen,tmpadr,hwo
-	GLOBAL	vdufmt,vduvar,vduptr,voices,hwacc,chrmap
+	GLOBAL	vdufmt,vduvar,vduptr,voices,chrmap
 	GLOBAL	breakpt,breakhi,ttxtfont
 ;
 	EXTERN	loadn,loads,storen,stores,getvar,putvar,expr,item,xeq
@@ -201,13 +201,9 @@ prnty:	dd	0		; Vertical printing position
 ;
 	align	4,db 0
 ;
-sysvar:	dd	link1 - sysvar
+sysvar:	dd	link2 - sysvar
 	db	'memhdc%',0
 memhdc:	dd	0		; Shadow screen device context
-;
-link1:	dd	link2 - link1
-	db	'prthdc%',0
-prthdc:	dd	0		; Printer device context
 ;
 link2:	dd	link3 - link2
 	db	'wparam%',0
@@ -217,13 +213,15 @@ link3:	dd	link4 - link3
 	db	'lparam%',0
 lParam:	dd	0		; Saved lParam for ON xxxx interrupt
 ;
+	dw	0		; Padding
 link4:	dd	link5 - link4
-	db	'hpal%',0
-	dd	palette		; Colour palette
-;
-link5:	dd	link6 - link5
 	db	'hwnd%',0
 hwndProg: dd	0		; Handle for program window
+;
+	dw	0		; Padding
+link5:	dd	link6 - link5
+	db	'hpal%',0
+	dd	palette		; Colour palette
 ;
 link6:	dd	link7 - link6
 	db	'ox%',0		; V5.2
@@ -237,18 +235,22 @@ link8:	dd	link9 - link8
 	db	'hfile%(',0
 	dd	farray		; Pointer to file handles array
 ;
+	db	0,0,0		; Padding
 link9:	dd	link10 - link9
 	db	'msg%',0
 iMsg:	dd	0		; Saved iMsg for ON xxxx interrupt
 ;
+	db	0,0,0		; Padding
 link10:	dd	link11 - link10
 	db	'vdu%',0
 	dd	vduvar		; Pointer to VDU variables
 ;
+	dw	0		; Padding
 link11:	dd	link12 - link11
-	db	'ispal%',0
-bPaletted: dd	0		; Paletted display flag (BOOL)
+	db	'platform%',0
+platform: dd	0		; SDL version & OS
 ;
+	db	0		; Padding
 link12:	dd	link13 - link12	; V3.0
 	db	'flags%',0	; V3.0
 tempo:	db	0		; *TEMPO value
@@ -260,103 +262,110 @@ link13:	dd	link14 - link13
 	db	'voices%',0
 voices:	dd	0		; Voices (waveforms) for sound channels
 ;
+	dw	0		; Padding
 link14:	dd	link15 - link14
 	db	'zoom%',0	; V3.0
 zoom:	dd	0		; V3.0
 ;
+	db	0,0,0		; Padding
 link15:	dd	link16 - link15
-	db	'midi%',0
-MidiId:	dd	0		; MIDI device ID
+	db	'hwo%',0	; V5.4
+hwo:	dd	0		; V5.4 Handle for wave output
 ;
-link16:	dd	link17 - link16	; V5.7
-	db	'hwacc%',0	; V5.6
-hwacc:	dd	0		; V5.6 Window Handle of accelerator
+link16:	dd	link17 - link16	; V6.0
+	db	'chrmap%',0	; V6.0
+chrmap:	dd	0		; V6.0
 ;
-	db	0		; Unused (was tweak) 
 	align	4,db 0
 savesp:	dd	0		; Store for caller's stack pointer
-lastick:	dd	0	; To check for TickCount wraparound
-flist:	times 33 dd 0		; V6.0 Pointers to string free lists
+flist:	times 33 dd 0		; Pointers to string free lists @ 440H
 tmps:	dd	0		; V6.0 Temp string descriptor:	address
 	dd	0		; V6.0 Temp string descriptor:	length
 ;
+lastick:dd	0		; To check for TickCount wraparound
 timoff:	dd	0		; Offset to add to TickCount
 envels:	dd	0		; Pointer to ENVELOPEs
 waves:	dd	0		; Pointer to SOUND waveforms
 elevel:	times 4 db 0		; Envelope level (amplitude)
 ;
+	db	0,0,0		; Padding
 link17:	dd	link18 - link17
 	db	'dir$',0	; V3.0
 diradr:	dd	0		; V3.0 Load directory address
 dirlen:	dd	0		; V6.0 Load directory length
 ;
+	db	0,0,0		; Padding
 link18:	dd	link19 - link18
 	db	'lib$',0	; V4.0
 libadr:	dd	0		; V4.0 Lib directory address
 liblen:	dd	0		; V6.0 Lib directory length
 ;
+	db	0,0,0		; Padding
 link19:	dd	link20 - link19
 	db	'cmd$',0
 cmdadr:	dd	0		; Command line address
 cmdlen:	dd	0		; V6.0 Command line length
 ;
+	db	0,0,0		; Padding
 link20:	dd	link21 - link20
 	db	'usr$',0	; V5.4
 usradr:	dd	0		; V5.4 User directory address
 usrlen:	dd	0		; V6.0 User directory length
 ;
+	db	0,0,0		; Padding
 link21:	dd	link22 - link21
 	db	'tmp$',0	; V5.4
 tmpadr:	dd	0		; V5.4 Temp directory address
 tmplen:	dd	0		; V6.0 Temp directory length
 ;
-link22:	dd	link23 - link22
-	db	'hwo%',0	; V5.4
-hwo:	dd	0		; V5.4 Handle for wave output
-;
-link23:	dd	link25 - link23
-	db	'platform%',0
-platform: dd	0		; SDL version & OS
-;
-link25:	dd	link26 - link25	; V6.0
-	db	'chrmap%',0	; V6.0
-chrmap:	dd	0		; V6.0
-;
-link26:	dd	link27 - link26
-	db	'panx%',0
-panx:	dd	0		; Horizontal pan
-;
-link27:	dd	link28 - link27
-	db	'pany%',0
-pany:	dd	0		; Vertical pan
-;
-link28:	dd	link29 - link28	; V5.4
+	db	0,0,0		; Padding
+link22:	dd	link23 - link22	; V5.4
 	db	'vdu{',0	; V5.4
 vduptr:	dd	vdufmt		; V5.4 Format address
 	dd	vduvar		; V5.4 Data address
 ;
-link29:	dd	link30 - link29
+	db	0		; Padding
+link23:	dd	link24 - link23
+	db	'ispal%',0
+bPaletted: dd	0		; Paletted display flag (BOOL)
+;
+	dw	0		; Padding
+link24:	dd	link25 - link24
+	db	'panx%',0
+panx:	dd	0		; Horizontal pan
+;
+	dw	0		; Padding
+link25:	dd	link26 - link25
+	db	'pany%',0
+pany:	dd	0		; Vertical pan
+;
+	db	0		; Padding
+link26:	dd	link27 - link26
 	db	'brkpt%',0
 breakpt:dd	0		; Breakpoint (bottom of range)
 ;
-link30:	dd	link31 - link30
+	db	0		; Padding
+link27:	dd	link28 - link27
 	db	'brkhi%',0
 breakhi:dd	0		; Breakpoint (top of range)
 ;
-link31:	dd	link32 - link31
+	dw	0		; Padding
+link28:	dd	link29 - link28
 	db	'size{',0	; V6.1 Member name
 	dd	ptfmt		; V6.1 Format address
-	dd	sizex		; V6.1 Data offset
+	dd	sizex		; V6.1 Data address
 ;
-link32:	dd	link00 - link32
+	dw	0		; Padding
+link29:	dd	link00 - link29
 	db	'char{',0	; V6.1 Member name
 	dd	ptfmt		; V6.1 Format address
-	dd	charx		; V6.1 Data offset
+	dd	charx		; V6.1 Data address
 ;
 ; Structure @vdu{o{x%,y%}, l{x%,y%}, p{x%,y%}, tl%, tr%, tt%, tb%,
 ;                d{x%,y%}, c{x%,y%}, hf%, hr%,
 ;                g{a&,b&,c&,d&}, t{a&,b&,c&,d&}, m{a&,b&,c&,d&}}
 ;
+	db	0		; Padding
 vdufmt:	dd	sndqw-vduvar	; V5.4 Total length (bytes)
 ;
 vlnk00:	dd	vlnk01 - vlnk00	; V5.4 Link to next
@@ -364,11 +373,13 @@ vlnk00:	dd	vlnk01 - vlnk00	; V5.4 Link to next
 	dd	ptfmt		; V5.4 Format address
 	dd	origx-vduvar	; V5.4 Data offset
 ;
+	db	0		; Padding
 vlnk01:	dd	vlnk02 - vlnk01
 	db	'l{',0		; V5.4 Member name
 	dd	ptfmt		; V5.4 Format address
 	dd	lastx-vduvar	; V5.4 Data offset
 ;
+	db	0		; Padding
 vlnk02:	dd	vlnk03 - vlnk02
 	db	'p{',0		; V5.4 Member name
 	dd	ptfmt		; V5.4 Format address
@@ -390,11 +401,13 @@ vlnk06:	dd	vlnk07 - vlnk06
 	db	'tb%',0		; V5.4 Member name
 	dd	textwb-vduvar	; V5.4 Data offset
 ;
+	db	0		; Padding
 vlnk07:	dd	vlnk08 - vlnk07
 	db	'd{',0		; V5.4 Member name
 	dd	ptfmt		; V5.4 Format address
 	dd	pixelx-vduvar	; V5.4 Data offset
 ;
+	db	0		; Padding
 vlnk08:	dd	vlnk09 - vlnk08
 	db	'c{',0		; V5.4 Member name
 	dd	ptfmt		; V5.4 Format address
@@ -408,26 +421,31 @@ vlnk10:	dd	vlnk11 - vlnk10
 	db	'hr%',0		; V5.4 Member name
 	dd	hrect-vduvar	; V5.4 Data offset
 ;
+	db	0		; Padding
 vlnk11:	dd	vlnk12 - vlnk11
 	db	'g{',0		; V5.4 Member name
 	dd	b4fmt		; V5.4 Format address
 	dd	forgnd-vduvar	; V5.4 Data offset
 ;
+	db	0		; Padding
 vlnk12:	dd	vlnk13 - vlnk12
 	db	't{',0		; V5.4 Member name
 	dd	b4fmt		; V5.4 Format address
 	dd	cursa-vduvar	; V5.4 Data offset
 ;
+	db	0		; Padding
 vlnk13:	dd	vlnk14 - vlnk13
 	db	'm{',0		; V5.4 Member name
 	dd	b4fmt		; V5.4 Format address
 	dd	modeno-vduvar	; V5.4 Data offset
 ;
+	db	0		; Padding
 vlnk14:	dd	0
 	db	'w{',0		; V6.1 Member name
 	dd	b4fmt		; V6.1 Format address
 	dd	cursx-vduvar	; V6.1 Data offset
 ;
+	db	0,0,0		; Padding
 link00:	dd	0		; V5.7 End of list
 	db	'fn%(',0	; V5.7
 	dd	fnarr		; V5.7 Pointer to function array

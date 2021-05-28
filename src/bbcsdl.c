@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.21a, 04-Apr-2021                                *
+*       Version 1.22a, 11-May-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -995,8 +995,7 @@ static int maintick (void)
 	static int oldtextx, oldtexty ;
 	static unsigned int lastpaint, lastusrev, lastpump ;
 	unsigned int now = SDL_GetTicks () ;
-	volatile unsigned int temp = zoom ;
-	float scale = (float)(temp) / 32768.0 ; // must be float
+	float scale = (float)(zoom) / 32768.0 ; // must be float
 	SDL_GetWindowSize (window, &ptsx, &ptsy) ;
 	SDL_GL_GetDrawableSize (window, &winx, &winy) ;
 	SDL_Rect caret ;
@@ -1032,6 +1031,7 @@ static int maintick (void)
 		caret.y = (texty - offsety + cursa) * scale + DestRect.y ;
 		if (cursx) caret.w = cursx * scale ; else caret.w = charx * scale ;
 		caret.h = (cursb - cursa) * scale ;
+		if (caret.h < 0) caret.h = 0 ; 
 
 		SDL_SetRenderTarget(renderer, NULL) ;
 		SDL_SetRenderDrawColor (renderer, 0, 0, 0, 255) ;
@@ -1095,8 +1095,9 @@ static int maintick (void)
 			scroln = 0 ;        // exit paged mode
 	    }
 
-	if (((scroln <= 0) && BBC_PeepEvents(&ev, 1, SDL_GETEVENT, 0, SDL_LASTEVENT)) ||
-	    ((scroln > 0)  && BBC_PeepEvents(&ev, 1, SDL_GETEVENT, 0, SDL_USEREVENT-1)))
+	if (bBackground || (scroln > 0) ?
+		BBC_PeepEvents(&ev, 1, SDL_GETEVENT, 0, SDL_USEREVENT-1) :
+		BBC_PeepEvents(&ev, 1, SDL_GETEVENT, 0, SDL_LASTEVENT))
 	{
 		switch (ev.type)
 		{
@@ -1297,13 +1298,18 @@ static int maintick (void)
 				}
 				break ;
 
-				case EVT_FSSYNC:
 #ifdef __EMSCRIPTEN__
+				case EVT_FSSYNC:
 				EM_ASM(
 				    FS.syncfs(function (err) {});
 				);
-#endif
 				break ;
+
+				case EVT_RUNJS:
+				emscripten_run_script (ev.user.data1) ;
+				SDL_SemPost (Sema4) ; // ev.user.data1 is volatile ptr
+				break ;
+#endif
 
 			}
 			break ;
@@ -1430,6 +1436,10 @@ static int maintick (void)
 				c += 26 ;
 			if ((c >= 136) && (c <= 137) && (ev.key.keysym.mod & KMOD_CTRL))
 				c -= 8 ;
+			if ((c >= 136) && (c <= 137) && (ev.key.keysym.mod & KMOD_GUI))
+				c -= 6 ;  // Mac Cmd+left, Cmd+right
+			if ((c >= 138) && (c <= 139) && (ev.key.keysym.mod & KMOD_GUI))
+				c ^= 23 ; // Mac Cmd+down, Cmd+up
 
 			if (c) putkey (c) ;
 			break ;
@@ -1498,23 +1508,18 @@ static int maintick (void)
 			}
 			if (fabs(ev.mgesture.dDist) > 0.002)
 			{
-				volatile unsigned int temp = zoom ; // force aligned access
-				temp = temp * (1.0 + ev.mgesture.dDist) /
+				zoom = zoom * (1.0 + ev.mgesture.dDist) /
 					      (1.0 - ev.mgesture.dDist) ;
-				zoom = temp ;
+				bChanged = 1 ;
 			}
 			if (fabs(ev.mgesture.x - oldx) < 0.05)
 			{
-				volatile int temp = panx ; // force aligned access
-				temp -= winx * (ev.mgesture.x - oldx) / scale ;
-				panx = temp ;
+				panx -= winx * (ev.mgesture.x - oldx) / scale ;
 				bChanged = 1 ;
 			}
 			if (fabs(ev.mgesture.y - oldy) < 0.05)
 			{
-				volatile int temp = pany ; // force aligned access
-				temp -= winy * (ev.mgesture.y - oldy) / scale ;
-				pany = temp ;
+				pany -= winy * (ev.mgesture.y - oldy) / scale ;
 				bChanged = 1 ;
 			}
 			oldx = ev.mgesture.x ;

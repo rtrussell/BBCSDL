@@ -1,9 +1,9 @@
 ;/*****************************************************************\
 ;*       BBC BASIC for SDL 2.0 (x86_64)                            *
-;*       Copyright (c) R. T. Russell, 2000-2020                    *
+;*       Copyright (c) R. T. Russell, 2000-2021                    *
 ;*                                                                 *
 ;*       BBCDATA.NAS RAM data definitions                          *
-;*       Version 1.15a, 27-Aug-2020                                *
+;*       Version 1.22a, 15-May-2021                                *
 ;\*****************************************************************/
 ;
 MAX_PORTS       EQU     4       ; Maximum number of i/o ports
@@ -241,39 +241,39 @@ sysvar:	dd	link1 - sysvar
 	checkalign
 wParam:	dd	0		; Saved wParam for ON xxxx interrupt
 ;
-link1:	dd	link3 - link1
+link3:	dd	link4 - link3
 	db	'lparam%',0
 	checkalign
 lParam:	dd	0		; Saved lParam for ON xxxx interrupt
 ;
 	db	0		; Padding
-link3:	dd	link4 - link3
+link23:	dd	link24 - link23
 	db	'ispal%',0
 	checkalign
 bPaletted: dd	0		; Paletted display flag (BOOL)
 ;
 	times 7	db 0		; Padding
-link4:	dd	link5 - link4
+link1:	dd	link3 - link1
 	db	'memhdc%%',0    ; n.b. aliased to @memhdc%
 	checkalign
 memhdc:	dd	0		; Shadow screen device context
 	dd	0		; 64-bit handle
 ;
 	times 7	db 0		; Padding
-link5:	dd	link6 - link5
+link9:	dd	link10 - link9
 	db	'msg%',0
 	checkalign
 iMsg:	dd	0		; Saved iMsg for ON xxxx interrupt
 ;
 	db	0		; Padding
-link6:	dd	link7 - link6
+link4:	dd	link5 - link4
 	db	'hwnd%%',0	; n.b. aliased to @hwnd%
 	checkalign
 hwndProg: dd	0		; Handle for program window
 	dd	0		; 64-bit handle
 ;
 	times 5	db 0		; Padding
-link11:	dd	link12 - link11
+link12:	dd	link14 - link12
 	db	'flags%',0
 	checkalign
 tempo:	db	0		; *TEMPO value
@@ -282,14 +282,14 @@ reflag:	db	0		; *REFRESH flags
 flags:	db	0		; Boolean flags (byte) @ 3FBH
 ;
 	times 7	db 0		; Padding
-link25:	dd	link26 - link25
+link16:	dd	link17 - link16
 	db	'chrmap%%',0	; n.b. aliased to @chrmap%
 	checkalign
 chrmap:	dd	0
 	dd	0		; 64-bit pointer
 ;
 	times 5	db 0		; Padding
-link9:	dd	link10 - link9
+link5:	dd	link6 - link5
 	db	'hpal%%',0
 	checkalign
 	dq	palette		; Colour palette
@@ -307,19 +307,19 @@ link00:	dd	0		; End of list
 	dq	fnarr		; Pointer to function array
 ;
 	dw	0		; Padding
-link23:	dd	link25 - link23
+link11:	dd	link12 - link11
 	db	'platform%',0
 	checkalign
 platform: dd	0		; SDL version & OS
 ;
 	dd	0		; Padding
-link7:	dd	link8 - link7
+link6:	dd	link7 - link6
 	db	'ox%',0	
 	checkalign
 offsetx:dd	0		; x-offset memhdc->hwnd
 ;
 	dd	0		; Padding
-link8:	dd	link9 - link8
+link7:	dd	link8 - link7
 	db	'oy%',0	 
 	checkalign
 offsety:dd	0		; y-offset memhdc->hwnd
@@ -339,7 +339,7 @@ libadr:	dd	0		; Library directory address
 liblen:	dd	0		; Library directory length
 ;
 	times 6	db 0		; Padding
-link26:	dd	link27 - link26
+link24:	dd	link25 - link24
 	db	'panx%',0
 	checkalign
 panx:	dd	0		; Horizontal pan
@@ -359,7 +359,7 @@ usradr:	dd	0		; User directory address
 usrlen:	dd	0		; User directory length
 ;
 	times 6	db 0		; Padding
-link27:	dd	link28 - link27
+link25:	dd	link26 - link25
 	db	'pany%',0
 	checkalign
 pany:	dd	0		; Vertical pan
@@ -372,51 +372,51 @@ tmpadr:	dd	0		; Temp directory address
 tmplen:	dd	0		; Temp directory length
 ;
 	times 7	db 0		; Padding
-link28:	dd	link29 - link28
+link22:	dd	link23 - link22
 	db	'vdu{',0
 	checkalign
 	dq	vdufmt		; Structure format address 
 	dq	vduvar		; Structure data address
 ;
 	times 6	db 0		; Padding
-link14:	dd	link17 - link14
+link14:	dd	link15 - link14
 	db	'zoom%',0
 	checkalign
 zoom:	dd	0
 ;
 	times 7	db 0		; Padding
-link12:	dd	link14 - link12
+link8:	dd	link9 - link8
 	db	'hfile%%(',0
 	checkalign
 	dq	farray		; Pointer to file handles array
 ;
 	times 5	db 0		; Padding
-link29:	dd	link30 - link29
+link26:	dd	link27 - link26
 	db	'brkpt%',0
 	checkalign
 breakpt:dd	0		; Breakpoint (bottom of range)
 ;
 	times 3	db 0		; Padding
-link22:	dd	link23 - link22
+link15:	dd	link16 - link15
 	db	'hwo%',0
 	checkalign
 hwo:	dd	0		; Handle for wave output
 ;
 	db	0		; Padding
-link30:	dd	link31 - link30
+link27:	dd	link28 - link27
 	db	'brkhi%',0
 	checkalign
 breakhi:dd	0		; Breakpoint (top of range)
 ;
 	dw	0		; Padding
-link31:	dd	link32 - link31
+link28:	dd	link29 - link28
 	db	'size{',0	; V6.1 Member name
 	checkalign
 	dq	ptfmt		; V6.1 Format address
 	dq	sizex		; V6.1 Data offset
 ;
 	times 6	db 0		; Padding
-link32:	dd	link00 - link32
+link29:	dd	link00 - link29
 	db	'char{',0	; V6.1 Member name
 	checkalign
 	dq	ptfmt		; V6.1 Format address

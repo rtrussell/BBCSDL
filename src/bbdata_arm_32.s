@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       BBC BASIC for SDL 2.0 (ARM_32)                            *
-*       Copyright (c) R. T. Russell, 2018-2020                    *
+*       Copyright (c) R. T. Russell, 2018-2021                    *
 *                                                                 *
 *       BBCDAT.S RAM data definitions                             *
-*       Version 1.15a, 27-Aug-2020                                *
+*       Version 1.22a, 15-May-2021                                *
 \*****************************************************************/
 
 .equ	MAX_PORTS,4
@@ -132,8 +132,6 @@
 .global offsety
 .global platform
 .global memhdc
-.global prthdc
-.global MidiId
 .global reflag
 .global sysflg
 .global panx
@@ -170,7 +168,6 @@
 .global vduvar
 .global vduptr
 .global voices
-.global hwacc
 .global chrmap
 .global breakpt
 .global breakhi
@@ -323,13 +320,9 @@ prnty:	.long	0	/* Vertical printing position */
 /* The following variables are organised as a linked-list at */
 /* sysvar, for access via 'system variables' starting with @ */
 
-sysvar:	.long	link1 - sysvar
+sysvar:	.long	link2 - sysvar
 	.asciz	"memhdc%"
 memhdc:	.long	0	/* Shadow screen device context */
-
-link1:	.long	link2 - link1
-	.asciz	"prthdc%"
-prthdc:	.long	0	/* Printer device context */
 
 link2:	.long	link3 - link2
 	.asciz	"wparam%"
@@ -339,38 +332,44 @@ link3:	.long	link4 - link3
 	.asciz	"lparam%"
 lParam:	.long	0	/* Saved lParam for ON xxxx interrupt */
 
+	.short	0	/* Padding */
 link4:	.long	link5 - link4
-	.asciz	"hpal%"
-	.long	palette	/* Colour palette */
-
-link5:	.long	link6 - link5
 	.asciz	"hwnd%"
 hwndProg: .long	0	/* Handle for program window */
 
+	.short	0	/* Padding */
+link5:	.long	link6 - link5
+	.asciz	"hpal%"
+	.long	palette	/* Colour palette */
+
 link6:	.long	link7 - link6
-	.asciz	"ox%"	
+	.asciz	"ox%"
 offsetx:.long	0	/* x-offset memhdc->hwnd */
 
 link7:	.long	link8 - link7
-	.asciz	"oy%"
+	.asciz	"oy%" 
 offsety:.long	0	/* y-offset memhdc->hwnd */
 
 link8:	.long	link9 - link8
 	.asciz	"hfile%("
 	.long	farray	/* Pointer to file handles array */
 
+	.byte	0,0,0	/* Padding */
 link9:	.long	link10 - link9
 	.asciz	"msg%"
 iMsg:	.long	0	/* Saved iMsg for ON xxxx interrupt */
 
+	.byte	0,0,0	/* Padding */
 link10:	.long	link11 - link10
 	.asciz	"vdu%"
 	.long	vduvar	/* Pointer to VDU variables */
 
+	.short	0	/* Padding */
 link11:	.long	link12 - link11
-	.asciz	"ispal%"
-bPaletted: .long	0	/* Paletted display flag (BOOL) */
+	.asciz	"platform%"
+platform: .long	0	/* SDL version & OS */
 
+	.byte	0	/* Padding */
 link12:	.long	link13 - link12
 	.asciz	"flags%"
 tempo:	.byte	0	/* *TEMPO value */
@@ -382,96 +381,101 @@ link13:	.long	link14 - link13
 	.asciz	"voices%"
 voices:	.long	0	/* Voices (waveforms) for sound channels */
 
+	.short	0	/* Padding */
 link14:	.long	link15 - link14
 	.asciz	"zoom%"
 zoom:	.long	0
 
+	.byte	0,0,0	/* Padding */
 link15:	.long	link16 - link15
-	.asciz	"midi%"
-MidiId:	.long	0	/* MIDI device ID */
+	.asciz	"hwo%"
+hwo:	.long	0	/* Handle for wave output */
 
 link16:	.long	link17 - link16
-	.asciz	"hwacc%"
-hwacc:	.long	0	/* Window Handle of accelerator */
-
-	.byte	0	/* Unused (was tweak) */
+	.asciz	"chrmap%"
+chrmap:	.long	0
 
 savesp:	.long	0	/* Store for caller's stack pointer */
-lastick:.long	0	/* To check for TickCount wraparound */
 flist:	.fill	33,4,0	/* Pointers to string free lists */
 tmps:	.long	0	/* Temp string descriptor: address */
-	.long	0	/* Temp string descriptor: length */
+	.long	0	/* Temp string descriptor: length  */
 
+lastick:.long	0	/* To check for TickCount wraparound */
 timoff:	.long	0	/* Offset to add to TickCount */
 envels:	.long	0	/* Pointer to ENVELOPEs */
 waves:	.long	0	/* Pointer to SOUND waveforms */
 elevel:	.byte	0,0,0,0	/* Envelope level (amplitude) */
 
+	.byte	0,0,0	/* Padding */
 link17:	.long	link18 - link17
 	.asciz	"dir$"
 diradr:	.long	0	/* Load directory address */
 dirlen:	.long	0	/* Load directory length */
 
+	.byte	0,0,0	/* Padding */
 link18:	.long	link19 - link18
 	.asciz	"lib$"
 libadr:	.long	0	/* Lib directory address */
 liblen:	.long	0	/* Lib directory length */
 
-link19:	.long	link20 - link19 
+	.byte	0,0,0	/* Padding */
+link19:	.long	link20 - link19
 	.asciz	"cmd$"
 cmdadr:	.long	0	/* Command line address */
 cmdlen:	.long	0	/* Command line length */
 
+	.byte	0,0,0	/* Padding */
 link20:	.long	link21 - link20
 	.asciz	"usr$"
 usradr:	.long	0	/* User directory address */
 usrlen:	.long	0	/* User directory length */
 
+	.byte	0,0,0	/* Padding */
 link21:	.long	link22 - link21
 	.asciz	"tmp$"
 tmpadr:	.long	0	/* Temp directory address */
 tmplen:	.long	0	/* Temp directory length */
 
+	.byte	0,0,0	/* Padding */
 link22:	.long	link23 - link22
-	.asciz	"hwo%"
-hwo:	.long	0	/* Handle for wave output */
-
-link23:	.long	link25 - link23
-	.asciz	"platform%"
-platform: .long	0	/* SDL version & OS */
-
-link25:	.long	link26 - link25
-	.asciz	"chrmap%"
-chrmap:	.long	0
-
-link26:	.long	link27 - link26
-	.asciz	"panx%"
-panx:	.long	0	/* Horizontal pan */
-
-link27:	.long	link28 - link27
-	.asciz	"pany%"
-pany:	.long	0	/* Vertical pan */
-
-link28:	.long	link29 - link28
 	.asciz	"vdu{"
 vduptr:	.long	vdufmt	/* Format address */
 	.long	vduvar	/* Data address */
 
-link29:	.long	link30 - link29
+	.byte	0	/* Padding */
+link23:	.long	link24 - link23
+	.asciz	"ispal%"
+bPaletted: .long  0	/* Paletted display flag (BOOL) */
+
+	.short	0	/* Padding */
+link24:	.long	link25 - link24
+	.asciz	"panx%"
+panx:	.long	0	/* Horizontal pan */
+
+	.short	0	/* Padding */
+link25:	.long	link26 - link25
+	.asciz	"pany%"
+pany:	.long	0	/* Vertical pan */
+
+	.byte	0	/* Padding */
+link26:	.long	link27 - link26
 	.asciz	"brkpt%"
 breakpt:.long	0	/* Breakpoint (bottom of range) */
 
-link30:	.long	link31 - link30
+	.byte	0	/* Padding */
+link27:	.long	link28 - link27
 	.asciz	"brkhi%"
 breakhi:.long	0	/* Breakpoint (top of range) */
 
-link31:	.long	link32 - link31
-	.asciz	"size{"
+	.short	0	/* Padding */
+link28:	.long	link29 - link28
+	.asciz	"size{"	/* Member name */
 	.long	ptfmt	/* Format address */
 	.long	sizex	/* Data address */
 
-link32:	.long	link00 - link32
-	.asciz	"char{"
+	.short	0	/* Padding */
+link29:	.long	link00 - link29
+	.asciz	"char{"	/* Member name */
 	.long	ptfmt	/* Format address */
 	.long	charx	/* Data address */
 
@@ -479,6 +483,7 @@ link32:	.long	link00 - link32
 /*                d{x%,y%}, c{x%,y%}, hf%, hr%, */
 /*                g{a&,b&,c&,d&}, t{a&,b&,c&,d&}, m{a&,b&,c&,d&}} */
 
+	.byte	0	/* Padding */
 vdufmt:	.long	sndqw-vduvar	/* Total length (bytes) */
 
 vlnk00:	.long	vlnk01 - vlnk00	/* Link to next */
@@ -486,11 +491,13 @@ vlnk00:	.long	vlnk01 - vlnk00	/* Link to next */
 	.long	ptfmt	/* Format address */
 	.long	origx-vduvar	/* Data offset */
 
+	.byte	0	/* Padding */
 vlnk01:	.long	vlnk02 - vlnk01
 	.asciz	"l{"	/* Member name */
 	.long	ptfmt	/* Format address */
 	.long	lastx-vduvar	/* Data offset */
 
+	.byte	0	/* Padding */
 vlnk02:	.long	vlnk03 - vlnk02
 	.asciz	"p{"	/* Member name */
 	.long	ptfmt	/* Format address */
@@ -512,11 +519,13 @@ vlnk06:	.long	vlnk07 - vlnk06
 	.asciz	"tb%"	/* Member name */
 	.long	textwb-vduvar	/* Data offset */
 
+	.byte	0	/* Padding */
 vlnk07:	.long	vlnk08 - vlnk07
 	.asciz	"d{"	/* Member name */
 	.long	ptfmt	/* Format address */
 	.long	pixelx-vduvar	/* Data offset */
 
+	.byte	0	/* Padding */
 vlnk08:	.long	vlnk09 - vlnk08
 	.asciz	"c{"	/* Member name */
 	.long	ptfmt	/* Format address */
@@ -530,26 +539,31 @@ vlnk10:	.long	vlnk11 - vlnk10
 	.asciz	"hr%"	/* Member name */
 	.long	hrect-vduvar	/* Data offset */
 
+	.byte	0	/* Padding */
 vlnk11:	.long	vlnk12 - vlnk11
 	.asciz	"g{"	/* Member name */
 	.long	b4fmt	/* Format address */
 	.long	forgnd-vduvar	/* Data offset */
 
+	.byte	0	/* Padding */
 vlnk12:	.long	vlnk13 - vlnk12
 	.asciz	"t{"	/* Member name */
 	.long	b4fmt	/* Format address */
 	.long	cursa-vduvar	/* Data offset */
 
+	.byte	0	/* Padding */
 vlnk13:	.long	vlnk14 - vlnk13
 	.asciz	"m{"	/* Member name */
 	.long	b4fmt	/* Format address */
 	.long	modeno-vduvar	/* Data offset */
 
+	.byte	0	/* Padding */
 vlnk14:	.long	0
 	.asciz	"w{"	/* Member name */
 	.long	b4fmt	/* Format address */
 	.long	cursx-vduvar	/* Data offset */
 
+	.byte	0,0,0	/* Padding */
 link00:	.long	0	/* End of list */
 	.asciz	"fn%("
 	.long	fnarr	/* Pointer to function array */

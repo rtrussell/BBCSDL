@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.21a, 19-Mar-2021                                *
+*       Version 1.22a, 15-May-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -806,8 +806,11 @@ void oscli (char *cmd)
 			q = path1 + strlen (path1) - 1 ;
 			if (*q == ';')
 				*q = '&' ;
-#ifdef __IPHONEOS__
+#if defined __IPHONEOS__
 			error (255, "Unsupported") ;
+#elif defined __EMSCRIPTEN__
+			pushev (EVT_RUNJS, path1, NULL) ;
+			waitev () ;
 #else
 			if (0 != system (path1))
 				error (254, "Bad command") ;

@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (Emscripten / Web Assembly)          *
-*       Copyright (c) R. T. Russell, 2000-2020                     *
+*       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       BBCSDL.H constant definitions                              *
-*       Version 1.15w 30-Aug-2020                                  *
+*       Version 1.22w 15-May-2021                                  *
 \******************************************************************/
 
 // System constants :
@@ -55,8 +55,9 @@
 #define EVT_MOUSETO	0x200D	// Move mouse pointer
 #define EVT_OSK		0x200E	// En/disable On Screen Keyboard
 #define EVT_OSWORD	0x200F  // OSWORD call
-#define EVT_TIMER	0x2010	// Set timer to new period
+#define EVT_TIMER	0x2010	// Set new timer period
 #define EVT_FSSYNC	0x2011  // Sync filesystem (Emscripten)
+#define EVT_RUNJS	0x2012  // Run Javascript (Emscripten)
 
 // Bit names:
 
@@ -253,25 +254,25 @@ extern int lastick ;		// To test for TIME wrapping
 
 extern int sysvar[] ;		// @ variables linked list
 #define memhdc (*(SDL_Renderer **)((char*)sysvar + 12))	// @memhdc%
-#define wParam (*(int *)((char*)sysvar + 44))		// @wparam%
-#define lParam (*(int *)((char*)sysvar + 60))		// @lparam%
-#define hwndProg (*(SDL_Window **)((char*)sysvar + 92))	// @hwnd%
-#define offsetx (*(int *)((char*)sysvar + 104))		// @ox%
-#define offsety (*(int *)((char*)sysvar + 116))		// @oy%
-#define iMsg   (*(int *)((char*)sysvar + 148))		// @msg%
-#define tempo  (*(unsigned char *)((char*)sysvar + 196))// @flags%
-#define sysflg (*(char *)((char*)sysvar + 197))		// *SYS flag
-#define reflag (*(char *)((char*)sysvar + 198))		// *REFRESH flag
-#define flags  (*(unsigned char *)((char*)sysvar + 199))// BASIC's Boolean flags byte
-#define voices ((unsigned char *)((char*)sysvar + 212)) // Voice (waveform) for each channel
-#define zoom   (*(unsigned int *)((char*)sysvar + 228))	// @zoom%
-#define hwo    (*(SDL_AudioDeviceID *)((char*)sysvar + 376)) // @hwo%
-#define platform (*(unsigned int *)((char*)sysvar + 396)) // SDL version and OS platform
-#define chrmap (*(short **)((char*)sysvar + 412))		// @chrmap%
-#define panx   (*(int *)((char*)sysvar + 428))		// @panx%
-#define pany   (*(int *)((char*)sysvar + 444))		// @pany%
-#define breakpt (*(heapptr *)((char*)sysvar + 496))	// @brkpt%
-#define breakhi (*(heapptr *)((char*)sysvar + 512))	// @brkhi%
+#define wParam (*(int *)((char*)sysvar + 28))		// @wparam%
+#define lParam (*(int *)((char*)sysvar + 44))		// @lparam%
+#define hwndProg (*(SDL_Window **)((char*)sysvar + 60))	// @hwnd%
+#define offsetx (*(int *)((char*)sysvar + 88))		// @ox%
+#define offsety (*(int *)((char*)sysvar + 100))		// @oy%
+#define iMsg   (*(int *)((char*)sysvar + 132))		// @msg%
+#define tempo  (*(unsigned char *)((char*)sysvar + 180))// @flags%
+#define sysflg (*(char *)((char*)sysvar + 181))		// *SYS flag
+#define reflag (*(char *)((char*)sysvar + 182))		// *REFRESH flag
+#define flags  (*(unsigned char *)((char*)sysvar + 183))// BASIC's Boolean flags byte
+#define voices ((unsigned char *)((char*)sysvar + 196)) // Voice (waveform) for each channel
+#define zoom   (*(unsigned int *)((char*)sysvar + 212))	// @zoom%
+#define hwo    (*(SDL_AudioDeviceID *)((char*)sysvar + 328)) // @hwo%
+#define platform (*(unsigned int *)((char*)sysvar + 348)) // SDL version and OS platform
+#define chrmap (*(short **)((char*)sysvar + 364))		// @chrmap%
+#define panx   (*(int *)((char*)sysvar + 380))		// @panx%
+#define pany   (*(int *)((char*)sysvar + 396))		// @pany%
+#define breakpt (*(heapptr *)((char*)sysvar + 448))	// @brkpt%
+#define breakhi (*(heapptr *)((char*)sysvar + 464))	// @brkhi%
 
 // Declared in bbcsdl.c:
 extern unsigned int palette[256] ;

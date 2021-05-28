@@ -309,7 +309,7 @@ int range2 (char c)
 // If NULL supplied as msg, look up message from code
 // If ON ERROR is active, execution continues
 // Error code zero signifies a 'fatal' error
-// Error code < 0 signifies QUIT (negative exitcode)
+// Error code < 0 signifies QUIT (inverted exitcode)
 // Error code 256 signifies return to immediate mode
 void error (int code, const char * msg)
 {
@@ -1491,7 +1491,7 @@ int basic (void *ecx, void *edx, void *prompt)
 	esi = vpage + 3 + (signed char *) zero ;
 	esp = (heapptr *)((himem + (size_t) zero) & -4) ;
 
-	errcode = (setjmp (env)) ; // >=0 = error, <0 = QUIT, 256 = END/STOP
+	errcode = (setjmp (env)) ; // >0 = error, <0 = QUIT, 256 = END/STOP
 
 	if (errcode < 0)
 		return ~errcode ;

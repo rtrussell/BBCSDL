@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       BBC BASIC for SDL 2.0 (ARM_64)                            *
-*       Copyright (c) R. T. Russell, 2000-2020                    *
+*       Copyright (c) R. T. Russell, 2000-2021                    *
 *                                                                 *
 *       BBCDAT.S RAM data definitions                             *
-*       Version 1.15a, 27-Aug-2020                                *
+*       Version 1.22a, 15-May-2021                                *
 \*****************************************************************/
 
 .equ	MAX_PORTS,4
@@ -362,32 +362,32 @@ _sysvar:.long	link1 - _sysvar
 .asciz	"wparam%"
 _wParam:.long	0		/* Saved wParam for ON xxxx interrupt */
 
-link1:	.long	link3 - link1
+link3:	.long	link4 - link3
 	.asciz	"lparam%"
 _lParam:.long	0		/* Saved lParam for ON xxxx interrupt */
 
 	.byte	0		/* Padding */
-link3:	.long	link4 - link3
+link23:	.long	link24 - link23
 	.asciz	"ispal%"
 _bPaletted: .long	0	/* Paletted display flag (BOOL) */
 
 	.fill	7,1,0		/* Padding */
-link4:	.long	link5 - link4
+link1:	.long	link3 - link1
 	.asciz	"memhdc%%"/* n.b. aliased to @memhdc% */
 _memhdc:.quad	0		/* Shadow screen device context */
 
 	.fill	7,1,0		/* Padding */
-link5:	.long	link6 - link5
+link9:	.long	link10 - link9
 	.asciz	"msg%"
 _iMsg:	.long	0		/* Saved iMsg for ON xxxx interrupt */
 
 	.byte	0		/* Padding */
-link6:	.long	link7 - link6
+link4:	.long	link5 - link4
 	.asciz	"hwnd%%"	/* n.b. aliased to @hwnd% */
 _hwndProg: .quad	0	/* Handle for program window */
 
 	.fill	5,1,0		/* Padding */
-link11:	.long	link12 - link11
+link12:	.long	link14 - link12
 	.asciz	"flags%"
 _tempo:	.byte	0		/* *TEMPO value */
 _sysflg:.byte	0		/* *SYS flags */
@@ -395,12 +395,12 @@ _reflag:.byte	0		/* *REFRESH flags */
 _flags:	.byte	0		/* Boolean flags (byte) */
 
 	.fill	7,1,0		/* Padding */
-link25:	.long	link26 - link25
+link16:	.long	link17 - link16
 	.asciz	"chrmap%%"	/* n.b. aliased to @chrmap% */
 _chrmap:.quad	0
 
 	.fill	5,1,0		/* Padding */
-link9:	.long	link10 - link9
+link5:	.long	link6 - link5
 	.asciz	"hpal%%"
 	.quad	_palette	/* Colour palette */
 
@@ -415,17 +415,17 @@ _link00:.long	0		/* End of list */
 	.quad	fnarr		/* Pointer to function array */
 
 	.short	0		/* Padding */
-link23:	.long	link25 - link23
+link11:	.long	link12 - link11
 	.asciz	"platform%"
 _platform: .long 0		/* SDL version & OS */
 
 	.long	0		/* Padding */
-link7:	.long	link8 - link7
+link6:	.long	link7 - link6
 	.asciz	"ox%"	
 _offsetx:.long	0		/* x-offset memhdc->hwnd */
 
 	.long	0		/* Padding */
-link8:	.long	link9 - link8
+link7:	.long	link8 - link7
 	.asciz	"oy%"	 
 _offsety:.long	0		/* y-offset memhdc->hwnd */
 
@@ -442,7 +442,7 @@ _libadr:.long	0		/* Library directory address */
 _liblen:.long	0		/* Library directory length */
 
 	.fill	6,1,00		/* Padding */
-link26:	.long	link27 - link26
+link24:	.long	link25 - link24
 	.asciz	"panx%"
 _panx:	.long	0		/* Horizontal pan */
 
@@ -459,7 +459,7 @@ _usradr:.long	0		/* User directory address */
 _usrlen:.long	0		/* User directory length */
 
 	.fill	6,1,00		/* Padding */
-link27:	.long	link28 - link27
+link25:	.long	link26 - link25
 	.asciz	"pany%"
 _pany:	.long	0		/* Vertical pan */
 
@@ -470,45 +470,45 @@ _tmpadr:.long	0		/* Temp directory address */
 _tmplen:.long	0		/* Temp directory length */
 
 	.fill	7,1,00		/* Padding */
-link28:	.long	link29 - link28
+link22:	.long	link23 - link22
 	.asciz	"vdu{"
 	.quad	vdufmt		/* Structure format address */
 	.quad	_vduvar		/* Structure data address */
 
 	.fill	6,1,00		/* Padding */
-link14:	.long	link17 - link14
+link14:	.long	link15 - link14
 	.asciz	"zoom%"
 _zoom:	.long	0
 
 	.fill	7,1,00		/* Padding */
-link12:	.long	link14 - link12
+link8:	.long	link9 - link8
 	.asciz	"hfile%%("
 	.quad	_farray		/* Pointer to file handles array */
 
 	.fill	5,1,00		/* Padding */
-link29:	.long	link30 - link29
+link26:	.long	link27 - link26
 	.asciz	"brkpt%"
 _breakpt:.long	0		/* Breakpoint (bottom of range) */
 
 	.fill	3,1,00		/* Padding */
-link22:	.long	link23 - link22
+link15:	.long	link16 - link15
 	.asciz	"hwo%"
 _hwo:	.long	0		/* Handle for wave output */
 
 	.byte	0		/* Padding */
-link30:	.long	link31 - link30
+link27:	.long	link28 - link27
 	.asciz	"brkhi%"
 _breakhi:.long	0		/* Breakpoint (top of range) */
 
 	.short	0		/* Padding */
-link31:	.long	link32 - link31
+link28:	.long	link29 - link28
 	.asciz	"size{"
 	.quad	ptfmt
 	.quad	_sizex
 
 	.short	0		/* Padding */
 	.long	0
-link32:	.long	_link00 - link32
+link29:	.long	_link00 - link29
 	.asciz	"char{"
 	.quad	ptfmt
 	.quad	_charx

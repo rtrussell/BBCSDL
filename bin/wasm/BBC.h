@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (Emscripten / Web Assembly)          *
-*       Copyright (c) R. T. Russell, 2000-2020                     *
+*       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       BBC.h constant and variable declarations                   *
-*       Version 1.15w, 28-Aug-2020                                 *
+*       Version 1.22w, 15-May-2021                                 *
 \******************************************************************/
 
 // Constants:
@@ -342,18 +342,18 @@ extern int vduvar[] ;		// VDU variables
 
 extern int sysvar[] ;		// @ variables linked list
 #define memhdc (*(size_t *)((char*)sysvar + 12))	// SDL Renderer
-#define flags  (*(unsigned char *)((char*)sysvar + 199))// BASIC's Boolean flags byte
-#define link00 (*(int *)((char*)sysvar + 538))		// Terminating link in @ list
-#define diradr (*(heapptr *)((char*)sysvar + 276))
-#define dirlen (*(int *)((char*)sysvar + 280))
-#define libadr (*(heapptr *)((char*)sysvar + 296))
-#define liblen (*(int *)((char*)sysvar + 300))
-#define cmdadr (*(heapptr *)((char*)sysvar + 316))
-#define cmdlen (*(int *)((char*)sysvar + 320))
-#define usradr (*(heapptr *)((char*)sysvar + 336))
-#define usrlen (*(int *)((char*)sysvar + 340))
-#define tmpadr (*(heapptr *)((char*)sysvar + 356))
-#define tmplen (*(int *)((char*)sysvar + 360))
+#define flags  (*(unsigned char *)((char*)sysvar + 183))// BASIC's Boolean flags byte
+#define link00 (*(int *)((char*)sysvar + 490))		// Terminating link in @ list
+#define diradr (*(heapptr *)((char*)sysvar + 228))
+#define dirlen (*(int *)((char*)sysvar + 232))
+#define libadr (*(heapptr *)((char*)sysvar + 248))
+#define liblen (*(int *)((char*)sysvar + 252))
+#define cmdadr (*(heapptr *)((char*)sysvar + 268))
+#define cmdlen (*(int *)((char*)sysvar + 272))
+#define usradr (*(heapptr *)((char*)sysvar + 288))
+#define usrlen (*(int *)((char*)sysvar + 292))
+#define tmpadr (*(heapptr *)((char*)sysvar + 308))
+#define tmplen (*(int *)((char*)sysvar + 312))
 
 // Defined in bbcsdl.c:
 extern char *szCmdLine ;	// @cmd$

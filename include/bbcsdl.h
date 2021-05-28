@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (64-bit)                             *
-*       Copyright (c) R. T. Russell, 2000-2020                     *
+*       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       BBCSDL.H constant definitions                              *
-*       Version 1.16a 17-Sep-2020                                  *
+*       Version 1.22a 14-May-2021                                  *
 \******************************************************************/
 
 // System constants :
@@ -57,6 +57,7 @@
 #define EVT_OSWORD	0x200F	// OSWORD call
 #define EVT_TIMER	0x2010	// Set new timer period
 #define EVT_FSSYNC	0x2011  // Sync filesystem (Emscripten)
+#define EVT_RUNJS	0x2012  // Run Javascript (Emscripten)
 
 // Bit names:
 

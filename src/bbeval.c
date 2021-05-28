@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.18a, 03-Nov-2020                                *
+*       Version 1.22a, 21-May-2021                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -97,11 +97,11 @@ void *sysadr (char *) ;		// Get the address of an API function
 extern jmp_buf env ;
 
 #if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__
-void setfpu(void) {}
+static void setfpu(void) {}
 static double xpower[9] = {1.0e1, 1.0e2, 1.0e4, 1.0e8, 1.0e16, 1.0e32, 1.0e64,
 			   1.0e128, 1.0e256} ;
 #else
-void setfpu(void) { unsigned int mode = 0x37F; asm ("fldcw %0" : : "m" (*&mode)); } 
+static void setfpu(void) { unsigned int mode = 0x37F; asm ("fldcw %0" : : "m" (*&mode)); } 
 static long double xpower[13] = {1.0e1L, 1.0e2L, 1.0e4L, 1.0e8L, 1.0e16L, 1.0e32L, 1.0e64L,
 				1.0e128L, 1.0e256L, 1.0e512L, 1.0e1024L, 1.0e2048L, 1.0e4096L} ;
 #endif
@@ -2215,7 +2215,7 @@ VAR item (void)
 
 static signed char relop (void)
 {
-	unsigned char al, op = nxt () ;
+	unsigned char al, op = *esi ;
 	if ((op != '<') && (op != '=') && (op != '>'))
 		return 0 ;
 	esi++ ;
@@ -2249,11 +2249,11 @@ static signed char relop (void)
 static VAR expr5 (void)
 {
 	VAR x = item () ;
+	signed char op = nxt () ;
 	if (x.s.t == -1)
 		return x ; // string
 	while (1) 
 	    {
-		signed char op = nxt () ;
 		if (op == '^')
 		    {
 			esi++ ;
@@ -2264,6 +2264,7 @@ static VAR expr5 (void)
 		    }
 		else
 			break ;
+		op = nxt () ;
 	    }
 	return x;
 }
@@ -2276,7 +2277,7 @@ static VAR expr4 (void)
 		return x ; // string
 	while (1) 
 	    {
-		signed char op = nxt () ;
+		signed char op = *esi ;
 		if ((op == '*') || (op == '/') || (op == TMOD) || (op == TDIV))
 		    {
 			esi++ ;
@@ -2299,7 +2300,7 @@ static VAR expr3 (void)
 	    {
 		while (1)
 		    {
-			signed char op = nxt () ;
+			signed char op = *esi ;
 			if (op == '+') // concatenate strings
 			    {
 				char *tmp ;
@@ -2322,7 +2323,7 @@ static VAR expr3 (void)
 	    }
 	while (1) 
 	    {
-		signed char op = nxt () ;
+		signed char op = *esi ;
 		if ((op == '+') || (op == '-'))
 		    {
 			esi++ ;
@@ -2341,9 +2342,8 @@ static VAR expr3 (void)
 // (these operators do not chain)
 static VAR expr2 (void)
 {
-	signed char op ;
 	VAR x = expr3 () ;
-	op = relop () ;
+	signed char op = relop () ;
 	if (op == 0)
 		return x ;
 	if (x.s.t == -1)
@@ -2408,7 +2408,7 @@ static VAR expr1 (void)
 		return x ; // string
 	while (1)
 	    {
-		signed char op = nxt () ;
+		signed char op = *esi ;
 		if (op == TAND)
 		    {
 			esi++ ;
@@ -2431,7 +2431,7 @@ VAR expr (void)
 		return x ; // string
 	while (1) 
 	    {
-		signed char op = nxt () ;
+		signed char op = *esi ;
 		if ((op == TOR) || (op == TEOR))
 		    {
 			esi++ ;

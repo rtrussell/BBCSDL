@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       32-bit BBC BASIC Interpreter                              *
-*       (c) 2018-2020  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2018-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbasmb.c: Simple ARM 4 assembler                          *
-*       Version 1.15a, 27-Aug-2020                                *
+*       Version 1.22a, 29-Apr-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -585,6 +585,8 @@ void assemble (void)
 					case TEQ:
 					case TST:
 						instruction = (ccode << 28) | (opcodes[mnemonic] << 20) ;
+						if ((*esi == 's') || (*esi == 'S'))
+							esi++ ;
 						instruction |= reg () << 16 ;
 						comma () ;
 						instruction |= shifter_operand () ;
