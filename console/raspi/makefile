@@ -13,16 +13,16 @@ bbexec.o: bbexec.c BBC.h
 	$(CXX) $(CXXFLAGS) -DARMHF -O2 $< -o $@
 
 bbeval.o: bbeval.c BBC.h
-	$(CXX) $(CXXFLAGS) -O2 $< -o $@
+	$(CXX) -Wno-array-bounds $(CXXFLAGS) -O2 $< -o $@
 
 bbasmb.o: bbasmb_arm_32.c BBC.h
 	$(CXX) $(CXXFLAGS) -Os $< -o $@
 
 bbccos.o: bbccos.c bbccon.h
-	$(CXX) -Wno-unused-result $(CXXFLAGS) -Os $< -o $@
+	$(CXX) -Wno-array-bounds -Wno-unused-result $(CXXFLAGS) -Os $< -o $@
 
 bbccon.o: bbccon.c bbccon.h
-	$(CXX) -Wno-unused-result $(CXXFLAGS) -O2 $< -o $@
+	$(CXX) -Wno-array-bounds -Wno-unused-result $(CXXFLAGS) -O2 $< -o $@
 
 bbdata.o: ../../../BBCSDL/src/bbdata_arm_32.s
 	as ../../../BBCSDL/src/bbdata_arm_32.s -o bbdata.o

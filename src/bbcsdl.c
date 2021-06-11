@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.22a, 11-May-2021                                *
+*       Version 1.22b, 29-May-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -436,9 +436,9 @@ static int myEventFilter(void* userdata, SDL_Event* pev)
 		bBackground = 1 ;
 		break ;
 
-		case SDL_APP_WILLENTERFOREGROUND:
 		case SDL_APP_DIDENTERFOREGROUND:
 		bBackground = 0 ;
+		bChanged = 1 ;
 		break ;
 	    }
 

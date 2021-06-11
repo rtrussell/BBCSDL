@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.22a, 18-Apr-2021                                *
+*       Version 1.23a, 05-Jun-2021                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -2808,6 +2808,7 @@ VAR xeq (void)
 					void *ptr = NULL ;
 					unsigned char type ;
 					VAR v, L, s ;
+					long long tmpll ;
 					signed char al = *esi ;
 					int b ;
 
@@ -2863,13 +2864,13 @@ VAR xeq (void)
 					s.i.t = *(short *)(esp + 4 + STRIDE) ;
 					s.i.n = *(long long *)(esp + 2 + STRIDE) ;
 #if defined __GNUC__ && __GNUC__ < 5
-					if ((v.i.t == 0) && (s.i.t == 0) && ((((L.i.n = v.i.n + s.i.n) ^
+					if ((v.i.t == 0) && (s.i.t == 0) && ((((tmpll = v.i.n + s.i.n) ^
 						             v.i.n) >= 0) || ((int)(v.s.l ^ s.s.l) < 0)))
 #else
 					if ((v.i.t == 0) && (s.i.t == 0) &&
-					    (! __builtin_saddll_overflow (v.i.n, s.i.n, &L.i.n)))
+					    (! __builtin_saddll_overflow (v.i.n, s.i.n, &tmpll)))
 #endif
-						 v.i.n = L.i.n ;
+						 v.i.n = tmpll ;
 					else
 					    {
 						if (v.i.t == 0)

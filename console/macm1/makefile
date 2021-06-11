@@ -12,7 +12,7 @@ bbexec.o: bbexec.c BBC.h
 	$(CXX) -c -O2 $< -o $@
 
 bbeval.o: bbeval.c BBC.h
-	$(CXX) -c -O2 $< -o $@
+	$(CXX) -Wno-array-bounds -c -O2 $< -o $@
 
 bbasmb.o: bbasmb_arm_32.c BBC.h
 	$(CXX) -c -Os $< -o $@
@@ -21,10 +21,10 @@ sort.o: sort.c
 	$(CXX) -c -O2 $< -o $@
 
 bbccos.o: bbccos.c bbccon.h
-	$(CXX) -Wno-unused-result -c -Os $< -o $@
+	$(CXX) -Wno-array-bounds -Wno-unused-result -c -Os $< -o $@
 
 bbccon.o: bbccon.c bbccon.h
-	$(CXX) -Wno-unused-result -c -Os $< -o $@
+	$(CXX) -Wno-array-bounds -Wno-unused-result -c -Os $< -o $@
 
 bbdata.o: ../../../BBCSDL/src/bbdata_arm_64.s
 	as ../../../BBCSDL/src/bbdata_arm_64.s -o bbdata.o

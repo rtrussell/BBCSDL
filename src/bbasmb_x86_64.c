@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       64-bit BBC BASIC Interpreter                              *
-*       Copyright (c) 2020 R.T.Russell http://www.rtrussell.co.uk *
+*       Copyright (c) 2021 R.T.Russell http://www.rtrussell.co.uk *
 *                                                                 *
 *       bbasmb_x86_64.c: x86-64 assembler                         *
-*       Version 1.15a, 27-Aug-2020                                *
+*       Version 1.23a, 05-Jun-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -2117,7 +2117,7 @@ void assemble (void)
 					do
 					    {
 						char *t = accs ;
-#ifdef _WIN32
+#if (defined (_WIN32)) && (__GNUC__ < 9)
 						t += sprintf (t, "%016I64X ", (long long) (size_t) oldpc) ;
 #else
 						t += sprintf (t, "%016llX ", (long long) oldpc) ;

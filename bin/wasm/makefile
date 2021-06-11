@@ -19,13 +19,13 @@ bbexec.o: bbexec.c BBC.h
 	$(CXX) -c -O2 $< -o $@
 
 bbeval.o: bbeval.c BBC.h
-	$(CXX) -c -O2 $< -o $@
+	$(CXX) -Wno-array-bounds -c -O2 $< -o $@
 
 bbasmb.o: bbasmb_wasm32.c BBC.h
 	$(CXX) -c -Os $< -o $@
 
 bbcmos.o: bbcmos.c bbcsdl.h
-	$(CXX) -c -O2 $< -o $@
+	$(CXX) -Wno-array-bounds -c -O2 $< -o $@
 
 bbccli.o: bbccli.c bbcsdl.h
 	$(CXX) -c -Os $< -o $@

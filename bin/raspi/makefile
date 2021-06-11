@@ -26,13 +26,13 @@ bbexec.o: bbexec.c BBC.h
 	$(CXX) $(CXXFLAGS) -DARMHF -O2 $< -o $@
 
 bbeval.o: bbeval.c BBC.h
-	$(CXX) $(CXXFLAGS) -O2 $< -o $@
+	$(CXX) -Wno-array-bounds $(CXXFLAGS) -O2 $< -o $@
 
 bbasmb.o: bbasmb_arm_32.c BBC.h
 	$(CXX) $(CXXFLAGS) -Os $< -o $@
 
 bbcmos.o: bbcmos.c bbcsdl.h
-	$(CXX) $(CXXFLAGS) -mfpu=neon -O2 $< -o $@
+	$(CXX) -Wno-array-bounds $(CXXFLAGS) -mfpu=neon -O2 $< -o $@
 
 bbccli.o: bbccli.c bbcsdl.h
 	$(CXX) -Wno-unused-result $(CXXFLAGS) -Os $< -o $@

@@ -2350,13 +2350,13 @@ long long apicall_ (long long (*APIfunc) (size_t, size_t, size_t, size_t, size_t
 			volatile double e, volatile double f, volatile double g, volatile double h)
 	{
 		long long result ;
-#ifdef __WIN32__
+#ifdef _WIN32
 		static void* savesp ;
 		asm ("mov %%esp,%0" : "=m" (savesp)) ;
 #endif
 		result = APIfunc (p->i[0], p->i[1], p->i[2], p->i[3], p->i[4], p->i[5],
 				p->i[6], p->i[7], p->i[8], p->i[9], p->i[10], p->i[11]) ;
-#ifdef __WIN32__
+#ifdef _WIN32
 		asm ("mov %0,%%esp" : : "m" (savesp)) ;
 #endif
 		return result ;
@@ -2380,13 +2380,13 @@ double fltcall_ (double (*APIfunc) (size_t, size_t, size_t, size_t, size_t, size
 			volatile double e, volatile double f, volatile double g, volatile double h)
 	{
 		double result ;
-#ifdef __WIN32__
+#ifdef _WIN32
 		static void* savesp ;
 		asm ("mov %%esp,%0" : "=m" (savesp)) ;
 #endif
 		result = APIfunc (p->i[0], p->i[1], p->i[2], p->i[3], p->i[4], p->i[5],
 				p->i[6], p->i[7], p->i[8], p->i[9], p->i[10], p->i[11]) ;
-#ifdef __WIN32__
+#ifdef _WIN32
 		asm ("mov %0,%%esp" : : "m" (savesp)) ;
 #endif
 		return result ;

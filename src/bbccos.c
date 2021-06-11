@@ -17,7 +17,7 @@
 #include <sys/stat.h>
 #include "bbccon.h"
 
-#ifdef __WIN32__
+#ifdef _WIN32
 #include <io.h>
 typedef int timer_t ;
 #define myfseek _fseeki64
@@ -197,7 +197,7 @@ void xeqvdu (int code, int data1, int data2)
 	static int col = 0, row = 0 ;
 	static int rhs = 999 ;
 
-#ifdef __WIN32__
+#ifdef _WIN32
 	if (!_isatty (_fileno (stdin)) || !_isatty (_fileno (stdout)))
 #else
 	if (!isatty (STDIN_FILENO) || !isatty (STDOUT_FILENO))
@@ -698,7 +698,7 @@ void oscli (char *cmd)
 			else
 			    {
 				getcwd (path2, MAX_PATH) ;
-#ifdef __WIN32__
+#ifdef _WIN32
 				dd = '\\' ;
 #else
 				dd = '/' ;
@@ -919,7 +919,7 @@ void oscli (char *cmd)
 		case MD:
 		case MKDIR:
 			setup (path, p, "", ' ', NULL) ;
-#ifdef __WIN32__
+#ifdef _WIN32
 			if (0 != mkdir (path))
 #else
 			if (0 != mkdir (path, 0777))

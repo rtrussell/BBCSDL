@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       BBC.h constant and variable declarations                   *
-*       Version 1.22w, 15-May-2021                                 *
+*       Version 1.23a, 06-Jun-2021                                 *
 \******************************************************************/
 
 // Constants:
@@ -224,7 +224,7 @@ typedef struct tagPARM
 // the least-significant 80-bits need to be stored on the heap, in files etc.
 // When a long double is 64-bits rather than 80-bits (e.g. ARM) it will be necessary
 // to force the type word (.i.t or .s.t member) to a value other than 0 or -1. 
-typedef union tagVAR
+typedef union __attribute__ ((packed)) __attribute__ ((aligned (4))) tagVAR
 {
 #if defined(__arm__) || defined(__aarch64__) || defined(__EMSCRIPTEN__)
 	double f ;
@@ -250,7 +250,7 @@ typedef union tagVAR
 } VAR, *LPVAR ; 
 
 // String descriptor:
-typedef struct tagSTR
+typedef struct __attribute__ ((packed)) __attribute__ ((aligned (4))) tagSTR
 {
 	heapptr p ; // Assumed to be 32 bits
 	int l ;
