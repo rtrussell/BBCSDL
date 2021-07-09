@@ -10,11 +10,11 @@ SDL_LIB = -L/usr/lib/ -lSDL2 -lSDL2main -lSDL2_ttf -lSDL2_net -ldl -lm
 
 VPATH = ../../src ../../include
 CXX = gcc -Wall -I ../../include
-CXXFLAGS = -march=armv7-a -mthumb -munaligned-access -mfloat-abi=hard -c
+CXXFLAGS = -c
 
 OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
       bbcvdu.o bbcvtx.o flood.o bbdata.o bbcsdl.o \
-      bbasmb.o SDL2_gfxPrimitives.o
+      bbasmb.o SDL2_gfxPrimitives.o sort.o
 
 all: bbcsdl
 
@@ -22,22 +22,22 @@ bbmain.o: bbmain.c BBC.h
 	$(CXX) -Wno-attributes $(CXXFLAGS) -O2 $< -o $@
 
 bbexec.o: bbexec.c BBC.h
-	$(CXX) $(CXXFLAGS) -DARMHF -O2 $< -o $@
+	$(CXX) $(CXXFLAGS) -O2 $< -o $@
 
 bbeval.o: bbeval.c BBC.h
 	$(CXX) -Wno-array-bounds $(CXXFLAGS) -O2 $< -o $@
 
-bbasmb.o: bbasmb_arm_32.c BBC.h
+bbasmb.o: bbasmb_arm_64.c BBC.h
 	$(CXX) $(CXXFLAGS) -Os $< -o $@
 
 bbcmos.o: bbcmos.c bbcsdl.h
-	$(CXX) -Wno-array-bounds $(CXXFLAGS) -mfpu=neon -O2 $< -o $@
+	$(CXX) -Wno-array-bounds $(CXXFLAGS) -O2 $< -o $@
 
 bbccli.o: bbccli.c bbcsdl.h
 	$(CXX) -Wno-unused-result $(CXXFLAGS) -Os $< -o $@
 
 bbcvdu.o: bbcvdu.c bbcsdl.h
-	$(CXX) $(CXXFLAGS) -DARMHF -Os $< -o $@
+	$(CXX) $(CXXFLAGS) -Os $< -o $@
 
 bbcvtx.o: bbcvtx.c bbcsdl.h
 	$(CXX) $(CXXFLAGS) -O3 $< -o $@
@@ -54,8 +54,12 @@ SDL2_rotozoom.o: SDL2_rotozoom.c SDL2_rotozoom.h SDL2_gfxPrimitives.h SDL_stbima
 flood.o: flood.c
 	$(CXX) $(CXXFLAGS) -O3 $< -o $@
 
-bbdata.o: ../../src/bbdata_arm_32.s
-	as ../../src/bbdata_arm_32.s -o bbdata.o
+sort.o: sort.c
+	$(CXX) $(CXXFLAGS) -O3 $< -o $@
+
+bbdata.o: ../../src/bbdata_arm_64.s
+	sed 's/_\([a-z]*\)/\1/g' <../../../BBCSDL/src/bbdata_arm_64.s >bbdata.s
+	as bbdata.s -o bbdata.o
 
 libstb.so: SDL2_rotozoom.o
 	$(CXX) -shared -o libstb.so SDL2_rotozoom.o

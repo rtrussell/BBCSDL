@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.19a, 10-Jan-2021                                *
+*       Version 1.23a, 03-Jul-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -404,6 +404,10 @@ long long BBC_RemoveTimer(st id, st i1, st i2, st i3, st i4, st i5, st i6, st i7
 
 // Miscellaneous:
 
+long long BBC_HasIntersection(st recta, st rectb, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_HasIntersection((const SDL_Rect*) recta, (const SDL_Rect*) rectb); }
+
 long long BBC_SetHint(st name, st value, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_SetHint((const char*) name, (const char*) value); }
@@ -528,7 +532,7 @@ long long BBC_emscripten_async_wget(st url, st file, st i2, st i3, st i4, st i5,
 	return 0 ;
 }
 
-#define NSYS 108
+#define NSYS 109
 #define POW2 128 // smallest power-of-2 >= NSYS
 
 static const char *sysname[NSYS] = {
@@ -582,6 +586,7 @@ static const char *sysname[NSYS] = {
 	"SDL_GetRenderTarget",
 	"SDL_GetTicks",
 	"SDL_GetWindowFlags",
+	"SDL_HasIntersection",
 	"SDL_LoadBMP_RW",
 	"SDL_LoadWAV_RW",
 	"SDL_LockAudioDevice",
@@ -692,6 +697,7 @@ static void *sysfunc[NSYS] = {
 	BBC_GetRenderTarget,
 	BBC_GetTicks,
 	BBC_GetWindowFlags,
+	BBC_HasIntersection,
 	BBC_LoadBMP_RW,
 	BBC_LoadWAV_RW,
 	BBC_LockAudioDevice,

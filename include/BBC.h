@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       BBC.h constant, variable and structure declarations        *
-*       Version 1.23a, 05-Jun-2021                                 *
+*       Version 1.23a, 16-Jun-2021                                 *
 \******************************************************************/
 
 // Constants:
@@ -295,8 +295,8 @@ register signed char *esi asm ("r12") ;	// Program pointer
 register heapptr *esp asm ("r13") ;	// Stack pointer
 #endif
 #ifdef __aarch64__
-register signed char *esi asm ("x28") ;	// Program pointer
-register heapptr *esp asm ("x29") ;	// Stack pointer
+register signed char *esi asm ("x27") ;	// Program pointer
+register heapptr *esp asm ("x28") ;	// Stack pointer
 #endif
 #endif
 

@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.20a, 02-Mar-2021                                *
+*       Version 1.23a, 18-Jun-2021                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
+#include <setjmp.h>
 #include "SDL2/SDL.h"
 #include "SDL_ttf.h"
 #include "bbcsdl.h"
@@ -50,7 +51,11 @@ void oscli (char *) ;		// Execute an emulated OS command
 // Interpreter entry point:
 int basic (void *, void *, void *) ;
 
+// Global jump buffer:
+extern jmp_buf env ;
+
 // Forward references:
+void oswrch (unsigned char) ;
 unsigned char osbget (void*, int*) ;
 void osbput (void*, unsigned char) ;
 
@@ -1162,7 +1167,14 @@ heapptr xtrap (void)
 // Report a 'fatal' error:
 void faterr (const char *msg)
 {
-	SDL_ShowSimpleMessageBox (SDL_MESSAGEBOX_ERROR, szVersion, msg, hwndProg) ;
+	if (SDL_ShowSimpleMessageBox (SDL_MESSAGEBOX_ERROR, szVersion, msg, hwndProg))
+	    {
+		reset () ;
+		oswrch (22) ; oswrch (7) ;
+		text (msg) ;
+		crlf () ;
+		longjmp (env, 256) ;		
+	    }
 }
 
 // Wait a maximum period for a keypress, or test key asynchronously:

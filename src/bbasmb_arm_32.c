@@ -287,7 +287,7 @@ static void poke (void *p, int n)
 	memcpy (d, p, n) ;
 }
 
-void *align (void)
+static void *align (void)
 {
 	while (stavar[16] & 3)
 	    {
@@ -351,7 +351,7 @@ void assemble (void)
 					do
 					    {
 						unsigned int i = *(unsigned int *)p ;
-#ifdef _WIN32
+#if (defined (_WIN32)) && (__GNUC__ < 9)
 						sprintf (accs, "%08I64X ", (long long) (size_t) oldpc) ;
 #else
 						sprintf (accs, "%08llX ", (long long) (size_t) oldpc) ;

@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.21a, 05-Apr-2021                                *
+*       Version 1.23a, 19-Jun-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1259,10 +1259,13 @@ static void newmode (short wx, short wy, short cx, short cy, short nc, signed ch
 	}
 #else
 	{
+		int x, y ;
 		SDL_DisplayMode dm ;
 		SDL_SetWindowSize (hwndProg, wx, wy) ;
 		SDL_GetDesktopDisplayMode (0, &dm) ;
-		SDL_SetWindowPosition (hwndProg, (dm.w - wx) >> 1, (dm.h - wy) >> 1) ;
+		SDL_GetWindowPosition (hwndProg, &x, &y) ;
+		if ((x < 0) || (y < 0) || ((x + wx) > dm.w) || ((y + wy) > dm.h))
+		    SDL_SetWindowPosition (hwndProg, (dm.w - wx) >> 1, (dm.h - wy) >> 1) ;
 	}
 #endif
 	SDL_SetRenderTarget (memhdc, tex) ;
@@ -2166,19 +2169,20 @@ int getwid_ (int l, char *s)
 // OPENFONT
 TTF_Font *openfont_ (char *filename, int sizestyle)
 {
+	SDL_Texture **p ;
 	if (hfont)
 		{
-			SDL_Texture **p ;
 			TTF_CloseFont (hfont) ;
-			for (p = TTFcache; p < TTFcache + 65536; p++)
-				if (*p != NULL)
-				{
-					SDL_DestroyTexture (*p) ;
-					*p = NULL ;
-				}
+			hfont = NULL ;
 		}
 
-	hfont = NULL ;
+	for (p = TTFcache; p < TTFcache + 65536; p++)
+		if (*p != NULL)
+		{
+			SDL_DestroyTexture (*p) ;
+			*p = NULL ;
+		}
+
 	vflags &= ~UFONT ;
 	if ((sizestyle & 0xFFFF) == 0)	// default font?
 	{
