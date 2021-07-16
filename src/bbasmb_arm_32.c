@@ -3,7 +3,7 @@
 *       (c) 2018-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       bbasmb.c: Simple ARM 4 assembler                          *
-*       Version 1.22a, 29-Apr-2021                                *
+*       Version 1.24a, 12-Jul-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -292,7 +292,8 @@ static void *align (void)
 	while (stavar[16] & 3)
 	    {
 		stavar[16]++ ;
-		stavar[15]++ ;
+		if (liston & BIT6)
+			stavar[15]++ ;
 	    } ;
 	return PC ;
 }
@@ -396,7 +397,8 @@ void assemble (void)
 				    }
 				nxt () ;
 #ifdef __arm__
-				__builtin___clear_cache (oldpc, PC) ; 
+				if ((liston & BIT6) == 0)
+					__builtin___clear_cache (oldpc, PC) ; 
 #endif
 				oldpc = PC ;
 				oldesi = esi ;

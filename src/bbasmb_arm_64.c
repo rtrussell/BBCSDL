@@ -5,6 +5,7 @@
 *                                                                 *
 *       bbasmb_arm_64.c: Simple ARM 4 assembler                   *
 *       Version 0.01, 27 May 2021                                 *
+*       Version 0.02, 12 Jul 2021                                 *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -13,6 +14,10 @@
 #include <ctype.h>
 #include <string.h>
 #include "BBC.h"
+
+#ifdef __APPLE__
+#include <libkern/OSCacheControl.h>
+#endif
 
 #ifndef __WINDOWS__
 #define stricmp strcasecmp
@@ -506,7 +511,8 @@ void *align (void)
     while (stavar[16] & 3)
         {
         stavar[16]++ ;
-        stavar[15]++ ;
+        if (liston & BIT6)
+                stavar[15]++ ;
         } ;
     return PC ;
 }
@@ -528,7 +534,8 @@ void *align (void)
  */
 
 enum addressing_mode { REG_UXTW, REG_SXTW, REG_SXTX, REG_LSL, REG_UNMODIFIED,
-                       LITERAL, PRE_INDEXED, POST_INDEXED, NO_OFFSET, IMMEDIATE };
+                       LITERAL, PRE_INDEXED, POST_INDEXED, NO_OFFSET, IMMEDIATE,
+                       NOTFOUND = -1 };
 
 static char *extends[] = { "UXTW", "SXTW", "SXTX", "LSL" };
 
@@ -999,7 +1006,12 @@ void assemble (void)
                     }
                 nxt () ;
 #if defined(__arm__) || defined(__aarch64__)
-                __builtin___clear_cache (oldpc, PC) ; 
+                if ((liston & BIT6) == 0)
+	#ifdef __APPLE__
+		        sys_icache_invalidate (oldpc, PC - oldpc) ;
+	#else
+                        __builtin___clear_cache (oldpc, PC) ;
+	#endif
 #endif
                 oldpc = PC ;
                 oldesi = esi ;
@@ -1294,7 +1306,8 @@ void assemble (void)
 
                             enum modifier { EXT_UXTB, EXT_UXTH, EXT_UXTW, EXT_UXTX,
                                             EXT_SXTB, EXT_SXTH, EXT_SXTW, EXT_SXTX,
-                                            EXT_LSL,  EXT_LSR,  EXT_ASR,  EXT_ROR, EXT_NO_MODIFIER };
+                                            EXT_LSL,  EXT_LSR,  EXT_ASR,  EXT_ROR, EXT_NO_MODIFIER,
+                                            NOTFOUND = -1 };
 
                             static char *modifiers[] = { "UXTB", "UXTH", "UXTW", "UXTX",
                                                          "SXTB", "SXTH", "SXTW", "SXTX",
