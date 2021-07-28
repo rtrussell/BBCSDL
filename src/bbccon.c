@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2021                          *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.34a, 03-Jun-2021                                 *
+*       Version 0.36a, 26-Jul-2021                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -1438,11 +1438,7 @@ int entry (void *immediate)
 	keystr = (char**) (path + 0x100) ;	// *KEY strings
 	keybdq = (char*) keystr + 0x100 ;	// Keyboard queue
 	eventq = (void*) keybdq + 0x100 ;	// Event queue
-	envels = (signed char*) eventq + 0x200 ;// Envelopes
-	waves = (short*) (envels + 0x100) ;	// Waveforms n.b. &20000 bytes long
-	filbuf[0] = (waves + 0x10000) ;		// File buffers n.b. pointer arithmetic!!
-	usrchr = (char*) (filbuf[0] + 0x800) ;	// User-defined characters
-	tempo = 0x45 ;				// Default SOUND tempo
+	filbuf[0] = (eventq + 0x200 / 4) ;	// File buffers n.b. pointer arithmetic!!
 	farray = 1 ;				// @hfile%() number of dimensions
 	fasize = MAX_PORTS + MAX_FILES + 4 ;	// @hfile%() number of elements
 

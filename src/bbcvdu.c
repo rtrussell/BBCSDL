@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.23a, 19-Jun-2021                                *
+*       Version 1.24a, 24-Jul-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -69,9 +69,9 @@ static short logicop[] =
         0x1501,	// GCOL 2 - AND (GL_AND)
         0x1506,	// GCOL 3 - XOR (GL_XOR)
         0x150A,	// GCOL 4 - NOT (GL_INVERT)
-        0,
-        0,
-        0
+        0x1505,	// GCOL 5 - GL_NOOP
+        0x1504,	// GCOL 6 - GL_AND_INVERTED
+        0x150D,	// GCOL 7 - GL_OR_INVERTED
 } ;
 
 static SDL_BlendMode blendop[] = 
@@ -79,11 +79,11 @@ static SDL_BlendMode blendop[] =
 	SDL_BLENDMODE_NONE, // GCOL 0 - just plot
 	SDL_BLENDMODE_ADD,  // GCOL 1 - add
 	SDL_BLENDMODE_MOD,  // GCOL 2 - multiply
-	0,		    // GCOL 3 - 'xor' (populated in vduinit)
-	0,		    // GCOL 4 - 'not' (populated in vduinit)
-        0,
-        0,
-        0
+	0,		    // GCOL 3 (populated in vduinit)
+	0,		    // GCOL 4 (populated in vduinit)
+        0,		    // GCOL 5 (populated in vduinit)
+	SDL_BLENDMODE_MOD,  // GCOL 6 - multiply by NOT src
+	SDL_BLENDMODE_ADD,  // GCOL 7 - add to NOT src
 } ;
 
 // It is important that solid colours aren't dithered, since
@@ -95,42 +95,41 @@ static SDL_BlendMode blendop[] =
 // XOR, INVERT) act upon the RGB value, *not* the palette index;
 // this may give unexpected results.  To maximise compatibility
 // between paletted and non-paletted displays, the default coltab
-// should have the property that logical maipulation of the index
+// should have the property that logical manipulation of the index
 // has the same effect as the equivalent manipulation of the RGB
 // value.  This is achieved by a direct mapping between each bit
-// of the index value and bits in the RGB values.  Unfortunately
-// the mapping from 8-bit to 5-bit RGB values for 15-bit & 16-bit
-// colour modes is slightly odd:
-//    if (col5 == 0)       col8 = 0x00
-//    else if (col5 == 1)  col8 = 0x0C
-//    else if (col5 == 31) col8 = 0xFF
-//    else                 col8 = (col5 + 1) * 8
+// of the index value and bits in the RGB values.  The mapping
+// from RGB555 to RGB888 is not universal across platforms but
+// this seems to be a common algorithm which preserves this rule:
+//    col8 = (col5 << 3) OR (col5 >> 2)
 // so the following mapping is chosen to satisfy both 15-bit and
 // 24-bit modes:
 //    00:  00000B -> 00000000B -> (0x00)
-//    01:  00110B -> 00111000B -> (0x38)
-//    10:  11000B -> 11001000B -> (0xC8)
-//    11:  11110B -> 11111000B -> (0xF8)
+//    01:  00110B -> 00110001B -> (0x31)
+//    10:  11001B -> 11001110B -> (0xCE)
+//    11:  11111B -> 11111111B -> (0xFF)
+// Fortuitously these four values also satisfy another common
+// algorithm: col8 = round((col5 / 31) * 255)
 //
 // DO NOT MODIFY THESE TABLES WITHOUT REFERENCE TO THE ABOVE !!
 
 static unsigned int coltab[NUMCOLOURS] =
 {
 0xFF000000,        // Black
-0xFF0000C8,        // Red
-0xFF00C800,        // Green
-0xFF00C8C8,        // Yellow
-0xFFC80000,        // Blue
-0xFFC800C8,        // Magenta
-0xFFC8C800,        // Cyan
-0xFFC8C8C8,        // White
-0xFF383838,        // Grey
-0xFF0000FF,        // Intensified red
-0xFF00FF00,        // Intensified green
-0xFF00FFFF,        // Intensified yellow
-0xFFFF0000,        // Intensified blue
-0xFFFF00FF,        // Intensified magenta
-0xFFFFFF00,        // Intensified cyan
+0xFF0000CE,        // Red
+0xFF00CE00,        // Green
+0xFF00CECE,        // Yellow
+0xFFCE0000,        // Blue
+0xFFCE00CE,        // Magenta
+0xFFCECE00,        // Cyan
+0xFFCECECE,        // White
+0xFF313131,        // Grey
+0xFF3131FF,        // Intensified red
+0xFF31FF31,        // Intensified green
+0xFF31FFFF,        // Intensified yellow
+0xFFFF3131,        // Intensified blue
+0xFFFF31FF,        // Intensified magenta
+0xFFFFFF31,        // Intensified cyan
 0xFFFFFFFF         // Intensified white
 } ;
 
@@ -143,15 +142,15 @@ static unsigned int coltab[NUMCOLOURS] =
 static unsigned int coltb4[] =
 {
 0xFF000000,        // Black
-0xFFC800C8,        // Magenta
-0xFF00C800,        // Green
-0xFFC8C8C8         // White
+0xFFCE00CE,        // Magenta
+0xFF00CE00,        // Green
+0xFFCECECE         // White
 } ;
 
 static unsigned int coltb2[] =
 {
 0xFF000000,        // Black
-0xFFC8C8C8         // White
+0xFFCECECE         // White
 } ;
 
 // Table of client area width & height, character width & height
@@ -252,6 +251,16 @@ int BBC_RenderReadPixels (SDL_Renderer* renderer, const SDL_Rect* rect,
 /*****************************************************************\
 *       Graphics support functions                                *
 \*****************************************************************/
+
+// Copy the RGB MSBs to all 8 bits:
+static unsigned int rgbsra7 (unsigned int rgb)
+{
+	rgb &= 0x808080 ;
+	rgb |= (rgb >> 4) ;
+	rgb |= (rgb >> 2) ;
+	rgb |= (rgb >> 1) ;
+	return rgb | 0xFF000000 ;
+}
 
 // Set render draw colour:
 static void setcol (unsigned char ci)
@@ -995,14 +1004,15 @@ static void charout_logic (short ax, short fg, int cx, int cy, int dx)
 		SDL_RenderReadPixels (memhdc, &rect, SDL_PIXELFORMAT_ABGR8888, p, pitch) ;
 		SDL_UnlockTexture (tex) ;
 		SDL_SetTextureBlendMode (tex, blendop[rop]) ;
-		if (rop == 2)
+		if ((rop == 2) || (rop == 6))
 			SDL_SetRenderDrawColor (memhdc, 0xFF, 0xFF, 0xFF, 0xFF) ;
 		else
 			SDL_SetRenderDrawColor (memhdc, 0, 0, 0, 0xFF) ;
 		BBC_RenderSetClipRect (memhdc, hrect) ;
 		SDL_RenderFillRect (memhdc, &rect) ;
-		if (rop == 3) col |= 8 ;
-		if (rop == 4) col = 255 ;
+		if (rop == 3) { palette[255] = rgbsra7 (palette[col]) ; col = 255; }
+		if (rop == 4) { palette[255] = 0xFFFFFFFF ; col = 255 ; }
+		if (rop >= 6) { palette[255] = palette[col] ^ 0xFFFFFF; col = 255; }
 		charout (ax, col, 0xFF, cx, cy, dx) ;
 		SDL_RenderCopy (memhdc, tex, NULL, &rect) ;
 		SDL_DestroyTexture (tex) ;
@@ -1195,8 +1205,6 @@ static void minit (signed char bc)
 static void gcol (char al, signed char ah)
 {
 	al &= 7 ;
-	if (al == 4)
-		ah |= 0x7F ;		// GCOL 4 - NOT
 	if (ah >= 0)
 		forgnd = (((ah & colmsk) << 8) | al) ;
 	else
@@ -1221,7 +1229,7 @@ static void rescol (void)
 	}
 	for (i = 0; i < n; i++)
 		palette[i] = p[i] ;
-	palette[255] = 0xFFFFFFFF ; // for 'invert' colour 
+
 	txtfor = colmsk & 7 ;
 	txtbak = 0 ;
 	gcol (0, txtfor) ;
@@ -1302,6 +1310,9 @@ static void vduinit (void)
 			SDL_BLENDFACTOR_ONE_MINUS_SRC_COLOR, SDL_BLENDOPERATION_ADD, 
 			SDL_BLENDFACTOR_ZERO, SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD) ;
 	blendop[4] = blendop[3] ;
+	blendop[5] = SDL_ComposeCustomBlendMode (SDL_BLENDFACTOR_ZERO, 
+			SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD, 
+			SDL_BLENDFACTOR_ZERO, SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD) ;
 #endif
 	hfont = NULL ;
 	modeno = -1 ;
@@ -1422,8 +1433,9 @@ static void plotns (unsigned char al, int cx, int cy)
 		else
 		    {
 			SDL_SetRenderDrawBlendMode (memhdc, blendop[rop]) ;
-			if (rop == 3) col |= 8 ;
-			if (rop == 4) col = 255 ;
+			if (rop == 3) { palette[255] = rgbsra7 (palette[col]) ; col = 255; }
+			if (rop == 4) { palette[255] = 0xFFFFFFFF ; col = 255 ; }
+			if (rop >= 6) { palette[255] = palette[col] ^ 0xFFFFFF; col = 255; }
 		    }
 	}
 
@@ -1690,8 +1702,9 @@ static void clg (void)
 			else
 			    {
 				SDL_SetRenderDrawBlendMode (memhdc, blendop[rop]) ;
-				if (rop == 3) col |= 8 ;
-				if (rop == 4) col = 255 ;
+				if (rop == 3) { palette[255] = rgbsra7 (palette[col]) ; col = 255; }
+				if (rop == 4) { palette[255] = 0xFFFFFFFF ; col = 255 ; }
+				if (rop >= 6) { palette[255] = palette[col] ^ 0xFFFFFF; col = 255; }
 			    }
 			filledPolygonColor (memhdc, vx, vy, 4, palette[(int) col]) ;
 			if (glLogicOpBBC)
