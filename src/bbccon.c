@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2021                          *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.36a, 26-Jul-2021                                 *
+*       Version 0.36a, 28-Jul-2021                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -1640,7 +1640,7 @@ HANDLE hThread = NULL ;
 
 	char *pstrVirtual = NULL ;
 
-	while ((MaximumRAM > DEFAULT_RAM) &&
+	while ((MaximumRAM >= DEFAULT_RAM) &&
 		(NULL == (pstrVirtual = (char*) VirtualAlloc (NULL, MaximumRAM,
 						MEM_RESERVE, PAGE_EXECUTE_READWRITE))))
 		MaximumRAM /= 2 ;
@@ -1661,7 +1661,7 @@ pthread_t hThread = 0 ;
 
 	void *base = NULL ;
 
-	while ((MaximumRAM > DEFAULT_RAM) && (NULL == (base = mymap (MaximumRAM))))
+	while ((MaximumRAM >= MINIMUM_RAM) && (NULL == (base = mymap (MaximumRAM))))
 		MaximumRAM /= 2 ;
 
 	// Now commit the initial amount to physical RAM:
@@ -1678,7 +1678,7 @@ pthread_t hThread = NULL ;
 
 	platform = 2 ;
 
-	while ((MaximumRAM > DEFAULT_RAM) &&
+	while ((MaximumRAM >= MINIMUM_RAM) &&
 				((void*)-1 == (userRAM = mmap ((void *)0x10000000, MaximumRAM, 
 						PROT_EXEC | PROT_READ | PROT_WRITE, 
 						MAP_PRIVATE | MAP_ANON, -1, 0))) &&
@@ -1698,7 +1698,10 @@ pthread_t hThread = NULL ;
 	platform |= 0x40 ;
 #endif
 
-	userTOP = userRAM + DEFAULT_RAM ;
+	if (MaximumRAM > DEFAULT_RAM)
+		userTOP = userRAM + DEFAULT_RAM ;
+	else
+		userTOP = userRAM + MaximumRAM ;
 	progRAM = userRAM + PAGE_OFFSET ; // Will be raised if @cmd$ exceeds 255 bytes
 	szCmdLine = progRAM - 0x100 ;     // Must be immediately below default progRAM
 	szTempDir = szCmdLine - 0x100 ;   // Strings must be allocated on BASIC's heap
