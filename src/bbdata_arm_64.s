@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2000-2021                    *
 *                                                                 *
 *       BBCDAT.S RAM data definitions                             *
-*       Version 1.23a, 08-Jul-2021                                *
+*       Version 1.24a, 29-Jul-2021                                *
 \*****************************************************************/
 
 .equ	MAX_PORTS,4
@@ -655,6 +655,8 @@ fnarr0:	.quad	_loadn		/* Load numeric  */
 	.quad	_gfxPrimitivesGetFont
 	.quad	_gfxPrimitivesSetFont
 fnarrt:
+
+	.text
 
 _fvtab:	.byte	1		/* &19 v&  Unsigned byte (8 bits) */
 	.byte	4		/* &1A v%  Signed dword (32 bits) */
