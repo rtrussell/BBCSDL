@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.22a, 18-Apr-2021                                *
+*       Version 1.24a, 31-Jul-2021                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -636,7 +636,7 @@ void clear (void)
 	pfree = lomem + 4 * fastvars ;
 	memset (dynvar, 0, 4 * (54 + 2)) ;
 	memset (flist, 0, sizeof(void *) * 33 + 8) ;
-	link00 = 0 ;
+	memset (&link00, 0, 4) ;
 }
 
 // Find the line containing a particular address
