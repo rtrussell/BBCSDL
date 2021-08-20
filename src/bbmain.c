@@ -522,7 +522,7 @@ void listline (signed char *p, int *pindent)
 	signed char al = 0 ;
 	char number[7] ;
 	unsigned char mode = BIT0 ; // set left
-	unsigned short lino = *(unsigned short*) p ;
+	unsigned short lino = SLOAD(p) ;
 	if (lino)
 		sprintf (number, "%5d", lino) ;
 	else
@@ -606,7 +606,7 @@ signed char *gettop (signed char *ebx, unsigned short *reserved)
 		if (n == 3)
 		    {
 			if (reserved != NULL)
-				*reserved = * ((unsigned short *) ebx - 1) ;
+				*reserved = SLOAD(ebx - 2) ;
 			if (*ebx == 0) return ebx ;
 			return NULL ;
 		    }
@@ -619,6 +619,7 @@ signed char *gettop (signed char *ebx, unsigned short *reserved)
 // Make space for 'fast' variables if appropriate
 void clear (void)
 {
+	int i ;
 	unsigned short fastvars ;
 	signed char *ebx = vpage + (signed char *) zero ;
 	signed char *top = gettop (ebx, &fastvars) ;
@@ -636,7 +637,9 @@ void clear (void)
 	pfree = lomem + 4 * fastvars ;
 	memset (dynvar, 0, 4 * (54 + 2)) ;
 	memset (flist, 0, sizeof(void *) * 33 + 8) ;
-	memset (&link00, 0, 4) ;
+        // link00 is a non-aligned 32-bit word 
+        for(i=0; i<4; i++)
+            ((volatile char *)&link00)[i]=0;
 }
 
 // Find the line containing a particular address
@@ -667,7 +670,7 @@ unsigned short setlin (signed char *edx, char **pebp)
 		tmp = findlin(libase + zero, edx, pebp) ;
 	if (tmp == NULL)
 		return 0 ;
-	return *(unsigned short *)(tmp + 1) ;
+	return SLOAD(tmp + 1) ;
 }
 
 // Find a specified numbered line in the program by
@@ -689,9 +692,9 @@ signed char * findl (unsigned int edx)
 		return NULL ;
 	    }
 	edx &= 0xFFFF ;
-	while (edx > *(unsigned short *)(ebx + 1))
+	while (edx > SLOAD(ebx + 1))
 		ebx += (int)*(unsigned char *)ebx ; 
-	if (edx == *(unsigned short *)(ebx + 1))
+	if (edx == SLOAD(ebx + 1))
 		return ebx ;
 	return NULL ;
 }
@@ -736,15 +739,15 @@ char * allocs (unsigned int *ps, int len)
 
 	if (len)
 		new = 32 - __builtin_clz (len) ;
-	if (*(ps+1))
-		old = 32 - __builtin_clz (*(ps+1)) ;
-	*(ps+1) = len ;
+	if (ULOAD(ps+1))
+		old = 32 - __builtin_clz (ULOAD(ps+1)) ;
+	USTORE(ps+1, len) ;
 
 // if old and new strings have the same allocation, just change the length:
 
 	if (old == new)
 	    {
-		return *ps + (char *) zero ; 
+		return ULOAD(ps) + (char *) zero ; 
 	    }
 
 	size = ((1 << new) - 1) ; // new allocation
@@ -759,8 +762,8 @@ char * allocs (unsigned int *ps, int len)
 		head->next = flist[old] ;
 		flist[old] = head ; 	  // insert into 'old' list
 		addr = head->data ;
-		head->data = *ps + (char *) zero ; 
-		*ps = addr - (char *) zero ;
+		head->data = ULOAD(ps) + (char *) zero ; 
+		USTORE(ps, addr - (char *) zero) ;
 		return addr ;
 	    }
 
@@ -768,9 +771,9 @@ char * allocs (unsigned int *ps, int len)
 // It is extremely important that a block in the free list is used *
 // IN PREFERENCE TO expanding into the heap.
 
-	if (old && ((*ps + (1 << old) - 1) == pfree))
+	if (old && ((ULOAD(ps) + (1 << old) - 1) == pfree))
 	    {
-		addr = *ps + (char *) zero ;
+		addr = ULOAD(ps) + (char *) zero ;
 		if (size > ((char *)esp - addr - STACK_NEEDED))
 			error (0, NULL) ; // 'No room'
 		pfree = addr + size - (char *) zero ;
@@ -792,7 +795,7 @@ char * allocs (unsigned int *ps, int len)
 			pfree = addr + sizeof (node) - (char *) zero ;
 			head = (node *) addr ;
 		    }
-		head->data = *ps + (char *) zero ;
+		head->data = ULOAD(ps) + (char *) zero ;
 		head->next = flist[old] ;
 		flist[old] = head ;
 	    }
@@ -803,7 +806,7 @@ char * allocs (unsigned int *ps, int len)
 	if (size > ((char *)esp - addr - STACK_NEEDED))
 		error (0, NULL) ; // 'No room'
 	pfree = addr + size - (char *) zero ;
-	*ps = addr - (char *) zero ;
+	USTORE(ps, addr - (char *) zero) ;
 	return addr ;
 }
 
@@ -870,14 +873,14 @@ void braket (void)
 int arrlen (void **pebx)
 {
 	int dims ;
-	unsigned char *ebx = *(unsigned char **)pebx ;
+	unsigned char *ebx = *(unsigned char**)pebx ;
 	int edx = 1 ;
 	if ((ebx < (unsigned char*)2) || (*ebx == 0))
 		error(14, NULL) ; // 'Bad use of array'
 	dims = *ebx++ ;
 	while (dims--)
 	    {
-		edx *= *(unsigned int *)ebx ;
+		edx *= ULOAD(ebx) ;
 		ebx += 4 ;
 	    }
 	*pebx = ebx ;
@@ -889,7 +892,7 @@ int arrlen (void **pebx)
 static int getsub (void **pebx, unsigned char *ptype)
 {
 	int dims ;
-	unsigned char *ebx = *(unsigned char **)pebx ;
+	unsigned char *ebx = (unsigned char*) CLOAD(pebx) ;
 	int edx = 0 ;
 	if ((ebx < (unsigned char*)2) || (*ebx == 0))
 		error(14, NULL) ; // 'Bad use of array'
@@ -897,7 +900,7 @@ static int getsub (void **pebx, unsigned char *ptype)
 	while (dims--)
 	    {
 		unsigned long long n = expri () ;
-		int ecx = *(unsigned int *)ebx ;
+		int ecx = ULOAD(ebx) ;
 		ebx += 4 ;
 		if (n >= ecx)
 			error (15, NULL) ; // 'Subscript out of range'
@@ -992,8 +995,8 @@ void * putvar (void *ebx, unsigned char *ptype)
 {
 	unsigned char *edi = pfree + (unsigned char *) zero ;
 
-	*(heapptr *)edi = *(heapptr *) ebx ;
-	*(heapptr *)ebx = edi - (unsigned char *) zero ;
+	USTORE(edi, ULOAD(ebx)) ;
+	USTORE(ebx, edi - (unsigned char *) zero) ;
 	edi += 4 ;
 
 	ebx = create (&edi, ptype) ;
@@ -1019,8 +1022,8 @@ void * putdef (void *ebx)
 	unsigned char type ;
 	unsigned char *edi = pfree + (unsigned char *) zero ;
 
-	*(heapptr *)edi = *(heapptr *) ebx ; 
-	*(heapptr *)ebx = edi - (unsigned char *) zero ;
+	USTORE(edi, ULOAD(ebx)) ; 
+	USTORE(ebx, edi - (unsigned char *) zero) ;
 	edi += 4 ;
 
 	ebx = create (&edi, &type) ;
@@ -1061,10 +1064,10 @@ static void *scanll (heapptr *base, signed char *edi)
 		    {
 			if (base && prev && ((this - zero) != *base))
 			    {
-				next = *(heapptr *)base ;
-				*(heapptr *)base = this - zero ;
-				*(heapptr *)prev = *(heapptr *)this ;
-				*(heapptr *)this = next ;
+				next = ULOAD(base) ;
+				USTORE(base, this - zero) ;
+				USTORE(prev, ULOAD(this)) ;
+				USTORE(this, next) ;
 			    }
 			if (*(esi-1) == '(')
 				esi-- ;
@@ -1072,7 +1075,7 @@ static void *scanll (heapptr *base, signed char *edi)
 		    }
 		esi = save ;
 		prev = this ;
-		next = *(int *)prev ;
+		next = ILOAD(prev) ;
 		if (base)
 			edi = next + (signed char *) zero ;
 		else
@@ -1099,14 +1102,14 @@ void *getdef (unsigned char *found)
 	al = *++esi ;
 	if (al == 0x18)
 	    {
-		unsigned short index = *(unsigned short *)(esi + 1) ;
+		unsigned short index = SLOAD(esi + 1) ;
 		esi += 3 ;
 		*found = 1 ;
 		return lomem + index * 4 + zero ;
 	    }
 	if (range1(al))
 	    {
-		void *ptr = scanll (ebx, *(heapptr *)ebx + zero) ;
+		void *ptr = scanll (ebx, ULOAD(ebx) + zero) ;
 		if (ptr != NULL)
 		    {
 			*found = 1 ;
@@ -1183,7 +1186,7 @@ static void *locate (unsigned char *ptype)
 		if ((al >= 0x19) && (al <= 0x1F))
 		    {
 			*ptype = fvtab[(int)(al - 0x19)] ;
-			ebx = lomem + (*(unsigned short *)(esi + 1) << 2) + zero ;
+			ebx = lomem + (SLOAD(esi + 1) << 2) + zero ;
 			esi += 3 ;
 			return ebx ;
 		    }
@@ -1215,7 +1218,7 @@ static void *locate (unsigned char *ptype)
 	else
 	    {
 		ebx = &dynvar[al - 'A'] ;
-		edx = *(heapptr *) ebx + zero ;
+		edx = ULOAD(ebx) + zero ;
 	    }
 	esi++ ;
 	ptr = scanll (ebx, edx) ;
@@ -1296,14 +1299,14 @@ void * getvar (unsigned char *ptype)
 		    }
 		if (*ptype == 36)
 			return ebx ; // FNxxx( or PROCxxx( so not an array
-		ebx = *(void **)ebx ;
+		ebx = VLOAD(ebx) ;
 		ecx = getsub (&ebx, ptype) ; // get array data pointer
 		ebx += ecx ; // n.b. ebx is modified by getsub !
 	    }
 
 	if (*ptype & BIT4)
 	    {
-		void *ebp = *(void **)((int *)ebx + STRIDE) ;  // data pointer
+		void *ebp = VLOAD((int *)ebx + STRIDE) ;  // data pointer
 		while (((al = *esi) == '.') || (al == '}'))
 		    {
 			if (al == '}')
@@ -1311,7 +1314,7 @@ void * getvar (unsigned char *ptype)
 
 			if (al == '.')
 			    {
-				signed char *edx = *(void **)ebx ; // template pointer
+				signed char *edx = VLOAD(ebx) ; // template pointer
 				if (edx == NULL)
 					error (26, NULL); // 'No such variable'
 				esi++ ; 
@@ -1322,10 +1325,10 @@ void * getvar (unsigned char *ptype)
 				*ptype = getype (ebx) ;
 				if (*ptype & BIT4) 
 				    {
-					ebp += *((int *)ebx + STRIDE) ;  // data pointer
+					ebp += ILOAD((int *)ebx + STRIDE) ;  // data pointer
 					continue ; // recurse into nested structure
 				    }
-				ebp += *(int *) ebx ; // address data/array
+				ebp += ILOAD(ebx) ; // address data/array
 				if (*esi == '(')
 				    {
 					esi++ ;
@@ -1395,8 +1398,8 @@ void * getdim (unsigned char *ptype)
 	if (*ptype)
 		return ebx ;
 
-	*(heapptr *)edi = *(heapptr *) ebx ;
-	*(heapptr *)ebx = edi - (unsigned char *) zero ;
+	USTORE(edi, ULOAD(ebx)) ;
+	USTORE(ebx, edi - (unsigned char *) zero) ;
 	edi += 4 ;
 
 	ebx = create (&edi, ptype) ;
@@ -1434,7 +1437,7 @@ static void fixup (signed char *ptr, int nlines, unsigned short start, unsigned 
 	signed char c ;
 	int quote = 0 ;
 	unsigned short n ;
-	unsigned short lino = *(unsigned short *)(ptr + 1) ;
+	unsigned short lino = SLOAD(ptr + 1) ;
 	ptr += 3 ;
 	while ((c = *ptr++) != 0x0D)
 	    {
@@ -1447,10 +1450,10 @@ static void fixup (signed char *ptr, int nlines, unsigned short start, unsigned 
 			n += ((*(unsigned char *)ptr++) ^ ((ah << 4) & 0xC0)) * 256 ;
 
 			for (i = 0; i < nlines; i++)
-				if (n == *(unsigned short *)(lomem + zero + i * 2))
+				if (n == SLOAD(lomem + zero + i * 2))
 					break ;
 
-			if (n == *(unsigned short *)(lomem + zero + i * 2))
+			if (n == SLOAD(lomem + zero + i * 2))
 				encode (start + i * step, (char *) ptr - 4) ;
 			else
 			    {
@@ -1567,16 +1570,16 @@ int basic (void *ecx, void *edx, void *prompt)
 			signed char *tmp = vpage + (signed char *) zero ;
 			clear () ;
 			n = strlen (buff) + 3 ;
-			while (lino > *(unsigned short *)(tmp + 1))
+			while (lino > SLOAD(tmp + 1))
 				tmp += (int)*(unsigned char *)tmp ; 
-			if (lino == *(unsigned short *)(tmp + 1))
+			if (lino == SLOAD(tmp + 1))
 				memmove (tmp, tmp + *(unsigned char *)tmp,
 				gettop (vpage + zero, NULL) - tmp + 3 - *(unsigned char *)tmp) ;
 			if (n > 4)
 			    {
 				memmove (tmp + n, tmp, gettop (vpage + zero, NULL) - tmp + 3) ;
 				*(unsigned char *)tmp = n ;
-				*(unsigned short *)(tmp + 1) = lino ;
+				SSTORE(tmp + 1, lino) ;
 				memcpy (tmp + 3, buff, n - 3) ;
 			    }
 			clear () ; // essential to set lomem correctly
@@ -1602,10 +1605,10 @@ int basic (void *ecx, void *edx, void *prompt)
 					if ((lo == 0) && (hi == 0xFFFF)) error (16, NULL) ;
 					if (hi == 0) hi = lo ;
 					esi = vpage + (signed char *) zero ;
-					while (*esi && (*(unsigned short *)(esi + 1) < lo))
+					while (*esi && (SLOAD(esi + 1) < lo))
 						esi += (int)*(unsigned char *)esi ;
 					tmp = (char*) esi ;
-					while (*esi && (*(unsigned short *)(esi + 1) <= hi))
+					while (*esi && (SLOAD(esi + 1) <= hi))
 						esi += (int)*(unsigned char *)esi ;
 					memmove (tmp, esi, gettop (vpage + zero, NULL) - esi + 3) ;
 					break ;
@@ -1621,7 +1624,7 @@ int basic (void *ecx, void *edx, void *prompt)
 					strcat (accs, "bbc.edit.tmp\042\015") ;
 					oswrch (21) ;
 					oscli (accs) ;
-					while (*esi && (*(unsigned short *)(esi + 1) <= hi))
+					while (*esi && (SLOAD(esi + 1) <= hi))
 					    {
 						n = 0 ;
 						listline (esi + 1, &n) ;
@@ -1650,9 +1653,9 @@ int basic (void *ecx, void *edx, void *prompt)
 					*(lexan (tmp, buff, 1)) = 0 ; // to support LISTIF
 					tmp = strchr (buff, TIF) ;
 					while ((tmp != NULL) && (*(++tmp) == ' ')) ;
-					while (*esi && (*(unsigned short *)(esi + 1) < lo))
+					while (*esi && (SLOAD(esi + 1) < lo))
 						esi += (int)*(unsigned char *)esi ; 
-					while (*esi && (*(unsigned short *)(esi + 1) <= hi))
+					while (*esi && (SLOAD(esi + 1) <= hi))
 					    {
 						trap () ;
 						if ((tmp == NULL) || (strstrt (esi + 3, tmp, 13)))
@@ -1695,7 +1698,7 @@ int basic (void *ecx, void *edx, void *prompt)
 								- (char *) esi ;
 							if (n > 255) break ;
 							*esi = n ;
-							*(unsigned short *)(esi + 1) = lino ;
+							SSTORE(esi + 1, lino) ;
 							esi += n ;
 						    }
 						osshut (file) ;
@@ -1718,8 +1721,8 @@ int basic (void *ecx, void *edx, void *prompt)
 					n = 0 ;
 					while (*esi)
 					    {
-						*(unsigned short *)(lomem + zero + 2*n) = 
-						*(unsigned short *)(esi + 1) ;
+						SSTORE(lomem + zero + 2*n, 
+							SLOAD(esi + 1)) ;
 						esi += *(unsigned char *)esi ;
 						n++ ;
 					    }
@@ -1729,7 +1732,7 @@ int basic (void *ecx, void *edx, void *prompt)
 					while (*esi)
 					    {
 						unsigned char c = *(unsigned char *)esi ;
-						*(unsigned short *)(esi + 1) = lino ;
+						SSTORE(esi + 1, lino) ;
 						if (memchr (esi + 3, TLINO, c - 4))
 							fixup (esi, n, lo, hi) ;
 						lino += hi ;
