@@ -3,6 +3,7 @@
 For the original BBCSDL please go to https://github.com/rtrussell/BBCSDL
 
 This fork is part of an attempt to implement console mode BBC Basic on a Raspberry Pi Pico.
+For discussion see https://www.raspberrypi.org/forums/viewtopic.php?f=144&t=316761
 
 It is a work in progress and may often be broken. It includes work by:
 
@@ -47,7 +48,7 @@ At this point the file filesystem.uf2 should be in the build directory.
 Unplug the Pico and replug it holding the boot button and again as 
 root perform the following to copy the uf2 to the Pico:
 
-     $ cp -v bbcbasic.uf2 /media/pi/RPI-RP2
+     $ cp -v filesystem.uf2 /media/pi/RPI-RP2
 
 If using USB, connect as
 
