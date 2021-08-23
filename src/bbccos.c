@@ -1,7 +1,9 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                         *
 *       Copyright (C) R. T. Russell, 2021                         *
-*                                                                 *
+
+        Modified 2021 by Eric Olson for Raspberry Pico
+
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
 *       Version 0.32a, 02-Mar-2021                                *
 \*****************************************************************/
@@ -12,7 +14,12 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <string.h>
+#ifdef PICO
+#include "lfswrap.h"
+extern char __StackLimit;
+#else
 #include <dirent.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "bbccon.h"
@@ -31,9 +38,9 @@ typedef dispatch_source_t timer_t ;
 #endif
 
 #undef MAX_PATH
-#define NCMDS 39	// number of OSCLI commands
+#define NCMDS 40	// number of OSCLI commands
 #define POWR2 32	// largest power-of-2 less than NCMDS
-#define COPYBUFLEN 4096	// length of buffer used for *COPY command
+#define COPYBUFLEN 512	// length of buffer used for *COPY command
 #define _S_IWRITE 0x0080
 #define _S_IREAD 0x0100
 #define MAX_PATH 260
@@ -78,16 +85,16 @@ static char *cmds[NCMDS] = {
 		"dump", "era", "erase", "esc", "exec", "float", "fx",
 		"help", "hex", "input", "key", "list", "load", "lock", "lowercase",
 		"md", "mkdir", "output", "quit", "rd", "refresh",
-		"ren", "rename", "rmdir", "run", "save", "spool", "spoolon",
-		"timer", "tv", "type", "unlock"} ;
+		"ren", "rename", "rmdir", "run", "save", "sbrk", "spool", "spoolon",
+		"timer", "tv", "type", "unlock" } ;
 
 enum {
 		BYE, CD, CHDIR, COPY, DEL, DELETE, DIRCMD,
 		DUMP, ERA, ERASE, ESC, EXEC, FLOAT, FX,
 		HELP, HEX, INPUT, KEY, LIST, LOAD, LOCK, LOWERCASE,
 		MD, MKDIR, OUTPUT, QUIT, RD, REFRESH,
-		REN, RENAME, RMDIR, RUN, SAVE, SPOOL, SPOOLON,
-		TIMER, TV, TYPE, UNLOCK} ;
+		REN, RENAME, RMDIR, RUN, SAVE, SBRK, SPOOL, SPOOLON,
+		TIMER, TV, TYPE, UNLOCK } ;
 
 // Change to a new screen mode:
 static void newmode (short wx, short wy, short cx, short cy, short nc, signed char bc) 
@@ -200,7 +207,11 @@ void xeqvdu (int code, int data1, int data2)
 #ifdef _WIN32
 	if (!_isatty (_fileno (stdin)) || !_isatty (_fileno (stdout)))
 #else
+# ifdef PICO
+    if (0)
+# else
 	if (!isatty (STDIN_FILENO) || !isatty (STDOUT_FILENO))
+# endif
 #endif
 	    {
 		fwrite (&vdu, 1, 1, stdout) ;
@@ -558,13 +569,14 @@ static int wild (char *ebx, char *edx)
 	return 0 ;
 }
 
+extern char *szLoadDir ;  // @dir$
+extern int dirlen;
 void oscli (char *cmd)
 {
 	int b = 0, h = POWR2, n ;
 	char cpy[256] ;
 	char path[MAX_PATH], path2[MAX_PATH] ;
 	FILE *srcfile, *dstfile ;
-	DIR *d ;
 	char *p, *q, dd ;
 	unsigned char flag ;
 
@@ -637,6 +649,13 @@ void oscli (char *cmd)
 			    }
 			if (chdir (path))
 				error (206, "Bad directory") ;
+			getcwd (szLoadDir,255) ;
+			dirlen = strlen (szLoadDir) ;
+#ifdef _WIN32
+			szLoadDir[dirlen++] = '\\' ;
+#else
+			szLoadDir[dirlen++] = '/' ;
+#endif
 			return ;
 
 		case COPY:			// *COPY oldfile newfile
@@ -712,7 +731,37 @@ void oscli (char *cmd)
 			text (p) ;
 			crlf () ;
 
-			d = opendir (q) ;
+#ifdef PICO
+			lfs_dir_t d;
+			if(lfs_dir_open(&lfs_root,&d,q)<0)
+				error (254, "Bad command") ;
+			while (1)
+			    {
+				stdin_handler (NULL, NULL) ;
+				if (flags & (ESCFLG | KILL))
+				    {
+					lfs_dir_close(&lfs_root,&d);
+					crlf () ;
+					trap () ;
+				    }
+				struct lfs_info r;
+				if(!lfs_dir_read(&lfs_root,&d,&r))
+					break ;
+				if (!wild (p, r.name))
+					continue ;
+				outchr (' ') ;
+				outchr (' ') ;
+				text (r.name) ;
+				do
+					outchr (' ') ;
+				while ( (vcount != 0) && (vcount != 20) &&
+					(vcount != 40) && (vcount < 60)) ;
+				if (vcount > 60)
+					crlf () ;
+			    }
+			lfs_dir_close(&lfs_root,&d);
+#else
+			DIR *d = opendir (q) ;
 			if (d == NULL)
 				error (254, "Bad command") ;
 
@@ -741,6 +790,7 @@ void oscli (char *cmd)
 					crlf () ;
 			    }
 			closedir (d) ;
+#endif
 			crlf () ;
 			return ;
 
@@ -1053,6 +1103,14 @@ void oscli (char *cmd)
 			while (n) ;
 			fclose (srcfile) ;
 			crlf () ; // Zero COUNT
+			return ;
+
+		case SBRK:
+			printf("Current sbrk address is %p.\r\n",sbrk(0)) ;
+#ifdef PICO
+			printf("System malloc heap remaining %llu.\r\n",
+			(unsigned long long int)(&__StackLimit-(char *)sbrk(0))) ;
+#endif
 			return ;
 
 		case UNLOCK:

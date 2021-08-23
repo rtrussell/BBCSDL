@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.24a, 08-Aug-2021                                *
+*       Version 1.23a, 18-Jun-2021                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -45,7 +45,7 @@ void crlf (void) ;		// Output a newline
 unsigned int rnd (void) ;	// Return a pseudo-random number
 
 // Declared in bbccli.c:
-char *setup (char *, char *, char *, char, unsigned char *) ;
+char *setup (char *, char *, char *, char, int *) ;
 void oscli (char *) ;		// Execute an emulated OS command
 
 // Interpreter entry point:

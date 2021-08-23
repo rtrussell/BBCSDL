@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.24a, 05-Aug-2021                                *
+*       Version 1.25a, 21-Aug-2021                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -1228,6 +1228,8 @@ void newlin (void)
 	    }
 }
 
+void stkchk(void);
+
 // Execute the program:
 VAR xeq (void)
 {
@@ -1235,6 +1237,7 @@ VAR xeq (void)
 	void *tmpesi ;
 	while (1) // for each statement
 	    {
+	        stkchk();
 	 	if (flags & (KILL + PAUSE + ALERT + ESCFLG))
 		    {
 			heapptr jump = xtrap () ;
@@ -1864,8 +1867,7 @@ VAR xeq (void)
 				{
 				equals () ;
 				void *n = (void *) (size_t) expri () ;
-				if ((n < progRAM) ||
-					((n + STACK_NEEDED) > (void *) esp))
+				if ((n + STACK_NEEDED) > (void *) esp)
 					error (8, NULL) ; // 'Address out of range'
 				vpage = n - zero ;
 				}
@@ -1877,9 +1879,8 @@ VAR xeq (void)
 				{
 				equals () ;
 				void *n = (void *) (size_t) expri () ;
-				if ((n < progRAM) || 
-					((n + STACK_NEEDED) > (void *) esp))
-						error (8, NULL) ; // 'Address out of range'
+				if ((n + STACK_NEEDED) > (void *) esp)
+					error (8, NULL) ; // 'Address out of range'
 				clear () ;
 				lomem = n - zero ;
 				pfree = n - zero ;

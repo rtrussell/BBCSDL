@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.24a, 31-Jul-2021                                *
+*       Version 1.25a, 21-Aug-2021                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -811,11 +811,11 @@ char * allocs (unsigned int *ps, int len)
 }
 
 // Allocate memory for a temporary string:
-//  For lengths < 65536 use the string accumulator
-//  For lengths >= 65536 allocate from the heap
+//  For lengths < ACCSLEN use the string accumulator
+//  For lengths >= ACCSLEN allocate from the heap
 char *alloct (int len) 
 {
-	if (len < 65536)
+	if (len < ACCSLEN)
 		return accs ;
 	return allocs ((unsigned int *)&tmps, len) ;
 }
@@ -831,7 +831,7 @@ char *moves (STR *ps, int offset)
 // Copy string to string accumulator and append CR:
 void fixs (VAR v)
 {
-	if (v.s.l > 65535)
+	if (v.s.l > ACCSLEN-1)
 		error (19, NULL) ; // 'String too long'
 	memmove (accs, v.s.p + zero, v.s.l) ;
 	*(accs + v.s.l) = 0x0D ;
@@ -1685,7 +1685,7 @@ int basic (void *ecx, void *edx, void *prompt)
 						lino = 0 ;
 						while (1)
 						    {
-							tmp = accs ; n = 65535 ;
+							tmp = accs ; n = ACCSLEN-1 ;
 							do *tmp = osbget (file, &eof) ;
 							while (!eof && --n && (*tmp++ != 0x0A)) ;
 							if (eof || (n <= 0)) break ;

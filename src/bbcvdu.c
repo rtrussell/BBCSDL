@@ -71,7 +71,7 @@ static short logicop[] =
         0x150A,	// GCOL 4 - NOT (GL_INVERT)
         0x1505,	// GCOL 5 - GL_NOOP
         0x1504,	// GCOL 6 - GL_AND_INVERTED
-        0x150D	// GCOL 7 - GL_OR_INVERTED
+        0x150D,	// GCOL 7 - GL_OR_INVERTED
 } ;
 
 static SDL_BlendMode blendop[] = 
@@ -83,7 +83,7 @@ static SDL_BlendMode blendop[] =
 	0,		    // GCOL 4 (populated in vduinit)
         0,		    // GCOL 5 (populated in vduinit)
 	SDL_BLENDMODE_MOD,  // GCOL 6 - multiply by NOT src
-	SDL_BLENDMODE_ADD   // GCOL 7 - add to NOT src
+	SDL_BLENDMODE_ADD,  // GCOL 7 - add to NOT src
 } ;
 
 // It is important that solid colours aren't dithered, since
@@ -1487,8 +1487,8 @@ static void plotns (unsigned char al, int cx, int cy)
 	case 8:		// PLOT 64-71, Plot a single 'dot' (size depends on mode)
 		rect.x = cx ;
 		rect.y = cy ;
-		rect.w = pixelx & 0xFFFF ;
-		rect.h = pixely & 0xFFFF ;
+		rect.w = pixelx ;
+		rect.h = pixely ;
 		setcol (col) ;
 		SDL_RenderFillRect(memhdc, &rect) ;
 		break ;
@@ -1664,20 +1664,12 @@ static void plot (char code, short xs, short ys)
 	int xpos = xs, ypos = ys ;
 
 	if ((code & BIT2) != 0)
-	    {
-		*((unsigned char*)&pixelx + 3) = 0 ;
-		*((unsigned char*)&pixely + 3) = 0 ;
 		ascale (&xpos, &ypos) ;
-	    }
 	else
-	    {
-		xpos += *((unsigned char*)&pixelx + 3) ;
-		ypos += *((unsigned char*)&pixely + 3) ;
-		*((unsigned char*)&pixelx + 3) = xpos & 1 ;
-		*((unsigned char*)&pixely + 3) = ypos & 1 ;
+	{
 		xpos = lastx + (xpos >> 1) ;
 		ypos = lasty - (ypos >> 1) ;
-	    }
+	}
 	plotns (code, xpos, ypos) ;
 }
 

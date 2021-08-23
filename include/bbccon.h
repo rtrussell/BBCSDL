@@ -10,9 +10,14 @@
 
 #define YEAR    "2021"          // Copyright year
 #define VERSION "v0.36"         // Version string
-#define PAGE_OFFSET    0x11300  // Offset of PAGE from memory base
+#define ACCSLEN 1024            // Must be the same in BBC.h
+#define PAGE_OFFSET ACCSLEN + 0x1300 // Offset of PAGE from memory base
 #define MINIMUM_RAM PAGE_OFFSET+0x20000  // Minimum amount of RAM to allocate
+#ifdef PICO
+#define DEFAULT_RAM PAGE_OFFSET+0xC000   // Initial amount of RAM to allocate
+#else
 #define DEFAULT_RAM PAGE_OFFSET+0x200000 // Initial amount of RAM to allocate
+#endif
 #define MAXIMUM_RAM 0x10000000  // Maximum amount of RAM to allocate
 
 #define MAX_PORTS	4	// Maximum number of port channels
@@ -34,7 +39,7 @@
 #define	BIT6		0x40
 #define	BIT7		0x80
 
-// Bits in [vflags]:
+// Bits in _flags byte (must be the same as in BBCEQUS.INC):
 
 #define	IOFLAG		BIT0	// Insert/overtype
 #define	EGAFLG		BIT1	// EGA-compatible modes (*EGA [ON])
@@ -185,4 +190,3 @@ extern const char szNotice[] ;	// Copyright string
 extern int bChanged ;		// Display refresh required
 extern unsigned int platform ;	// OS platform
 extern unsigned int palette[256] ;
-
