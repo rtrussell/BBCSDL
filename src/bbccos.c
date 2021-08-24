@@ -1107,6 +1107,7 @@ void oscli (char *cmd)
 
 		case SBRK:
 			printf("Current sbrk address is %p.\r\n",sbrk(0)) ;
+			printf("Current stack address: %p.\r\n",&b) ;
 #ifdef PICO
 			printf("System malloc heap remaining %llu.\r\n",
 			(unsigned long long int)(&__StackLimit-(char *)sbrk(0))) ;

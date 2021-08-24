@@ -1228,8 +1228,6 @@ void newlin (void)
 	    }
 }
 
-void stkchk(void);
-
 // Execute the program:
 VAR xeq (void)
 {
@@ -1237,7 +1235,11 @@ VAR xeq (void)
 	void *tmpesi ;
 	while (1) // for each statement
 	    {
-	        stkchk();
+#ifdef PICO
+		if(&al < (signed char *)himem + 0x800) {
+			error(0, "Recursion too deep!");
+		}
+#endif
 	 	if (flags & (KILL + PAUSE + ALERT + ESCFLG))
 		    {
 			heapptr jump = xtrap () ;

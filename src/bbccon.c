@@ -176,21 +176,22 @@ static int putinp (unsigned char inp)
 	return 0 ;
 }
 
-void myPoll(){
 #ifdef PICO
-	flags |= ALERT ;
+inline static void myPoll(){
 	for(;;){
 		int c=getchar_timeout_us(0);
 		if(c==PICO_ERROR_TIMEOUT) break;
 		putinp(c);
 	}
-#endif
 }
+#endif
 
 // Get from STDIN queue:
 static int getinp (unsigned char *pinp)
 {
+#ifdef PICO
 	myPoll();
+#endif
 	unsigned char bl = inpqr ;
 	if (bl != inpqw)
 	    {
@@ -339,7 +340,9 @@ static int putkey (char key)
 // Get keycode (if any) from keyboard queue:
 int getkey (unsigned char *pkey)
 {
+#ifdef PICO
 	myPoll();
+#endif
 	unsigned char bl = kbdqr ;
 	if (bl != kbdqw)
 	    {
@@ -370,7 +373,9 @@ unsigned int GetTicks (void)
 
 static int kbchk (void)
 {
+#ifdef PICO
 	myPoll();
+#endif
 	return (inpqr != inpqw) ;
 }
 
@@ -1493,7 +1498,7 @@ void osshut (void *chan)
 // Start interpreter:
 int entry (void *immediate)
 {
-	memset (&stavar[1], 0, (char *)datend - (char *)&stavar[1]) ;
+        // memset (&stavar[1], 0, (char *)datend - (char *)&stavar[1]) ;
 
 	accs = (char*) userRAM ;		// String accumulator
 	buff = (char*) accs + 0x10000 ;		// Temporary string buffer
@@ -1633,13 +1638,6 @@ void StopTimer (timer_t timerid)
     {
     cancel_repeating_timer (&s_rpt_timer);
     return;
-    }
-
-extern heapptr himem ;		// Pointer to top of stack
-void stkchk (void)
-    {
-    int dummy;
-    if ( &dummy < (int *)himem ) error (0, "System stack overflow. Recursion too deep?");
     }
 
 void SystemIO (int flag) {
