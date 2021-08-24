@@ -3,6 +3,13 @@
 
 #include "lfspico.h"
 
+#define NAME_MAX 256
+#define DIR void
+struct dirent
+    {
+    char d_name[NAME_MAX+1];
+    };
+
 extern lfs_t lfs_root;
 extern lfs_bbc_t lfs_root_context;
 
@@ -20,6 +27,9 @@ extern FILE *myfopen(char *pathname, char *mode);
 extern int myfclose(FILE *stream);
 extern size_t myfread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 extern size_t myfwrite(void *ptr, size_t size, size_t nmemb, FILE *stream);
+extern DIR *myopendir(const char *name);
+extern struct dirent *myreaddir(DIR *dirp);
+extern int myclosedir(DIR *dirp);
 
 #define realpath myrealpath
 #define chdir mychdir
@@ -34,5 +44,8 @@ extern size_t myfwrite(void *ptr, size_t size, size_t nmemb, FILE *stream);
 #define fopen myfopen
 #define fread myfread
 #define fwrite myfwrite
+#define opendir myopendir
+#define readdir myreaddir
+#define closedir myclosedir
 
 #endif

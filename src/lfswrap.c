@@ -206,3 +206,41 @@ unsigned int sleep(unsigned int seconds){
 	sleep_ms(seconds*1000);
 	return 0;
 }
+
+typedef struct
+    {
+    struct dirent   de;
+    lfs_dir_t       ld;
+    } dir_info;
+
+extern DIR *myopendir(const char *name)
+    {
+    dir_info *pdi = (dir_info *) malloc (sizeof (dir_info));
+    if ( pdi == NULL ) return NULL;
+    if ( lfs_dir_open(&lfs_root, &(pdi->ld), name) < 0 )
+        {
+        free (pdi);
+        return NULL;
+        }
+    return (DIR *) pdi;
+    }
+
+extern struct dirent *myreaddir(DIR *dirp)
+    {
+    if ( dirp == NULL ) return NULL;
+    dir_info *pdi = (dir_info *) dirp;
+    struct lfs_info r;
+    if ( !lfs_dir_read (&lfs_root, &(pdi->ld), &r) ) return NULL;
+    strncpy (pdi->de.d_name, r.name, NAME_MAX);
+    return &(pdi->de);
+    }
+
+extern int myclosedir(DIR *dirp)
+    {
+    if ( dirp == NULL ) return -1;
+    dir_info *pdi = (dir_info *) dirp;
+    lfs_dir_close (&lfs_root, &(pdi->ld));
+    free (pdi);
+    return 0;
+    }
+

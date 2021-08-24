@@ -731,36 +731,6 @@ void oscli (char *cmd)
 			text (p) ;
 			crlf () ;
 
-#ifdef PICO
-			lfs_dir_t d;
-			if(lfs_dir_open(&lfs_root,&d,q)<0)
-				error (254, "Bad command") ;
-			while (1)
-			    {
-				stdin_handler (NULL, NULL) ;
-				if (flags & (ESCFLG | KILL))
-				    {
-					lfs_dir_close(&lfs_root,&d);
-					crlf () ;
-					trap () ;
-				    }
-				struct lfs_info r;
-				if(!lfs_dir_read(&lfs_root,&d,&r))
-					break ;
-				if (!wild (p, r.name))
-					continue ;
-				outchr (' ') ;
-				outchr (' ') ;
-				text (r.name) ;
-				do
-					outchr (' ') ;
-				while ( (vcount != 0) && (vcount != 20) &&
-					(vcount != 40) && (vcount < 60)) ;
-				if (vcount > 60)
-					crlf () ;
-			    }
-			lfs_dir_close(&lfs_root,&d);
-#else
 			DIR *d = opendir (q) ;
 			if (d == NULL)
 				error (254, "Bad command") ;
@@ -790,7 +760,6 @@ void oscli (char *cmd)
 					crlf () ;
 			    }
 			closedir (d) ;
-#endif
 			crlf () ;
 			return ;
 
