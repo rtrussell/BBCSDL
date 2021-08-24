@@ -21,7 +21,7 @@ if (TARGET tinyusb_device)
 		src/bbccos.c src/bbccon.c src/lfspico.c src/lfswrap.c 
 		m0FaultDispatch/m0FaultDispatch.c src/fault.c
 		littlefs/lfs.c littlefs/lfs_util.c src/bbdata_arm_32.s)
-	target_compile_options(bbcbasic PRIVATE -g)
+	target_compile_options(bbcbasic PRIVATE -O1 -g)
 	target_link_options(bbcbasic PRIVATE -g)
 	target_link_libraries(bbcbasic pico_stdlib hardware_flash hardware_exception)
 	target_compile_definitions(bbcbasic PUBLIC PICO
