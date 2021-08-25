@@ -13,6 +13,12 @@ It is a work in progress and may often be broken. It includes work by:
 
 Apologies to anyone else I omitted.
 
+Now modified to provide storage either in Pico flash or an attached SD card (FAT format).
+The SD card is mounted at /sdcard.
+
+This project includes source from various locations with difference licenses. See the
+various LICENSE.txt files.
+
 ## Instructions (thanks to Eric)
 
 To build this for the Pico, make sure you have the SDK installed and the
@@ -23,12 +29,13 @@ Then type
 
      $ mkdir build
      $ cd build
-     $ cmake -DSTDIO=USB ..
+     $ cmake -DPICO_BOARD=vgaboard -DSTDIO=USB ..
      $ make
 
+The above assumes that you are using a Pico plugged into a VGA Demo Board to provide the
+SDCARD socket. If you are using another configuration, change appropriately.
 If you wish to access BBC Basic via the serial port instead of USB, then replace -DSTDIO=USB
-by -DSTDIO=UART. You may also need to include -DPICO_BOARD=... if you are using anything other
-than a bare Pico. Other options may also be appropriate in some cases.
+by -DSTDIO=UART. Other options may also be appropriate in some cases.
 
 At this point the file bbcbasic.uf2 should be in the build directory.
 

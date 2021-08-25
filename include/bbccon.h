@@ -9,7 +9,7 @@
 // System constants :
 
 #define YEAR    "2021"          // Copyright year
-#define VERSION "v0.36"         // Version string
+#define VERSION "v0.36c"         // Version string
 #define ACCSLEN 1024            // Must be the same in BBC.h
 #define PAGE_OFFSET ACCSLEN + 0x1300 // Offset of PAGE from memory base
 #define MINIMUM_RAM PAGE_OFFSET+0x20000  // Minimum amount of RAM to allocate

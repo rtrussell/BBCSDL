@@ -18,17 +18,27 @@ pico_sdk_init()
 if (TARGET tinyusb_device)
 	add_executable(bbcbasic 
 		src/bbmain.c src/bbexec.c src/bbeval.c src/bbasmb_arm_32.c 
-		src/bbccos.c src/bbccon.c src/lfspico.c src/lfswrap.c 
+		src/bbccos.c src/bbccon.c src/lfswrap.c 
 		m0FaultDispatch/m0FaultDispatch.c src/fault.c
-		littlefs/lfs.c littlefs/lfs_util.c src/bbdata_arm_32.s)
+		 src/bbdata_arm_32.s)
 	target_compile_options(bbcbasic PRIVATE -O1 -g)
 	target_link_options(bbcbasic PRIVATE -g)
 	target_link_libraries(bbcbasic pico_stdlib hardware_flash hardware_exception)
 	target_compile_definitions(bbcbasic PUBLIC PICO
-		PICO_STACK_SIZE=0x3D000)
-	target_include_directories(bbcbasic PRIVATE include
-		m0FaultDispatch littlefs)
-    pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/bbc_pico.ld)
+	  PICO_STACK_SIZE=0x3D000)
+	target_include_directories(bbcbasic PRIVATE include m0FaultDispatch)
+	
+	target_compile_definitions(bbcbasic PUBLIC -DHAVE_LFS)
+	target_sources(bbcbasic PRIVATE src/lfspico.c littlefs/lfs.c littlefs/lfs_util.c)
+	target_include_directories(bbcbasic PRIVATE littlefs)
+
+	target_compile_definitions(bbcbasic PUBLIC -DHAVE_FAT)
+	pico_generate_pio_header(bbcbasic ${CMAKE_CURRENT_LIST_DIR}/src/sd_spi.pio)
+	target_sources(bbcbasic PRIVATE fatfs/ff.c fatfs/ffsystem.c fatfs/ffunicode.c
+	  src/ff_disk.c src/sd_spi2.c)
+	target_link_libraries(bbcbasic hardware_dma hardware_pio)
+	
+	pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/bbc_pico.ld)
 	if ( ${STDIO} STREQUAL "UART" )
 	        pico_enable_stdio_usb(bbcbasic 0)
 		pico_enable_stdio_uart(bbcbasic 1)

@@ -1,17 +1,16 @@
 #ifndef LFSWRAP_H
 #define LFSWRAP_H
 
-#include "lfspico.h"
-
-#define NAME_MAX 256
+#ifdef HAVE_FAT
+#include <../fatfs/ff.h>
+#else
 #define DIR void
+#endif
+#define NAME_MAX 256
 struct dirent
     {
     char d_name[NAME_MAX+1];
     };
-
-extern lfs_t lfs_root;
-extern lfs_bbc_t lfs_root_context;
 
 extern char *myrealpath(const char *restrict p, char *restrict r);
 extern int mychdir(const char *p);
@@ -24,12 +23,13 @@ extern unsigned int mysleep(unsigned int seconds);
 extern long myftell(FILE *fp);
 extern int myfseek(FILE *fp, long offset, int whence);
 extern FILE *myfopen(char *pathname, char *mode);
-extern int myfclose(FILE *stream);
-extern size_t myfread(void *ptr, size_t size, size_t nmemb, FILE *stream);
-extern size_t myfwrite(void *ptr, size_t size, size_t nmemb, FILE *stream);
+extern int myfclose(FILE *fp);
+extern size_t myfread(void *ptr, size_t size, size_t nmemb, FILE *fp);
+extern size_t myfwrite(void *ptr, size_t size, size_t nmemb, FILE *fp);
 extern DIR *myopendir(const char *name);
 extern struct dirent *myreaddir(DIR *dirp);
 extern int myclosedir(DIR *dirp);
+extern int mount(void);
 
 #define realpath myrealpath
 #define chdir mychdir
