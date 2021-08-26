@@ -4,6 +4,9 @@
     This is free software released under the exact same terms as
     stated in license.txt for the Basic interpreter.  */
 
+#define	SDMOUNT	"sdcard"	// SD Card mount point
+#define SDMLEN	( strlen (SDMOUNT) + 1 )
+
 #include <stdio.h>
 #include <string.h>
 
@@ -18,13 +21,14 @@ lfs_bbc_t lfs_root_context;
 
 static inline bool isfat (const char *path)
     {
-    if (( ! strncmp (path, "/sdcard", 7) ) && ( ( path[7] == '/' ) || ( path[7] == '\0' ) ) ) return true;
+    if (( ! strncmp (path, "/"SDMOUNT, SDMLEN) ) &&
+	( ( path[SDMLEN] == '/' ) || ( path[SDMLEN] == '\0' ) ) ) return true;
     return false;
     }
 
 static inline const char *fat_path (const char *path)
     {
-    return path + 7;
+    return path + SDMLEN;
     }
 
 typedef struct
@@ -59,7 +63,7 @@ static inline lfs_file_t *lfsptr (FILE *fp)
 
 typedef struct
     {
-    bool	    bFAT;
+    enum { dfLFS, dfRoot, dfFstRoot, dfFAT } df;
     struct dirent   de;
     union
 	{
@@ -68,24 +72,24 @@ typedef struct
 	};
     } dir_info;
 
-static inline bool is_fatdir (DIR *dp)
+static inline bool is_fatdir (DIR *dirp)
     {
-    return ((dir_info *)dp)->bFAT;
+    return (((dir_info *)dirp)->df == dfFAT);
     }
 
-static inline void set_fatdir (DIR *dp, bool bFAT)
+static inline void set_fatdir (DIR *dirp, bool bFAT)
     {
-    ((dir_info *)dp)->bFAT = bFAT;
+    ((dir_info *)dirp)->df = bFAT ? dfFAT : dfLFS;
     }
 
-static inline DIR * fatdir (DIR *dp)
+static inline DIR * fatdir (DIR *dirp)
     {
-    return &((dir_info *)dp)->fat_dt;
+    return &((dir_info *)dirp)->fat_dt;
     }
 
-static inline lfs_dir_t * lfsdir (DIR *dp)
+static inline lfs_dir_t * lfsdir (DIR *dirp)
     {
-    return &((dir_info *)dp)->lfs_dt;
+    return &((dir_info *)dirp)->lfs_dt;
     }
 
 #else	// Only HAVE_FAT
@@ -122,18 +126,18 @@ typedef struct
     DIR	    	    fat_dt;
     } dir_info;
 
-static inline bool is_fatdir (DIR *dp)
+static inline bool is_fatdir (DIR *dirp)
     {
     return true;
     }
 
-static inline void set_fatdir (DIR *dp, bool bFAT)
+static inline void set_fatdir (DIR *dirp, bool bFAT)
     {
     }
 
-static inline DIR * fatdir (DIR *dp)
+static inline DIR * fatdir (DIR *dirp)
     {
-    return &((dir_info *)dp)->fat_dt;
+    return &((dir_info *)dirp)->fat_dt;
     }
 
 #endif
@@ -157,21 +161,21 @@ typedef struct
     lfs_dir_t       lfs_dt;
     } dir_info;
 
-static inline void set_fatdir (DIR *dp, bool bFAT)
+static inline void set_fatdir (DIR *dirp, bool bFAT)
     {
     }
 
-static inline lfs_dir_t * lfsdir (DIR *dp)
+static inline lfs_dir_t * lfsdir (DIR *dirp)
     {
-    return &((dir_info *)dp)->lfs_dt;
+    return &((dir_info *)dirp)->lfs_dt;
     }
 
 #endif
 #endif
 
-static inline struct dirent * deptr (DIR *dp)
+static inline struct dirent * deptr (DIR *dirp)
     {
-    return &((dir_info *)dp)->de;
+    return &((dir_info *)dirp)->de;
     }
 
 static int picoslash(char c)
@@ -576,6 +580,12 @@ DIR *myopendir(const char *name)
         return NULL;
         }
     set_fatdir (dirp, false);
+#ifdef HAVE_FAT
+    if ( picopath[0] == '\0' )
+	{
+	((dir_info *)dirp)->df = dfFstRoot;
+	}
+#endif
     return (DIR *) dirp;
 #endif
     }
@@ -591,14 +601,32 @@ struct dirent *myreaddir(DIR *dirp)
 	if ( fi.fname[0] == '\0' ) return NULL;
 	struct dirent *pde = deptr (dirp);
 	strncpy (pde->d_name, fi.fname, NAME_MAX);
+	if ( fi.fattrib & AM_DIR ) strcat (pde->d_name, "/");
 	return pde;
 	}
 #endif
 #ifdef HAVE_LFS
+    struct dirent *pde = deptr (dirp);
+#ifdef HAVE_FAT
+    // Insert mount point as first root directory entry
+    if (((dir_info *)dirp)->df == dfFstRoot )
+	{
+	((dir_info *)dirp)->df = dfRoot;
+	strcpy (pde->d_name, SDMOUNT"/");
+	return;
+	}
+#endif
     struct lfs_info r;
     if ( !lfs_dir_read (&lfs_root, lfsdir(dirp), &r) ) return NULL;
-    struct dirent *pde = deptr (dirp);
+#ifdef HAVE_FAT
+    // Hide any root entry with the same name as the mount point
+    if ((((dir_info *)dirp)->df == dfRoot) && (!strcmp (r.name, SDMOUNT)))
+	{
+	if ( !lfs_dir_read (&lfs_root, lfsdir(dirp), &r) ) return NULL;
+	}
+#endif
     strncpy (pde->d_name, r.name, NAME_MAX);
+    if ( r.type == LFS_TYPE_DIR )  strcat (pde->d_name, "/");
     return pde;
 #endif
     }
