@@ -6,7 +6,8 @@
 
 #include "ff.h"
 #include <stdlib.h>
-
+// #include <stdio.h>
+// #include <unistd.h>
 
 #if FF_USE_LFN == 3	/* Dynamic memory allocation */
 
@@ -14,10 +15,18 @@
 /* Allocate a memory block                                                */
 /*------------------------------------------------------------------------*/
 
+// extern char __StackLimit;
 void* ff_memalloc (	/* Returns pointer to the allocated memory block (null if not enough core) */
 	UINT msize		/* Number of bytes to allocate */
 )
 {
+/*
+        char *test = malloc(1);
+        free (test);
+	printf("ff_memalloc: free = 0x%llX, limit = 0x%p, test = %p, sbrk = 0x%p, size = 0x%X\n",
+	    (unsigned long long int)(&__StackLimit-(char *)sbrk(0)),
+	    &__StackLimit, test, sbrk(0), msize) ;
+*/
 	return malloc(msize);	/* Allocate a new memory block with POSIX API */
 }
 

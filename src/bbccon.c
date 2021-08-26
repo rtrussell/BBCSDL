@@ -2,7 +2,8 @@
 *       BBC BASIC Minimal Console Version                          *
 *       Copyright (C) R. T. Russell, 2021                          *
 
-        Modified 2021 by Eric Olson for Raspberry Pico
+        Modified 2021 by Eric Olson and Memotech-Bill for
+        Raspberry Pico
 
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
 *       Version 0.36a, 28-Jul-2021                                 *
@@ -102,6 +103,7 @@ const int bLowercase = 0 ;    // Dummy
 const char szVersion[] = "Altered Basic "PLATFORM" Console "VERSION;
 const char szNotice[] = 
 	"Created by Eric Olson with help\r\n"
+        "Modified by Memotech-Bill\r\n"
 	"using altered source from BBC BASIC\r\n"
 	"(C) Copyright R. T. Russell, "YEAR ;
 char *szLoadDir ;

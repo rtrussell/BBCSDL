@@ -8,13 +8,17 @@
 #define SDMLEN	( strlen (SDMOUNT) + 1 )
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <pico/time.h>
 
 #include "lfswrap.h"
+#ifdef HAVE_LFS
 #include "lfspico.h"
 
 lfs_t lfs_root;
 lfs_bbc_t lfs_root_context;
+#endif
 
 #ifdef HAVE_FAT
 #ifdef HAVE_LFS		// Both FAT and LFS
@@ -92,6 +96,11 @@ static inline lfs_dir_t * lfsdir (DIR *dirp)
     return &((dir_info *)dirp)->lfs_dt;
     }
 
+static inline struct dirent * deptr (DIR *dirp)
+    {
+    return &((dir_info *)dirp)->de;
+    }
+
 #else	// Only HAVE_FAT
 
 static inline bool isfat (const char *path)
@@ -140,6 +149,11 @@ static inline DIR * fatdir (DIR *dirp)
     return &((dir_info *)dirp)->fat_dt;
     }
 
+static inline struct dirent * deptr (DIR *dirp)
+    {
+    return &((dir_info *)dirp)->de;
+    }
+
 #endif
 #else
 #ifdef HAVE_LFS	// Only HAVE_LFS
@@ -170,13 +184,13 @@ static inline lfs_dir_t * lfsdir (DIR *dirp)
     return &((dir_info *)dirp)->lfs_dt;
     }
 
-#endif
-#endif
-
 static inline struct dirent * deptr (DIR *dirp)
     {
     return &((dir_info *)dirp)->de;
     }
+
+#endif
+#endif
 
 static int picoslash(char c)
     {
@@ -302,6 +316,7 @@ int mymkdir(const char *p, mode_t m)
 #ifdef HAVE_FAT
     if ( isfat (picopath) )
 	{
+	printf ("mkdir (%s)\n", picopath);
 	if ( f_mkdir (fat_path (picopath)) != FR_OK ) return -1;
 	return 0;
 	}
@@ -380,9 +395,13 @@ int myfseek(FILE *fp, long offset, int whence)
 
 FILE *myfopen(char *p, char *mode)
     {
+#if defined(HAVE_FAT) || defined(HAVE_LFS)
     FILE *fp = (FILE *) malloc (sizeof (multi_file));
     if ( fp == NULL ) return NULL;
     myrealpath(p,picopath);
+#else
+    return NULL;
+#endif
 #ifdef HAVE_FAT
     if ( isfat (picopath) )
 	{
@@ -557,9 +576,13 @@ unsigned int sleep(unsigned int seconds)
 
 DIR *myopendir(const char *name)
     {
+#if defined(HAVE_FAT) || defined(HAVE_LFS)
     DIR *dirp = (DIR *) malloc (sizeof (dir_info));
     if ( dirp == NULL ) return NULL;
     myrealpath(name, picopath);
+#else
+    return NULL;
+#endif
 #ifdef HAVE_FAT
     if ( isfat (picopath) )
 	{
@@ -670,15 +693,6 @@ static struct lfs_config lfs_root_cfg = {
 int mount (void)
     {
     int istat = 0;
-#ifdef HAVE_FAT
-    static FATFS   vol;
-    FRESULT fr = f_mount (&vol, "0:", 1);
-    if ( fr != FR_OK )
-	{
-	printf ("Failed to mount SD card.\n");
-	istat |= 1;
-	}
-#endif
 #ifdef HAVE_LFS
     struct lfs_bbc_config lfs_bbc_cfg =
 	{
@@ -695,6 +709,15 @@ int mount (void)
 	    printf("unable for format littlefs\n");
 	    istat |= 2;
 	    }
+	}
+#endif
+#ifdef HAVE_FAT
+    static FATFS   vol;
+    FRESULT fr = f_mount (&vol, "0:", 1);
+    if ( fr != FR_OK )
+	{
+	printf ("Failed to mount SD card.\n");
+	istat |= 1;
 	}
 #endif
     return istat;

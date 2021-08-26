@@ -29,13 +29,16 @@ Then type
 
      $ mkdir build
      $ cd build
-     $ cmake -DPICO_BOARD=vgaboard -DSTDIO=USB ..
+     $ cmake [options] ..
      $ make
 
-The above assumes that you are using a Pico plugged into a VGA Demo Board to provide the
-SDCARD socket. If you are using another configuration, change appropriately.
-If you wish to access BBC Basic via the serial port instead of USB, then replace -DSTDIO=USB
-by -DSTDIO=UART. Other options may also be appropriate in some cases.
+The following options may be specified with the cmake command:
+
+* -DPICO_BOARD=vgaboard if using the VGA demo board, or other board as appropriate.
+* -DSTDIO=USB for the basic console on USB or -DSTDIO=UART for the basic console on UART.
+* -DLFS=Y to include storage on Pico flash or -DLFS=N to exclude it.
+* -DFAT=Y to include storage on SD card or -DFAT=N to exclude it.
+* Other cmake options if required.
 
 At this point the file bbcbasic.uf2 should be in the build directory.
 
