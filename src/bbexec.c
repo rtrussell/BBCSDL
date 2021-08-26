@@ -1236,9 +1236,8 @@ VAR xeq (void)
 	while (1) // for each statement
 	    {
 #ifdef PICO
-		if(&al < (signed char *)himem + 0x800) {
+		if(&al < (signed char *)libtop + 0x800)
 			error(0, "Recursion too deep!");
-		}
 #endif
 	 	if (flags & (KILL + PAUSE + ALERT + ESCFLG))
 		    {
@@ -1369,6 +1368,9 @@ VAR xeq (void)
 						void *ebx = *(void **)esp ;
 						esp += STRIDE ;
 						VSTORE(ebx, NULL) ; // remove called module
+#ifdef PICO
+						libtop = ebx ;
+#endif
 					    }
 					else
 						error (38, NULL) ; // 'Not in a subroutine'
@@ -1745,6 +1747,9 @@ VAR xeq (void)
 				newtop = gettop (edi, NULL) ;
 				if (newtop == NULL) 
 					error (52, NULL) ; // 'Bad library'
+#ifdef PICO
+				libtop = newtop ;
+#endif
 				if (al == TINSTALL)
 				    {
 					defscan (libase + (signed char *) zero) ;
@@ -1904,6 +1909,9 @@ VAR xeq (void)
 				if ((libase != 0) && (himem > libase))
 				    {
 					libase = 0 ;
+#ifdef PICO
+					libtop = n ;
+#endif
 					proptr[0] = 0 ;
 					fnptr[0] = 0 ;
 				    }

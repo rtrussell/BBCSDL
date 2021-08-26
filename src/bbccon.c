@@ -114,6 +114,9 @@ char *szCmdLine ;
 int MaximumRAM = MAXIMUM_RAM ;
 timer_t UserTimerID ;
 unsigned int palette[256] ;
+#ifdef PICO
+void *libtop;
+#endif
 
 // Array of VDU command lengths:
 static int vdulen[] = {

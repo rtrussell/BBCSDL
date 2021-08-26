@@ -324,4 +324,9 @@ extern char *szUserDir ;	// @usr$
 extern char *szTempDir ;	// @tmp$
 extern const char szNotice [] ;
 
+// Defined in bbccon.c
+#ifdef PICO
+extern void *libtop;
+#endif
+
 #include <align.h>

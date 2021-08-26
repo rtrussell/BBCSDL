@@ -1488,6 +1488,9 @@ int basic (void *ecx, void *edx, void *prompt)
 	vpage = ecx - zero ;
 	curlin = ecx - zero ;
 	himem = edx - zero ;
+#ifdef PICO
+	libtop = edx ;
+#endif
 	clear () ;
 	datptr = search (vpage + (signed char *) zero, TDATA) - (signed char *) zero ;
 
