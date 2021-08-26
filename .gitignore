@@ -45,3 +45,7 @@ build/
 
 # Editor files
 *~
+.#*
+
+# Work in progress
+vdu/

@@ -24,8 +24,7 @@ if (TARGET tinyusb_device)
   target_compile_options(bbcbasic PRIVATE -O1 -g)
   target_link_options(bbcbasic PRIVATE -g)
   target_link_libraries(bbcbasic pico_stdlib hardware_flash hardware_exception)
-  target_compile_definitions(bbcbasic PUBLIC PICO
-    PICO_STACK_SIZE=0x3D000)
+  target_compile_definitions(bbcbasic PUBLIC PICO PICO_STACK_SIZE=0x3C000)
   target_include_directories(bbcbasic PRIVATE include m0FaultDispatch)
   pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/bbc_pico.ld)
 
