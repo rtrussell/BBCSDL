@@ -636,7 +636,7 @@ struct dirent *myreaddir(DIR *dirp)
 	{
 	((dir_info *)dirp)->df = dfRoot;
 	strcpy (pde->d_name, SDMOUNT"/");
-	return;
+	return pde;
 	}
 #endif
     struct lfs_info r;
