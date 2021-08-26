@@ -3,17 +3,22 @@
 *       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       bbccon.h constant definitions                              *
-*       Version v0.36, 28-Jul-2021                                 *
+*       Version v0.36, 21-Aug-2021                                 *
 \******************************************************************/
 
 // System constants :
 
 #define YEAR    "2021"          // Copyright year
 #define VERSION "v0.36"         // Version string
-#define PAGE_OFFSET    0x11300  // Offset of PAGE from memory base
+#define	ACCSLEN 65536		// Must be the same in BBC.h
+#define PAGE_OFFSET ACCSLEN + 0x1300     // Offset of PAGE from memory base
 #define MINIMUM_RAM PAGE_OFFSET+0x20000  // Minimum amount of RAM to allocate
 #define DEFAULT_RAM PAGE_OFFSET+0x200000 // Initial amount of RAM to allocate
 #define MAXIMUM_RAM 0x10000000  // Maximum amount of RAM to allocate
+
+#if (PAGE_OFFSET < 0x10000) && (defined(__x86_64__) || defined(__aarch64__))
+#error "PAGE must be at least 64K above memory base on 64-bit platforms"
+#endif
 
 #define MAX_PORTS	4	// Maximum number of port channels
 #define MAX_FILES	8	// Maximum number of file channels
@@ -45,7 +50,7 @@
 #define	UFONT		BIT6	// User font selected
 #define	UTF8		BIT7	// UTF-8 mode selected
 
-// Bits in _flags byte (must be the same as in BBCEQUS.INC):
+// Bits in _flags byte:
 
 #define ESCFLG          0x80
 #define ESCDIS          0x40

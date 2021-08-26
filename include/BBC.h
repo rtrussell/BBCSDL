@@ -3,11 +3,12 @@
 *       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       BBC.h constant, variable and structure declarations        *
-*       Version 1.24a, 17-Aug-2021                                 *
+*       Version 1.25b, 22-Aug-2021                                 *
 \******************************************************************/
 
 // Constants:
 #define STACK_NEEDED 512
+#define ACCSLEN 65536 // Must be the same in bbcsdl.h and bbccon.h
 
 // Sentinels:
 #define CALCHK	0xC3414C43
@@ -352,7 +353,6 @@ extern char *szLibrary ;	// @lib$
 extern char *szUserDir ;	// @usr$
 extern char *szTempDir ;	// @tmp$
 extern const char szNotice [] ;
-extern void *progRAM ;
 extern void *userRAM ;
 
 // Helper macros to fix alignment problem:

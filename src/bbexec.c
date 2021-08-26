@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.24a, 05-Aug-2021                                *
+*       Version 1.25a, 21-Aug-2021                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -1235,6 +1235,10 @@ VAR xeq (void)
 	void *tmpesi ;
 	while (1) // for each statement
 	    {
+#ifdef PICO
+		if(&al < (signed char *)libtop + 0x800)
+			error(0, "Recursion too deep!");
+#endif
 	 	if (flags & (KILL + PAUSE + ALERT + ESCFLG))
 		    {
 			heapptr jump = xtrap () ;
@@ -1364,6 +1368,9 @@ VAR xeq (void)
 						void *ebx = *(void **)esp ;
 						esp += STRIDE ;
 						VSTORE(ebx, NULL) ; // remove called module
+#ifdef PICO
+						libtop = ebx ;
+#endif
 					    }
 					else
 						error (38, NULL) ; // 'Not in a subroutine'
@@ -1740,6 +1747,9 @@ VAR xeq (void)
 				newtop = gettop (edi, NULL) ;
 				if (newtop == NULL) 
 					error (52, NULL) ; // 'Bad library'
+#ifdef PICO
+				libtop = newtop ;
+#endif
 				if (al == TINSTALL)
 				    {
 					defscan (libase + (signed char *) zero) ;
@@ -1864,8 +1874,7 @@ VAR xeq (void)
 				{
 				equals () ;
 				void *n = (void *) (size_t) expri () ;
-				if ((n < progRAM) ||
-					((n + STACK_NEEDED) > (void *) esp))
+				if ((n + STACK_NEEDED) > (void *) esp)
 					error (8, NULL) ; // 'Address out of range'
 				vpage = n - zero ;
 				}
@@ -1877,9 +1886,8 @@ VAR xeq (void)
 				{
 				equals () ;
 				void *n = (void *) (size_t) expri () ;
-				if ((n < progRAM) || 
-					((n + STACK_NEEDED) > (void *) esp))
-						error (8, NULL) ; // 'Address out of range'
+				if ((n + STACK_NEEDED) > (void *) esp)
+					error (8, NULL) ; // 'Address out of range'
 				clear () ;
 				lomem = n - zero ;
 				pfree = n - zero ;
@@ -1901,6 +1909,9 @@ VAR xeq (void)
 				if ((libase != 0) && (himem > libase))
 				    {
 					libase = 0 ;
+#ifdef PICO
+					libtop = n ;
+#endif
 					proptr[0] = 0 ;
 					fnptr[0] = 0 ;
 				    }

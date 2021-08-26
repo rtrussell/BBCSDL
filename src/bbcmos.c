@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.24a, 08-Aug-2021                                *
+*       Version 1.25a, 21-Aug-2021                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -2367,10 +2367,8 @@ int entry (void *immediate)
 	int i ;
 	short *table ;
 
-	memset (&stavar[1], 0, (char *)datend - (char *)&stavar[1]) ;
-
 	accs = (char*) userRAM ;		// String accumulator
-	buff = (char*) accs + 0x10000 ;		// Temporary string buffer
+	buff = (char*) accs + ACCSLEN ;		// Temporary string buffer
 	path = (char*) buff + 0x100 ;		// File path
 	keystr = (char**) (path + 0x100) ;	// *KEY strings
 	keybdq = (char*) keystr + 0x100 ;	// Keyboard queue
