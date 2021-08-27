@@ -52,7 +52,7 @@ flood.o: flood.c
 	$(CXX) -c $(SDL_INCLUDE) -O3 $< -o $@
 
 bbdata.o: ../../src/bbdata_x86_64.nas
-	nasm -f win64 -s ../../src/bbdata_x86_64.nas -o bbdata.o -l bbdata.lst
+	nasm -f win64 -s ../../src/bbdata_x86_64.nas -o bbdata.o
 
 bbcsdl.exe: $(OBJ)
 	$(CXX) $(OBJ) \

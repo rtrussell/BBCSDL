@@ -6,7 +6,7 @@
         Raspberry Pico
 
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.36a, 28-Jul-2021                                 *
+*       Version 0.36a, 22-Aug-2021                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -1305,7 +1305,13 @@ static void readb (FILE *context, unsigned char *buffer, FCB *pfcb)
 		error (222, "Invalid channel") ;
 //	if (pfcb->p != pfcb->o) Windows requires fseek to be called ALWAYS
 	myfseek (context, (pfcb->p - pfcb->o) & 0xFF, SEEK_CUR) ;
+#ifdef _WIN32
+	long long ptr = myftell (context) ;
+#endif
 	amount = fread (buffer, 1, 256, context) ;
+#ifdef _WIN32
+	myfseek (context, ptr + amount, SEEK_SET) ; // filetest.bbc fix (32-bit)
+#endif
 	pfcb->p = 0 ;
 	pfcb->o = amount & 0xFF ;
 	pfcb->w = 0 ;
@@ -1506,12 +1512,13 @@ int entry (void *immediate)
         // memset (&stavar[1], 0, (char *)datend - (char *)&stavar[1]) ;
 
 	accs = (char*) userRAM ;		// String accumulator
-	buff = (char*) accs + 0x10000 ;		// Temporary string buffer
+	buff = (char*) accs + ACCSLEN ;		// Temporary string buffer
 	path = (char*) buff + 0x100 ;		// File path
 	keystr = (char**) (path + 0x100) ;	// *KEY strings
 	keybdq = (char*) keystr + 0x100 ;	// Keyboard queue
 	eventq = (void*) keybdq + 0x100 ;	// Event queue
 	filbuf[0] = (eventq + 0x200 / 4) ;	// File buffers n.b. pointer arithmetic!!
+
 	farray = 1 ;				// @hfile%() number of dimensions
 	fasize = MAX_PORTS + MAX_FILES + 4 ;	// @hfile%() number of elements
 

@@ -6,7 +6,7 @@
         Raspberry Pico
 
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.32a, 02-Mar-2021                                *
+*       Version 0.36a, 09-Aug-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -672,6 +672,8 @@ void oscli (char *cmd)
 				error (189, "Couldn't close file") ;
 			    }
 			p = malloc (COPYBUFLEN) ;
+			if (p == NULL)
+				error (255, "Out of memory") ;
 			do
 			    {
 				n = fread (p, 1, COPYBUFLEN, srcfile) ;
