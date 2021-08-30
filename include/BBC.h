@@ -377,8 +377,69 @@ extern void *libtop;
 #define NLOAD(p)    *(VAR*)(p)
 #define NSTORE(p,i) *(VAR*)(p) = i
 #else
+static inline int ILOAD (void *p)
+    {
+    if ( (int)p & 0x03 ) { int i; memcpy(&i, p, 4); return i; }
+    return *((volatile int *)p);
+    }
+static inline void ISTORE (void *p, int i)
+    {
+    if ( (int)p & 0x03 ) memcpy(p, &i, 4);
+    else *((volatile int *)p) = i;
+    }
+static inline intptr_t TLOAD (void *p)
+    {
+    if ( (int)p & 0x03 ) { intptr_t i; memcpy(&i, p, 4); return i; }
+    else return *((intptr_t *)p);
+    }
+static inline void TSTORE (void *p, intptr_t i)
+    {
+    if ( (int)p & 0x03 ) memcpy(p, &i, 4);
+    else *((intptr_t *)p) = i;
+    } 
+static inline unsigned int ULOAD (void *p)
+    {
+    if ( (int)p & 0x03 ) { unsigned int i; memcpy(&i, p, 4); return i; }
+    else return *((unsigned int *)p);
+    }
+static inline void USTORE (void *p, unsigned int i)
+    {
+    if ( (int)p & 0x03 ) memcpy(p, &i, 4);
+    else *((unsigned int *)p) = i;
+    } 
+static inline unsigned short SLOAD (void *p)
+    {
+    if ( (int)p & 0x01 ) { unsigned short i; memcpy(&i, p, 2); return i; }
+    else return *((unsigned short *)p);
+    }
+static inline void SSTORE (void *p, unsigned short i)
+    {
+    if ( (int)p & 0x01 ) memcpy(p, &i, 2);
+    else *((unsigned short *)p) = i;
+    } 
+static inline void *VLOAD (void *p)
+    {
+    if ( (int)p & 0x03 ) { void *i; memcpy(&i, p, sizeof(void*)); return i; }
+    else return *((void **)p);
+    }
+static inline void VSTORE (void *p, void *i)
+    {
+    if ( (int)p & 0x03 ) memcpy(p, &i, sizeof(void*));
+    else *((void **)p) = i;
+    } 
+static inline char *CLOAD (void *p)
+    {
+    if ( (int)p & 0x03 ) { char *i; memcpy(&i, p, sizeof(char*)); return i; }
+    else return *((char **)p);
+    }
+static inline void CSTORE (void *p, char *i)
+    {
+    if ( (int)p & 0x03 ) memcpy(p, &i, sizeof(char*));
+    else *((char **)p) = i;
+    } 
+#if 0
 static inline int ILOAD (void *p) { int i; memcpy(&i, p, 4); return i; }
-static inline void ISTORE (void *p, int i) { memcpy(p, &i, 4); } 
+static inline void ISTORE (void *p, int i) { memcpy(p, &i, 4); }
 static inline intptr_t TLOAD (void *p) { intptr_t i; memcpy(&i, p, 4); return i; }
 static inline void TSTORE (void *p, intptr_t i) { memcpy(p, &i, 4); } 
 static inline unsigned int ULOAD (void *p) { unsigned int i; memcpy(&i, p, 4); return i; }
@@ -389,6 +450,7 @@ static inline void *VLOAD (void *p) { void *i; memcpy(&i, p, sizeof(void*)); ret
 static inline void VSTORE (void *p, void *i) { memcpy(p, &i, sizeof(void*)); } 
 static inline char *CLOAD (void *p) { char *i; memcpy(&i, p, sizeof(char*)); return i; }
 static inline void CSTORE (void *p, char *i) { memcpy(p, &i, sizeof(char*)); } 
+#endif
 static inline VAR NLOAD (void *p) { VAR i; memcpy(&i, p, sizeof(VAR)); return i; }
-static inline void NSTORE (void *p, VAR i) { memcpy(p, &i, sizeof(VAR)); } 
+static inline void NSTORE (void *p, VAR i) { memcpy(p, &i, sizeof(VAR)); }
 #endif
