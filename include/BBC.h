@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       BBC.h constant, variable and structure declarations        *
-*       Version 1.25b, 22-Aug-2021                                 *
+*       Version 1.25c, 01-Sep-2021                                 *
 \******************************************************************/
 
 // Constants:
@@ -355,35 +355,27 @@ extern char *szTempDir ;	// @tmp$
 extern const char szNotice [] ;
 extern void *userRAM ;
 
+// Alignment helper types:
+typedef __attribute__((aligned(1))) int unaligned_int;
+typedef __attribute__((aligned(1))) intptr_t unaligned_intptr_t;
+typedef __attribute__((aligned(1))) unsigned int unaligned_uint;
+typedef __attribute__((aligned(1))) unsigned short unaligned_ushort;
+typedef __attribute__((aligned(1))) void* unaligned_void_ptr;
+typedef __attribute__((aligned(1))) char* unaligned_char_ptr;
+typedef __attribute__((aligned(1))) VAR unaligned_VAR;
+
 // Helper macros to fix alignment problem:
-#if defined(__i386__) || defined(__x86_64__) || defined(__EMSCRIPTEN__) || __ARM_FEATURE_UNALIGNED
-#define ILOAD(p)    *(int*)(p)
-#define ISTORE(p,i) *(int*)(p) = i 
-#define TLOAD(p)    *(intptr_t*)(p)
-#define TSTORE(p,i) *(intptr_t*)(p) = i 
-#define ULOAD(p)    *(unsigned int*)(p)
-#define USTORE(p,i) *(unsigned int*)(p) = i 
-#define SLOAD(p)    *(unsigned short*)(p)
-#define SSTORE(p,i) *(unsigned short*)(p) = i 
-#define VLOAD(p)    *(void**)(p)
-#define VSTORE(p,i) *(void**)(p) = i 
-#define CLOAD(p)    *(char**)(p)
-#define CSTORE(p,i) *(char**)(p) = i 
-#define NLOAD(p)    *(VAR*)(p)
-#define NSTORE(p,i) *(VAR*)(p) = i
-#else
-static inline int ILOAD (void *p) { int i; memcpy(&i, p, 4); return i; }
-static inline void ISTORE (void *p, int i) { memcpy(p, &i, 4); } 
-static inline intptr_t TLOAD (void *p) { intptr_t i; memcpy(&i, p, 4); return i; }
-static inline void TSTORE (void *p, intptr_t i) { memcpy(p, &i, 4); } 
-static inline unsigned int ULOAD (void *p) { unsigned int i; memcpy(&i, p, 4); return i; }
-static inline void USTORE (void *p, unsigned int i) { memcpy(p, &i, 4); } 
-static inline unsigned short SLOAD (void *p) { unsigned short i; memcpy(&i, p, 2); return i; }
-static inline void SSTORE (void *p, unsigned short i) { memcpy(p, &i, 2); } 
-static inline void *VLOAD (void *p) { void *i; memcpy(&i, p, sizeof(void*)); return i; }
-static inline void VSTORE (void *p, void *i) { memcpy(p, &i, sizeof(void*)); } 
-static inline char *CLOAD (void *p) { char *i; memcpy(&i, p, sizeof(char*)); return i; }
-static inline void CSTORE (void *p, char *i) { memcpy(p, &i, sizeof(char*)); } 
-static inline VAR NLOAD (void *p) { VAR i; memcpy(&i, p, sizeof(VAR)); return i; }
-static inline void NSTORE (void *p, VAR i) { memcpy(p, &i, sizeof(VAR)); } 
-#endif
+#define ILOAD(p)    *((unaligned_int*)(p))
+#define ISTORE(p,i) *((unaligned_int*)(p)) = i 
+#define TLOAD(p)    *((unaligned_intptr_t*)(p))
+#define TSTORE(p,i) *((unaligned_intptr_t*)(p)) = i 
+#define ULOAD(p)    *((unaligned_uint*)(p))
+#define USTORE(p,i) *((unaligned_uint*)(p)) = i 
+#define SLOAD(p)    *((unaligned_ushort*)(p))
+#define SSTORE(p,i) *((unaligned_ushort*)(p)) = i 
+#define VLOAD(p)    *((unaligned_void_ptr*)(p))
+#define VSTORE(p,i) *((unaligned_void_ptr*)(p)) = i 
+#define CLOAD(p)    *((unaligned_char_ptr*)(p))
+#define CSTORE(p,i) *((unaligned_char_ptr*)(p)) = i 
+#define NLOAD(p)    *((unaligned_VAR*)(p))
+#define NSTORE(p,i) *((unaligned_VAR*)(p)) = i
