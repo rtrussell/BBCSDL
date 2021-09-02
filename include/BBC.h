@@ -3,12 +3,16 @@
 *       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       BBC.h constant, variable and structure declarations        *
-*       Version 1.25c, 01-Sep-2021                                 *
+*       Version 1.25d, 02-Sep-2021                                 *
 \******************************************************************/
 
 // Constants:
 #define STACK_NEEDED 512
+#ifdef PICO
+#define ACCSLEN 1024  // Must be the same in bbcsdl.h and bbccon.h
+#else
 #define ACCSLEN 65536 // Must be the same in bbcsdl.h and bbccon.h
+#endif
 
 // Sentinels:
 #define CALCHK	0xC3414C43
