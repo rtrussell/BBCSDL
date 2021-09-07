@@ -25,7 +25,7 @@ bbccon.o: bbccon.c bbccon.h
 	$(CXX) -Wno-array-bounds -Wno-unused-value -c -Os $< -o $@
 
 bbdata.o: ../../../BBCSDL/src/bbdata_x86_64.nas
-	nasm -f win64 -s ../../../BBCSDL/src/bbdata_x86_64.nas -o bbdata.o -l bbdata.lst
+	nasm -f win64 -s ../../../BBCSDL/src/bbdata_x86_64.nas -o bbdata.o
 
 bbcbasic.exe: $(OBJ)
 	$(CXX) $(OBJ) \

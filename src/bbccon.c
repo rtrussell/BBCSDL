@@ -6,7 +6,7 @@
         Raspberry Pico
 
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.36a, 22-Aug-2021                                 *
+*       Version 0.37a, 03-Sep-2021                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -987,6 +987,7 @@ void osline (char *buffer)
 				    }
 				break ;
 
+			case 9:
 			case 132:
 			case 133:
 			case 140:
