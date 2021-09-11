@@ -50,6 +50,7 @@ memcpy
 memset
 memcmp
 memchr
+tud_cdc_connected
 END
 } | {
 	printf "// sympico.i -- Alphabetical list of SDK function calls\n"

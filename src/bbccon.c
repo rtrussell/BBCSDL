@@ -670,6 +670,8 @@ heapptr xtrap (void)
 void faterr (const char *msg)
 {
 #ifdef PICO
+	extern void waitconsole();
+	waitconsole() ;
 	fprintf (stdout, "%s\r\n", msg) ;
 #else
 	fprintf (stderr, "%s\r\n", msg) ;
@@ -1736,25 +1738,16 @@ void sigbus(void){
 	printf("SIGBUS exception caught...\n");
 	for(;;);
 }
-#endif
-
-int main (int argc, char* argv[])
-{
-#ifdef PICO
-    stdio_init_all();
-# ifdef FREE
-	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,sigbus);
-# else
-	extern void __attribute__((used,naked)) HardFault_Handler(void);
-	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,HardFault_Handler);
-# endif
-#ifdef STDIO_USB
+void waitconsole(void){
+	static int waitdone=0;
+	if(waitdone) return;
+# ifdef STDIO_USB
 	printf("Waiting for usb host");
 	while (!tud_cdc_connected()) {
 		printf(".");
 		sleep_ms(500);
 	}
-#else
+# else
 	// Wait for UART connection
 	const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 	gpio_init(LED_PIN);
@@ -1767,10 +1760,24 @@ int main (int argc, char* argv[])
 	    sleep_ms(500);
 	    printf ("%d seconds to start\n", i);
 	    }
-#endif
-	char *cmdline[]={"bbcbasic",0};
-	argc=1; argv=cmdline;
+# endif
+	waitdone=1;
 	printf("\n");
+}
+#endif
+
+int main (int argc, char* argv[])
+{
+#ifdef PICO
+    stdio_init_all();
+# ifdef FREE
+	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,sigbus);
+# else
+	extern void __attribute__((used,naked)) HardFault_Handler(void);
+	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,HardFault_Handler);
+# endif
+	char *cmdline[]={"/autorun.bbc",0};
+	argc=1; argv=cmdline;
 	mount ();
 #endif
 int i ;
@@ -1841,7 +1848,7 @@ pthread_t hThread = NULL ;
 #endif
 
 #ifdef PICO
-	platform = 1 ;
+	platform = 6 ;
 	MaximumRAM = MINIMUM_RAM;
 	userRAM = &__StackLimit;
 	if (userRAM + MaximumRAM > (void *)0x20040000) userRAM = 0 ;
@@ -1857,6 +1864,7 @@ pthread_t hThread = NULL ;
 	if ((userRAM == NULL) || (userRAM == (void *)-1))
 	    {
 #ifdef PICO
+		waitconsole();
 		fprintf(stdout, "Couldn't allocate memory\r\n") ;
 		sleep(5);
 #else
@@ -1940,6 +1948,9 @@ pthread_t hThread = NULL ;
 	    }
 	else
 	    {
+#ifdef PICO
+		waitconsole();
+#endif
 		immediate = (void *) 1 ;
 		*szAutoRun = '\0' ;
 	    }

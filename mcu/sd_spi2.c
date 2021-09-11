@@ -6,6 +6,7 @@
 #include "hardware/dma.h"
 #include "sd_spi.pio.h"
 #include "sd_spi.h"
+#include "boards/vgaboard.h"
 
 // #define DEBUG
 #ifdef DEBUG
