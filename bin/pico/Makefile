@@ -11,27 +11,33 @@ buildusb/CMakeCache.txt: ../../console/pico/CMakeLists.txt
 	cd buildusb && PICO_SDK_PATH=$(PICO_SDK_PATH) \
 		cmake ../../../console/pico -DSTDIO=USB -DLFS=Y -DFAT=N
 
-builduart/CMakeCache.txt: ../../console/pico/CMakeLists.txt
+../../mcu/fatfs/ff.c:
+	-ln -s ../../mcu/fatfs/source/ff.c ../../mcu/fatfs/ff.c
+
+../../mcu/fatfs/ff.h:
+	-ln -s ../../mcu/fatfs/source/ff.h ../../mcu/fatfs/ff.h
+
+../../mcu/fatfs/ffsystem.c:
+	-ln -s ../../mcu/fatfs/source/ffsystem.c ../../mcu/fatfs/ffsystem.c
+
+../../mcu/fatfs/ffunicode.c:
+	-ln -s ../../mcu/fatfs/source/ffunicode.c ../../mcu/fatfs/ffunicode.c
+
+../../mcu/fatfs/diskio.h:
+	-ln -s ../../mcu/fatfs/source/diskio.h ../../mcu/fatfs/diskio.h
+
+
+builduart/CMakeCache.txt: ../../console/pico/CMakeLists.txt ../../mcu/fatfs/ff.c ../../mcu/fatfs/ff.h ../../mcu/fatfs/ffsystem.c ../../mcu/fatfs/ffunicode.c ../../mcu/fatfs/diskio.h
 	rm -rf builduart
 	mkdir -p builduart
 	cd builduart && PICO_SDK_PATH=$(PICO_SDK_PATH) \
 		cmake ../../../console/pico -DSTDIO=UART -DLFS=Y -DFAT=Y
 
 buildusb/bbcbasic.uf2: buildusb/CMakeCache.txt $(SOURCES)
-	-ln -s ../../mcu/fatfs/source/ff.c ../../mcu/fatfs/ff.c
-	-ln -s ../../mcu/fatfs/source/ff.h ../../mcu/fatfs/ff.h
-	-ln -s ../../mcu/fatfs/source/ffsystem.c ../../mcu/fatfs/ffsystem.c
-	-ln -s ../../mcu/fatfs/source/ffunicode.c ../../mcu/fatfs/ffunicode.c
-	-ln -s ../../mcu/fatfs/source/diskio.h ../../mcu/fatfs/diskio.h
 	cd buildusb && make
 	cp buildusb/bbcbasic.uf2 ../../bbcbasicusb.uf2
 
 builduart/bbcbasic.uf2: builduart/CMakeCache.txt $(SOURCES)
-	-ln -s ../../mcu/fatfs/source/ff.c ../../mcu/fatfs/ff.c
-	-ln -s ../../mcu/fatfs/source/ff.h ../../mcu/fatfs/ff.h
-	-ln -s ../../mcu/fatfs/source/ffsystem.c ../../mcu/fatfs/ffsystem.c
-	-ln -s ../../mcu/fatfs/source/ffunicode.c ../../mcu/fatfs/ffunicode.c
-	-ln -s ../../mcu/fatfs/source/diskio.h ../../mcu/fatfs/diskio.h
 	cd builduart && make
 	cp builduart/bbcbasic.uf2 ../../bbcbasicuart.uf2
 
