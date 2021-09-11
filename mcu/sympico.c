@@ -6,6 +6,14 @@
 #include <string.h>
 #include "pico/stdlib.h"
 
+#ifdef STDIO_USB
+#include "tusb.h"
+#else
+static int tud_cdc_connected(){
+	return 1;
+}
+#endif
+
 typedef struct { char *s; void *p; } symbols;
 #define SYMADD(X) { #X, &X }
 const symbols sdkfuncs[]={

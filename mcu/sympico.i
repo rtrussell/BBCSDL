@@ -44,4 +44,5 @@ SYMADD(memchr),
 SYMADD(memcmp),
 SYMADD(memcpy),
 SYMADD(memmove),
-SYMADD(memset)
+SYMADD(memset),
+SYMADD(tud_cdc_connected)

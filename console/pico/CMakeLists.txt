@@ -17,30 +17,38 @@ pico_sdk_init()
 
 if (TARGET tinyusb_device)
   add_executable(bbcbasic 
-    src/bbmain.c src/bbexec.c src/bbeval.c src/bbasmb_arm_32.c 
-    src/bbccos.c src/bbccon.c src/sympico.c src/lfswrap.c 
-    m0FaultDispatch/m0FaultDispatch.c src/fault.c
-    src/bbdata_arm_32.s)
+    ../../src/bbmain.c ../../src/bbexec.c ../../src/bbeval.c
+	../../src/bbasmb_arm_32.c ../../src/bbccos.c ../../src/bbccon.c
+    ../../src/bbdata_arm_32.s
+	../../mcu/sympico.c ../../mcu/lfswrap.c 
+    ../../mcu/m0FaultDispatch/m0FaultDispatch.c 
+	../../mcu/fault.c)
   target_compile_options(bbcbasic PRIVATE -O1 -g)
   target_link_options(bbcbasic PRIVATE -g)
   target_link_libraries(bbcbasic pico_stdlib hardware_flash hardware_exception)
   target_compile_definitions(bbcbasic PUBLIC PICO PICO_STACK_SIZE=0x3C000)
-  target_include_directories(bbcbasic PRIVATE include m0FaultDispatch)
+  target_include_directories(bbcbasic PRIVATE
+	../../include ../../mcu ../../mcu/m0FaultDispatch)
   pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/bbc_pico.ld)
 
   if ( ${LFS} )
     message(STATUS "Including LFS filesystem for flash storage")
     target_compile_definitions(bbcbasic PUBLIC -DHAVE_LFS)
-    target_sources(bbcbasic PRIVATE src/lfspico.c littlefs/lfs.c littlefs/lfs_util.c)
-    target_include_directories(bbcbasic PRIVATE littlefs)
+    target_sources(bbcbasic PRIVATE 
+		../../mcu/lfspico.c ../../mcu/littlefs/lfs.c 
+		../../mcu/littlefs/lfs_util.c)
+    target_include_directories(bbcbasic PRIVATE ../../mcu/littlefs)
   endif()
 
   if ( ${FAT} )
     message(STATUS "Including FAT filesystem for SD card storage")
     target_compile_definitions(bbcbasic PUBLIC -DHAVE_FAT)
-    pico_generate_pio_header(bbcbasic ${CMAKE_CURRENT_LIST_DIR}/src/sd_spi.pio)
-    target_sources(bbcbasic PRIVATE fatfs/ff.c fatfs/ffsystem.c fatfs/ffunicode.c
-      src/ff_disk.c src/sd_spi2.c)
+    pico_generate_pio_header(bbcbasic
+		${CMAKE_CURRENT_LIST_DIR}/../../mcu/sd_spi.pio)
+    target_sources(bbcbasic PRIVATE 
+		../../mcu/fatfs/ff.c ../../mcu/fatfs/ffsystem.c
+		../../mcu/fatfs/ffunicode.c
+		../../mcu/ff_disk.c ../../mcu/sd_spi2.c)
     target_link_libraries(bbcbasic hardware_dma hardware_pio)
   endif()
 
@@ -61,5 +69,5 @@ if (TARGET tinyusb_device)
   
   pico_add_extra_outputs(bbcbasic)
 elseif(PICO_ON_DEVICE)
-  message(WARNING "Not building bbcbasic because TinyUSB submodule is not initialized in the SDK")
+  message(WARNING "TinyUSB submodule is not initialized in the SDK")
 endif()

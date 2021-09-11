@@ -690,6 +690,7 @@ static struct lfs_config lfs_root_cfg = {
 };
 #endif
 
+extern void waitconsole();
 int mount (void)
     {
     int istat = 0;
@@ -706,6 +707,7 @@ int mount (void)
 	lfs_err = lfs_mount(&lfs_root, &lfs_root_cfg);
 	if (lfs_err)
 	    {
+	    waitconsole();
 	    printf("unable for format littlefs\n");
 	    istat |= 2;
 	    }
@@ -716,6 +718,7 @@ int mount (void)
     FRESULT fr = f_mount (&vol, "0:", 1);
     if ( fr != FR_OK )
 	{
+	waitconsole();
 	printf ("Failed to mount SD card.\n");
 	istat |= 1;
 	}

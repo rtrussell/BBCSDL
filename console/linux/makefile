@@ -30,3 +30,6 @@ bbcbasic: $(OBJ)
 	$(CXX) $(OBJ) -L . -L/usr/include -ldl -lm -lrt -pthread \
 	-o bbcbasic -Wl,-s -Wl,-R,'$$ORIGIN'
 	cp bbcbasic ../../
+
+clean:
+	rm -f *.o bbcbasic ../../bbcbasic
