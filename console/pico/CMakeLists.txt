@@ -27,8 +27,8 @@ if (TARGET tinyusb_device)
   target_link_options(bbcbasic PRIVATE -g)
   target_link_libraries(bbcbasic pico_stdlib hardware_flash hardware_exception)
   target_compile_definitions(bbcbasic PUBLIC PICO PICO_STACK_SIZE=0x3C000)
-  target_include_directories(bbcbasic PRIVATE
-	../../include ../../mcu ../../mcu/m0FaultDispatch)
+  target_include_directories(bbcbasic PUBLIC
+	../../mcu ../../include ../../mcu/m0FaultDispatch)
   pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/bbc_pico.ld)
 
   if ( ${LFS} )
@@ -50,6 +50,7 @@ if (TARGET tinyusb_device)
 		../../mcu/fatfs/ffunicode.c
 		../../mcu/ff_disk.c ../../mcu/sd_spi2.c)
     target_link_libraries(bbcbasic hardware_dma hardware_pio)
+    target_include_directories(bbcbasic PRIVATE ../../mcu/fatfs)
   endif()
 
   if ( NOT STDIO )

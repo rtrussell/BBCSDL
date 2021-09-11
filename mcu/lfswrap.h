@@ -2,7 +2,7 @@
 #define LFSWRAP_H
 
 #ifdef HAVE_FAT
-#include <../fatfs/ff.h>
+#include "ff.h"
 #else
 #define DIR void
 #endif

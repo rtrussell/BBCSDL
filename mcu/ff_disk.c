@@ -2,8 +2,8 @@
 
 #include "pico.h"
 #include "pico/stdlib.h"
-#include "../fatfs/ff.h"
-#include "../fatfs/diskio.h"
+#include "ff.h"
+#include "diskio.h"
 
 #define USE_SPI     // Never managed to make SD card mode from Pico SDK work
 static uint32_t lba_base = 0;
