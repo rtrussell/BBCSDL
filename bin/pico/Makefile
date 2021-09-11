@@ -18,6 +18,11 @@ builduart/CMakeCache.txt: ../../console/pico/CMakeLists.txt
 		cmake ../../../console/pico -DSTDIO=UART -DLFS=Y -DFAT=Y
 
 buildusb/bbcbasic.uf2: buildusb/CMakeCache.txt $(SOURCES)
+	-ln -s ../../mcu/fatfs/source/ff.c ../../mcu/fatfs/ff.c
+	-ln -s ../../mcu/fatfs/source/ff.h ../../mcu/fatfs/ff.h
+	-ln -s ../../mcu/fatfs/source/ffsystem.c ../../mcu/fatfs/ffsystem.c
+	-ln -s ../../mcu/fatfs/source/ffunicode.c ../../mcu/fatfs/ffunicode.c
+	-ln -s ../../mcu/fatfs/source/diskio.h ../../mcu/fatfs/diskio.h
 	cd buildusb && make
 	cp buildusb/bbcbasic.uf2 ../../bbcbasicusb.uf2
 
