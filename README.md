@@ -2,10 +2,10 @@
 
 For the original BBCSDL please go to https://github.com/rtrussell/BBCSDL
 
-This fork is part of an attempt to implement console mode BBC Basic on a Raspberry Pi Pico.
+This fork is part of an attempt to implement BBC Basic on a Raspberry Pi Pico.
 For discussion see https://www.raspberrypi.org/forums/viewtopic.php?f=144&t=316761
 
-It is a work in progress and may often be broken. It includes work by:
+It includes work by:
 
 * R. T. Russell
 * Eric Olson
@@ -13,8 +13,21 @@ It is a work in progress and may often be broken. It includes work by:
 
 Apologies to anyone else I omitted.
 
-Now modified to provide storage either in Pico flash or an attached SD card (FAT format).
-The SD card is mounted at /sdcard.
+There are two somewhat divergent lines of development:
+
+1.  To be able to use the Pico as a microcontroller programmed in BBC Basic.
+    User interaction (if any) would be via a console interface over USB or serial.
+    Includes program and data storage either in Pico flash and/or an attached SD card.
+    This is in a fairly advanced state of development.
+
+2.  To be able to use the Pico as a computer programmable in BBC Basic with input
+    by an attached USB keyboard and display on an attached VGA monitor. This
+    development is aimed at a Pico attached to a VGA demonstration board as per
+    chapter 3 of
+    [Hardware design with RP2040](https://datasheets.raspberrypi.org/rp2040/hardware-design-with-rp2040.pdf)
+    or the commercial version
+    [Pimoroni Pico VGA Demo Base](https://shop.pimoroni.com/products/pimoroni-pico-vga-demo-base).
+    This is still in an early phase, requiring much more work and may often be broken.
 
 This project includes source from various locations with difference licenses. See the
 various LICENSE.txt files.
@@ -38,6 +51,7 @@ The following options may be specified with the cmake command:
 
 * -DPICO_BOARD=vgaboard if using the VGA demo board, or other board as appropriate.
 * -DSTDIO=USB for the basic console on USB or -DSTDIO=UART for the basic console on UART.
+  Use -DSTDIO=PICO for input via USB keyboard and output via VGA monitor.
 * -DLFS=Y to include storage on Pico flash or -DLFS=N to exclude it.
 * -DFAT=Y to include storage on SD card or -DFAT=N to exclude it.
 * Other cmake options if required.
@@ -86,3 +100,14 @@ The following limitations are noted:
 6.  There is are known buffer overflows in the wrappers appearing in
     lfswrap.c which are triggered when a filename path grows to be
     greater than 256 characters.  Please don't do that.
+
+## TO DO - For the second development line
+
+* Sort out the memory map for this mode
+* Enhance text processing (viewports)
+* Implement teletext mode
+* Implement graphics
+* 800x600 VGA output (currently only 640x480)
+* Sound?
+* Testing - Lots of it
+* Documentation

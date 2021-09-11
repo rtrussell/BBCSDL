@@ -117,6 +117,7 @@ static void newmode (short wx, short wy, short cx, short cy, short nc, signed ch
 	scroln = 0 ;
 }
 
+#ifndef PICO_VGA
 //VDU 22,n - MODE n
 static void modechg (char al) 
 {
@@ -416,6 +417,7 @@ void xeqvdu (int code, int data1, int data2)
 	    }
 	fflush (stdout) ;
 }
+#endif
 
 // Parse a filespec, return pointer to terminator.
 // Note that source string is CR-terminated

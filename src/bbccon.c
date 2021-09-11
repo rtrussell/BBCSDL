@@ -327,7 +327,7 @@ static heapptr getevt (void)
 }
 
 // Put keycode to keyboard queue:
-static int putkey (char key)
+int putkey (char key)
 {
 	unsigned char bl = kbdqw ;
 	unsigned char al = bl + 1 ;
@@ -1747,19 +1747,6 @@ void waitconsole(void){
 		printf(".");
 		sleep_ms(500);
 	}
-# else
-	// Wait for UART connection
-	const uint LED_PIN = PICO_DEFAULT_LED_PIN;
-	gpio_init(LED_PIN);
-	gpio_set_dir(LED_PIN, GPIO_OUT);
-	for (int i = 10; i > 0; --i )
-	    {
-	    gpio_put(LED_PIN, 1);
-	    sleep_ms(500);
-	    gpio_put(LED_PIN, 0);
-	    sleep_ms(500);
-	    printf ("%d seconds to start\n", i);
-	    }
 # endif
 	waitdone=1;
 	printf("\n");
@@ -1770,6 +1757,20 @@ int main (int argc, char* argv[])
 {
 #ifdef PICO
     stdio_init_all();
+#ifndef STDIO_USB
+	// Wait for UART connection
+	const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+	gpio_init(LED_PIN);
+	gpio_set_dir(LED_PIN, GPIO_OUT);
+	for (int i = 10; i > 0; --i )
+	    {
+	    printf ("%d seconds to start\n", i);
+	    gpio_put(LED_PIN, 1);
+	    sleep_ms(500);
+	    gpio_put(LED_PIN, 0);
+	    sleep_ms(500);
+	    }
+#endif
 # ifdef FREE
 	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,sigbus);
 # else
@@ -1778,6 +1779,10 @@ int main (int argc, char* argv[])
 # endif
 	char *cmdline[]={"/autorun.bbc",0};
 	argc=1; argv=cmdline;
+#ifdef PICO_VGA
+    setup_vdu ();
+    setup_keyboard ();
+#endif
 	mount ();
 #endif
 int i ;
@@ -1850,8 +1855,12 @@ pthread_t hThread = NULL ;
 #ifdef PICO
 	platform = 6 ;
 	MaximumRAM = MINIMUM_RAM;
+#ifdef PICO_VGA
+    userRAM = malloc(MaximumRAM);
+#else
 	userRAM = &__StackLimit;
 	if (userRAM + MaximumRAM > (void *)0x20040000) userRAM = 0 ;
+#endif
 /*
 	The address 0x20040000 is 8K less than total RAM on the Pico to
 	leave space for the current stack when zeroing.  This only works
