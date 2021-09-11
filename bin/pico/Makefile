@@ -1,4 +1,3 @@
-PICO_SDK_PATH=/usr/local/pico-sdk
 SOURCES=../../mcu/*.[chi] ../../src/*.c ../../include/*.h
 
 all: usb uart filesystem
@@ -6,17 +5,17 @@ usb: buildusb/bbcbasic.uf2
 uart: builduart/bbcbasic.uf2
 filesystem:	../../mcu/lfsutil/filesystem.uf2
 
-buildusb/CMakeCache.txt: CMakeLists.txt
+buildusb/CMakeCache.txt: ../../console/pico/CMakeLists.txt
 	rm -rf buildusb
 	mkdir -p buildusb
 	cd buildusb && PICO_SDK_PATH=$(PICO_SDK_PATH) \
-		cmake .. -DSTDIO=USB -DLFS=Y -DFAT=N
+		cmake ../../../console/pico -DSTDIO=USB -DLFS=Y -DFAT=N
 
-builduart/CMakeCache.txt: CMakeLists.txt
+builduart/CMakeCache.txt: ../../console/pico/CMakeLists.txt
 	rm -rf builduart
 	mkdir -p builduart
 	cd builduart && PICO_SDK_PATH=$(PICO_SDK_PATH) \
-		cmake .. -DSTDIO=UART -DLFS=Y -DFAT=Y
+		cmake ../../../console/pico -DSTDIO=UART -DLFS=Y -DFAT=Y
 
 buildusb/bbcbasic.uf2: buildusb/CMakeCache.txt $(SOURCES)
 	cd buildusb && make
