@@ -29,8 +29,10 @@ Then type
 
      $ mkdir build
      $ cd build
-     $ cmake [options] ..
+     $ cmake [options] -S ../console/pico -B .
      $ make
+
+Note the stop (current folder) after the -B flag.
 
 The following options may be specified with the cmake command:
 
@@ -46,19 +48,6 @@ Plug a Pico into the USB port while holding the boot button and then assuming de
 on a Raspberry Pi with Raspberry Pi OS:
 
      $ cp -v bbcbasic.uf2 /media/pi/RPI-RP2
-
-Now change to the filesystem directory and build the filesystem image 
-with all the examples.
-
-     $ cd ../filesystem
-     $ make
-
-At this point the file filesystem.uf2 should be in the build directory.
-
-Unplug the Pico and replug it holding the boot button and again as 
-root perform the following to copy the uf2 to the Pico:
-
-     $ cp -v filesystem.uf2 /media/pi/RPI-RP2
 
 If using USB, connect as
 
