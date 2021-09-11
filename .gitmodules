@@ -1,0 +1,3 @@
+[submodule "mcu/littlefs"]
+	path = mcu/littlefs
+	url = https://github.com/littlefs-project/littlefs.git
