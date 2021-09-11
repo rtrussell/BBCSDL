@@ -385,7 +385,6 @@ typedef __attribute__((aligned(1))) unsigned short unaligned_short;
 typedef __attribute__((aligned(1))) void* unaligned_void_ptr;
 typedef __attribute__((aligned(1))) char* unaligned_char_ptr;
 typedef __attribute__((aligned(1))) VAR unaligned_VAR;
-#endif
 
 static inline int ILOAD(void* p){
         if((int)p&0x03) return *((unaligned_int*)p);
@@ -408,3 +407,4 @@ static inline void CSTORE(void* p, char* i) { *((unaligned_char_ptr*)p) = i; }
 static inline VAR NLOAD(void* p) { return *((unaligned_VAR*)p); }
 static inline void NSTORE(void* p, VAR i) { *((unaligned_VAR*)p) = i; }
 
+#endif
