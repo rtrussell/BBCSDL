@@ -361,33 +361,34 @@ typedef union __attribute__ ((packed)) __attribute__ ((aligned (4))) tagVAR
     } d ;
 } VAR, *LPVAR ;
 
-// Helper macros to fix alignment problem:
+// Alignment helper types:
 typedef __attribute__((aligned(1))) int unaligned_int;
-typedef __attribute__((aligned(1))) int* unaligned_intptr_t;
+#if PICO
+typedef __attribute__((aligned(1))) intptr_t unaligned_intptr_t;
+#endif
 typedef __attribute__((aligned(1))) unsigned int unaligned_uint;
-typedef __attribute__((aligned(1))) unsigned short unaligned_short;
+typedef __attribute__((aligned(1))) unsigned short unaligned_ushort;
 typedef __attribute__((aligned(1))) void* unaligned_void_ptr;
 typedef __attribute__((aligned(1))) char* unaligned_char_ptr;
 typedef __attribute__((aligned(1))) VAR unaligned_VAR;
 
-static inline int ILOAD(void* p){
-        if((int)p&0x03) return *((unaligned_int*)p);
-        else return *((int*)p);
-}
-static inline void ISTORE(void* p, int i){
-        if((int)p&0x03) *((unaligned_int*)p) = i;
-        else *((int *)p) = i;
-}
-static inline int* TLOAD(void* p) { return *((unaligned_intptr_t*)p); }
-static inline void TSTORE(void* p, int* i) { *((unaligned_intptr_t*)p) = i; }
-static inline unsigned int ULOAD(void* p) { return *((unaligned_uint*)p); }
-static inline void USTORE(void* p, unsigned int i) { *((unaligned_uint*)p) = i; }
-static inline unsigned short SLOAD(void* p) { return *((unaligned_short*)p); }
-static inline void SSTORE(void* p, unsigned short i) { *((unaligned_short*)p) = i; }
-static inline void* VLOAD(void* p) { return *((unaligned_void_ptr*)p); }
-static inline void VSTORE(void* p, void* i) { *((unaligned_void_ptr*)p) = i; }
-static inline char* CLOAD(void* p) { return *((unaligned_char_ptr*)p); }
-static inline void CSTORE(void* p, char* i) { *((unaligned_char_ptr*)p) = i; }
-static inline VAR NLOAD(void* p) { return *((unaligned_VAR*)p); }
-static inline void NSTORE(void* p, VAR i) { *((unaligned_VAR*)p) = i; }
-
+// Helper macros to fix alignment problem:
+#define ILOAD(p)    *((unaligned_int*)(p))
+#define ISTORE(p,i) *((unaligned_int*)(p)) = i 
+#if PICO
+#define TLOAD(p)    *((unaligned_intptr_t*)(p))
+#define TSTORE(p,i) *((unaligned_intptr_t*)(p)) = i 
+#else
+#define TLOAD(p)    *((int*)(p))
+#define TSTORE(p,i) *((int*)(p)) = i
+#endif
+#define ULOAD(p)    *((unaligned_uint*)(p))
+#define USTORE(p,i) *((unaligned_uint*)(p)) = i 
+#define SLOAD(p)    *((unaligned_ushort*)(p))
+#define SSTORE(p,i) *((unaligned_ushort*)(p)) = i 
+#define VLOAD(p)    *((unaligned_void_ptr*)(p))
+#define VSTORE(p,i) *((unaligned_void_ptr*)(p)) = i 
+#define CLOAD(p)    *((unaligned_char_ptr*)(p))
+#define CSTORE(p,i) *((unaligned_char_ptr*)(p)) = i 
+#define NLOAD(p)    *((unaligned_VAR*)(p))
+#define NSTORE(p,i) *((unaligned_VAR*)(p)) = i
