@@ -362,10 +362,6 @@ typedef union __attribute__ ((packed)) __attribute__ ((aligned (4))) tagVAR
 } VAR, *LPVAR ;
 
 // Alignment helper types:
-#if __WORDSIZE == 64
-    typedef long int        intptr_t;
-#endif
-
 typedef __attribute__((aligned(1))) int unaligned_int;
 typedef __attribute__((aligned(1))) intptr_t unaligned_intptr_t;
 typedef __attribute__((aligned(1))) unsigned int unaligned_uint;
