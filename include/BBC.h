@@ -362,22 +362,6 @@ typedef union __attribute__ ((packed)) __attribute__ ((aligned (4))) tagVAR
 } VAR, *LPVAR ;
 
 // Helper macros to fix alignment problem:
-#if defined(__i386__) || defined(__x86_64__) || defined(__EMSCRIPTEN__) || __ARM_FEATURE_UNALIGNED
-#define ILOAD(p)    *(int*)(p)
-#define ISTORE(p,i) *(int*)(p) = i 
-#define TLOAD(p)    *(intptr_t*)(p)
-#define TSTORE(p,i) *(intptr_t*)(p) = i 
-#define ULOAD(p)    *(unsigned int*)(p)
-#define USTORE(p,i) *(unsigned int*)(p) = i 
-#define SLOAD(p)    *(unsigned short*)(p)
-#define SSTORE(p,i) *(unsigned short*)(p) = i 
-#define VLOAD(p)    *(void**)(p)
-#define VSTORE(p,i) *(void**)(p) = i 
-#define CLOAD(p)    *(char**)(p)
-#define CSTORE(p,i) *(char**)(p) = i 
-#define NLOAD(p)    *(VAR*)(p)
-#define NSTORE(p,i) *(VAR*)(p) = i
-#else
 typedef __attribute__((aligned(1))) int unaligned_int;
 typedef __attribute__((aligned(1))) intptr_t unaligned_intptr_t;
 typedef __attribute__((aligned(1))) unsigned int unaligned_uint;
@@ -407,4 +391,3 @@ static inline void CSTORE(void* p, char* i) { *((unaligned_char_ptr*)p) = i; }
 static inline VAR NLOAD(void* p) { return *((unaligned_VAR*)p); }
 static inline void NSTORE(void* p, VAR i) { *((unaligned_VAR*)p) = i; }
 
-#endif
