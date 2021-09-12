@@ -363,7 +363,7 @@ typedef union __attribute__ ((packed)) __attribute__ ((aligned (4))) tagVAR
 
 // Helper macros to fix alignment problem:
 typedef __attribute__((aligned(1))) int unaligned_int;
-typedef __attribute__((aligned(1))) intptr_t unaligned_intptr_t;
+typedef __attribute__((aligned(1))) int* unaligned_intptr_t;
 typedef __attribute__((aligned(1))) unsigned int unaligned_uint;
 typedef __attribute__((aligned(1))) unsigned short unaligned_short;
 typedef __attribute__((aligned(1))) void* unaligned_void_ptr;
@@ -378,8 +378,8 @@ static inline void ISTORE(void* p, int i){
         if((int)p&0x03) *((unaligned_int*)p) = i;
         else *((int *)p) = i;
 }
-static inline intptr_t TLOAD(void* p) { return *((unaligned_intptr_t*)p); }
-static inline void TSTORE(void* p, intptr_t i) { *((unaligned_intptr_t*)p) = i; }
+static inline int* TLOAD(void* p) { return *((unaligned_intptr_t*)p); }
+static inline void TSTORE(void* p, int* i) { *((unaligned_intptr_t*)p) = i; }
 static inline unsigned int ULOAD(void* p) { return *((unaligned_uint*)p); }
 static inline void USTORE(void* p, unsigned int i) { *((unaligned_uint*)p) = i; }
 static inline unsigned short SLOAD(void* p) { return *((unaligned_short*)p); }
