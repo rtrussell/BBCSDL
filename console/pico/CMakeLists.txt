@@ -23,6 +23,7 @@ if (TARGET tinyusb_device)
 	../../mcu/sympico.c ../../mcu/lfswrap.c 
     ../../mcu/m0FaultDispatch/m0FaultDispatch.c 
 	../../mcu/fault.c)
+  pico_set_printf_implementation(bbcbasic compiler)
   target_compile_options(bbcbasic PRIVATE -O1 -g)
   target_link_options(bbcbasic PRIVATE -g)
   target_link_libraries(bbcbasic pico_stdlib hardware_flash hardware_exception)
