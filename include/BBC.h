@@ -362,10 +362,12 @@ typedef union __attribute__ ((packed)) __attribute__ ((aligned (4))) tagVAR
 } VAR, *LPVAR ;
 
 // Alignment helper types:
-typedef __attribute__((aligned(1))) int unaligned_int;
-#if PICO
-typedef __attribute__((aligned(1))) intptr_t unaligned_intptr_t;
+#if __WORDSIZE == 64
+    typedef long int        intptr_t;
 #endif
+
+typedef __attribute__((aligned(1))) int unaligned_int;
+typedef __attribute__((aligned(1))) intptr_t unaligned_intptr_t;
 typedef __attribute__((aligned(1))) unsigned int unaligned_uint;
 typedef __attribute__((aligned(1))) unsigned short unaligned_ushort;
 typedef __attribute__((aligned(1))) void* unaligned_void_ptr;
@@ -375,13 +377,8 @@ typedef __attribute__((aligned(1))) VAR unaligned_VAR;
 // Helper macros to fix alignment problem:
 #define ILOAD(p)    *((unaligned_int*)(p))
 #define ISTORE(p,i) *((unaligned_int*)(p)) = i 
-#if PICO
 #define TLOAD(p)    *((unaligned_intptr_t*)(p))
 #define TSTORE(p,i) *((unaligned_intptr_t*)(p)) = i 
-#else
-#define TLOAD(p)    *((int*)(p))
-#define TSTORE(p,i) *((int*)(p)) = i
-#endif
 #define ULOAD(p)    *((unaligned_uint*)(p))
 #define USTORE(p,i) *((unaligned_uint*)(p)) = i 
 #define SLOAD(p)    *((unaligned_ushort*)(p))
