@@ -32,6 +32,7 @@ if (TARGET tinyusb_device)
     ../../mcu/m0FaultDispatch/m0FaultDispatch.c
     ../../mcu/fault.c
     )
+  pico_set_printf_implementation(bbcbasic compiler)
   target_compile_options(bbcbasic PRIVATE -O1 -g)
   target_link_options(bbcbasic PRIVATE -g)
   target_link_libraries(bbcbasic
@@ -39,11 +40,7 @@ if (TARGET tinyusb_device)
     hardware_flash
     hardware_exception
     )
-  target_compile_definitions(bbcbasic PUBLIC
-    PICO
-    PICO_STACK_SIZE=0x2B800
-    PICO_CORE1_STACK_SIZE=0x800
-    )
+  target_compile_definitions(bbcbasic PUBLIC PICO)
   target_include_directories(bbcbasic PRIVATE
     ../../include
     ../../mcu
@@ -89,6 +86,10 @@ if (TARGET tinyusb_device)
       ../../mcu/picovdu.c
       ../../mcu/framebuffer.S
       )
+    target_compile_definitions(bbcbasic PUBLIC
+      PICO_STACK_SIZE=0x2B800
+      PICO_CORE1_STACK_SIZE=0x800
+      )
     target_compile_definitions(bbcbasic PRIVATE -DSTDIO_PICO)
     # target_compile_definitions(bbcbasic PRIVATE -DSTDIO_UART)
     target_compile_definitions(bbcbasic PRIVATE -DPICO_VGA)
@@ -103,18 +104,20 @@ if (TARGET tinyusb_device)
       tinyusb_host
       tinyusb_board
       )
-    # pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/bbc_pico.ld)
+    pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/vga_pico.ld)
   elseif ( ${STDIO} STREQUAL "UART" )
     message(STATUS "BBC Basic console I/O will be on UART")
     pico_enable_stdio_usb(bbcbasic 0)
     pico_enable_stdio_uart(bbcbasic 1)
     target_compile_definitions(bbcbasic PRIVATE -DSTDIO_UART)
+    target_compile_definitions(bbcbasic PUBLIC PICO PICO_STACK_SIZE=0x3C000)
     pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/bbc_pico.ld)
   else()
     message(STATUS "BBC Basic console I/O will be on USB")
     pico_enable_stdio_usb(bbcbasic 1)
     pico_enable_stdio_uart(bbcbasic 0)
     target_compile_definitions(bbcbasic PRIVATE -DSTDIO_USB)
+    target_compile_definitions(bbcbasic PUBLIC PICO PICO_STACK_SIZE=0x3C000)
     pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/bbc_pico.ld)
   endif()
   
