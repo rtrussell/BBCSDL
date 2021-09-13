@@ -46,18 +46,6 @@ static int gfg;         // Graphics foreground colour
 static int gbg;         // Graphics background colour
 static bool bPrint = false;     // Enable output to printer (UART)
 
-// Temporary definitions for testing
-#if 0
-#define ESCFLG  1
-#define KILL    2
-#define VDUDIS  1
-#define HRGFLG  2
-static uint8_t  scroln;
-static uint8_t  flags;
-static uint8_t  cmcflg;
-static uint8_t  vflags;
-#endif
-
 static uint16_t curpal[16];
 
 static const uint16_t defpal[16] =
@@ -620,6 +608,9 @@ static void wrap (void)
 
 static void tabxy (int x, int y)
     {
+#if DEBUG > 0
+    printf ("tab: row = %d, col = %d\n", y, x);
+#endif
     if (( x >= 0 ) && ( x < pmode->tcol ) && ( y >= 0 ) && ( y < pmode->trow ))
         {
         row = y;
@@ -699,40 +690,46 @@ void xeqvdu (int code, int data1, int data2)
     if ( pmode == NULL ) return;
     int vdu = code >> 8;
 
+    // WJB
+    if ((vdu > 32) && (vdu < 127)) printf ("%c", vdu);
+    else if ((vdu == 10) || (vdu == 13)) printf ("%c", vdu);
+    else if (vdu == 32) printf ("_");
+    else printf (" 0x%02X ", vdu);
+
     if ((vflags & VDUDIS) && (vdu != 6))
         return;
 
     switch (vdu)
         {
-        case 1: // Next character to printer only
+        case 1: // 0x01 - Next character to printer only
             putchar (code & 0xFF);
             break;
             
-        case 2: // PRINTER ON
+        case 2: // 0x02 - PRINTER ON
             bPrint = true;
             break;
 
-        case 3: // PRINTER OFF
+        case 3: // 0x03 - PRINTER OFF
             bPrint = false;
             break;
 
-        case 4: // LO-RES TEXT
+        case 4: // 0x04 - LO-RES TEXT
             vflags &= ~HRGFLG;
             break;
 
-        case 5: // HI-RES TEXT
+        case 5: // 0x05 - HI-RES TEXT
             vflags |= HRGFLG;
             break;
 
-        case 6: // ENABLE VDU DRIVERS
+        case 6: // 0x06 - ENABLE VDU DRIVERS
             vflags &= ~VDUDIS;
             break;
 
-        case 7: // BELL
+        case 7: // 0x07 - BELL
             if ( bPrint ) putchar (vdu);
             break;
 
-        case 8: // LEFT
+        case 8: // 0x08 - LEFT
             if (col == 0)
                 {
                 col = pmode->tcol;
@@ -754,7 +751,7 @@ void xeqvdu (int code, int data1, int data2)
                 }
             break;
 
-        case 9: // RIGHT
+        case 9: // 0x09 - RIGHT
             if (col == pmode->tcol)
                 {
                 wrap ();
@@ -766,37 +763,37 @@ void xeqvdu (int code, int data1, int data2)
                 }
             break;
 
-        case 10: // LINE FEED
+        case 10: // 0x0A - LINE FEED
             newline (&col, &row);
             break;
 
-        case 11: // UP
+        case 11: // 0x0B - UP
             if ( row == 0 ) scrldn ();
             else --row;
             if ( bPrint ) printf ("\033M");
             break;
 
-        case 12: // CLEAR SCREEN
+        case 12: // 0x0C - CLEAR SCREEN
             cls (bgfill);
             if ( bPrint ) printf ("\033[H\033[J");
             col = 0;
             row = 0;
             break;
 
-        case 13: // RETURN
+        case 13: // 0x0D - RETURN
             if ( bPrint ) putchar (vdu);
             col = 0;
             break;
 
-        case 14: // PAGING ON
+        case 14: // 0x0E - PAGING ON
             scroln = 0x80 + row;
             break;
 
-        case 15: // PAGING OFF
+        case 15: // 0x0F - PAGING OFF
             scroln = 0;
             break;
 
-        case 16: // CLEAR GRAPHICS SCREEN
+        case 16: // 0x10 - CLEAR GRAPHICS SCREEN
         {
             uint8_t fill;
             if ( pmode->nclr == 16 )        fill = (uint8_t) cpx16[bg];
@@ -809,12 +806,24 @@ void xeqvdu (int code, int data1, int data2)
             break;
         }
 
-        case 17: // COLOUR n
-            fg = clrmsk (code);
-            bg = clrmsk (code >> 4);
-            if ( pmode->nclr == 16 )        bgfill = (uint8_t) cpx16[bg];
-            else if ( pmode->nclr == 4 )    bgfill = (uint8_t) cpx04[bg];
-            else                            bgfill = cpx02[bg];
+        case 17: // 0x11 - COLOUR n
+            if ( code & 0x80 )
+                {
+                bg = clrmsk (code >> 4);
+                if ( pmode->nclr == 16 )        bgfill = (uint8_t) cpx16[bg];
+                else if ( pmode->nclr == 4 )    bgfill = (uint8_t) cpx04[bg];
+                else                            bgfill = cpx02[bg];
+#if DEBUG > 0
+                printf ("Background colour %d\n", code & 0x7F);
+#endif
+                }
+            else
+                {
+                fg = clrmsk (code);
+#if DEBUG > 0
+                printf ("Foreground colour %d\n", code & 0x7F);
+#endif
+                }
             if ( bPrint )
                 {
                 vdu = 30 + (code & 7);
@@ -826,7 +835,7 @@ void xeqvdu (int code, int data1, int data2)
                 }
             break;
 
-        case 18: // GCOL m, n
+        case 18: // 0x12 - GCOL m, n
             gmd = code & 0x0F;
             gfg = clrmsk (data1);
             gbg = clrmsk (data1 >> 4);
@@ -841,7 +850,7 @@ void xeqvdu (int code, int data1, int data2)
                 }
             break;
 
-        case 19: // SET CURPAL
+        case 19: // 0x13 - SET CURPAL
         {
             int pal = code & 0x0F;
             int phy = data1 & 0xFF;
@@ -854,7 +863,7 @@ void xeqvdu (int code, int data1, int data2)
             genrb ();
         }
 
-        case 20: // RESET COLOURS
+        case 20: // 0x14 - RESET COLOURS
             clrreset ();
             fg = clrmsk (7);
             bg = 0;
@@ -864,22 +873,26 @@ void xeqvdu (int code, int data1, int data2)
             if ( bPrint ) printf ("\033[37m\033[40m");
             break;
 
-        case 21: // DISABLE VDU DRIVERS
+        case 21: // 0x15 - DISABLE VDU DRIVERS
             vflags |= VDUDIS;
             break;
 
-        case 22: // MODE CHANGE
+        case 22: // 0x16 - MODE CHANGE
             modechg (code & 0x7F);
             col = 0;
             row = 0;
             break;
 
-        case 23: // DEFINE CHARACTER ETC.
+        case 23: // 0x17 - DEFINE CHARACTER ETC.
             /*
             defchr (data2 & 0xFF, (data2 >> 8) & 0xFF, (data2 >> 16) & 0xFF,
                 (data2 >> 24) & 0xFF, data1 & 0xFF, (data1 >> 8) & 0xFF,
                 (data1 >> 16) & 0xFF, (data1 >> 24) & 0xFF, code & 0xFF);
             */
+#if DEBUG > 0
+            printf ("VDU 0x17: code = 0x%04X, data1 = 0x%08X, data2 = 0x%08X\n",
+                code, data1, data2);
+#endif
             if ((data2 & 0xFF) == 22)
                 {
                 col = 0;
@@ -887,36 +900,36 @@ void xeqvdu (int code, int data1, int data2)
                 }
             break;
 
-        case 24: // DEFINE GRAPHICS VIEWPORT - TODO
+        case 24: // 0x18 - DEFINE GRAPHICS VIEWPORT - TODO
             break;
 
-        case 25: // PLOT - TODO
+        case 25: // 0x19 - PLOT - TODO
             break;
 
-        case 26: // RESET VIEWPORTS
+        case 26: // 0x1A - RESET VIEWPORTS
             col = 0;
             row = 0;
             break;
 
-        case 27: // SEND NEXT TO OUTC
+        case 27: // 0x1B - SEND NEXT TO OUTC
             showchr (code & 0xFF);
             break;
 
-        case 28: // SET TEXT VIEWPORT - TODO
+        case 28: // 0x1C - SET TEXT VIEWPORT - TODO
             break;
 
-        case 29: // SET GRAPHICS ORIGIN - TODO
+        case 29: // 0x1D - SET GRAPHICS ORIGIN - TODO
             break;
 
-        case 30: // CURSOR HOME
+        case 30: // 0x1E - CURSOR HOME
             if ( bPrint ) printf ("\033[H");
             col = 0;
             row = 0;
             scroln &= 0x80;
             break;
 
-        case 31: // TAB(X,Y)
-            tabxy (data1 >> 24 & 0xFF, data1 >> 24 & 0xFF);
+        case 31: // 0x1F - TAB(X,Y)
+            tabxy (data1 >> 24 & 0xFF, code & 0xFF);
             if ( bPrint ) printf ("\033[%i;%iH", row + 1, col + 1);
             break;
 
