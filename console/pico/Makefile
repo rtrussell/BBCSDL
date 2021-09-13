@@ -36,10 +36,12 @@ builduart/CMakeCache.txt: CMakeLists.txt ../../mcu/fatfs/ff.c ../../mcu/fatfs/ff
 buildusb/bbcbasic.uf2: buildusb/CMakeCache.txt $(SOURCES)
 	cd buildusb && make
 	cp buildusb/bbcbasic.uf2 ../../bbcbasicusb.uf2
+	cp buildusb/bbcbasic.elf ../../bbcbasicusb.elf
 
 builduart/bbcbasic.uf2: builduart/CMakeCache.txt $(SOURCES)
 	cd builduart && make
 	cp builduart/bbcbasic.uf2 ../../bbcbasicuart.uf2
+	cp builduart/bbcbasic.elf ../../bbcbasicuart.elf
 
 ../../mcu/sympico.i: ../../mcu/sympico.sh
 	cd ../../mcu && ./sympico.sh
@@ -47,6 +49,7 @@ builduart/bbcbasic.uf2: builduart/CMakeCache.txt $(SOURCES)
 ../../mcu/lfsutil/filesystem.uf2:
 	cd ../../mcu/lfsutil && make
 	cp ../../mcu/lfsutil/filesystem.uf2 ../..
+	cp ../../mcu/lfsutil/filesystem.elf ../..
 
 clean:
 	rm -rf buildusb builduart

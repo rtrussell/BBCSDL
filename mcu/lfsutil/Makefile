@@ -1,11 +1,14 @@
 CFLAGS=-O2 -Wall -I.. -I../littlefs
-TARGETS=filesystem.uf2 filesystem.lfs mklfsimage uf2conv
+TARGETS=filesystem.uf2 filesystem.elf filesystem.lfs mklfsimage uf2conv
 SOURCES=mklfsimage.c ../lfspico.c ../littlefs/lfs.a
 
 all: $(TARGETS)
 
 filesystem.uf2: filesystem.lfs uf2conv
 	./uf2conv filesystem.lfs filesystem.uf2 0x10100000
+
+filesystem.elf: filesystem.lfs
+	arm-none-eabi-objcopy --change-addresses 0x10100000 --input-target=binary --output-target=elf32-little filesystem.lfs filesystem.elf
 
 tree:
 	rm -rf tree
