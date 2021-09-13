@@ -1855,12 +1855,8 @@ pthread_t hThread = NULL ;
 #ifdef PICO
 	platform = 6 ;
 	MaximumRAM = MINIMUM_RAM;
-#ifdef PICO_VGA
-    userRAM = malloc(MaximumRAM);
-#else
 	userRAM = &__StackLimit;
 	if (userRAM + MaximumRAM > (void *)0x20040000) userRAM = 0 ;
-#endif
 /*
 	The address 0x20040000 is 8K less than total RAM on the Pico to
 	leave space for the current stack when zeroing.  This only works
