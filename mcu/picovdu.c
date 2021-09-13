@@ -500,6 +500,14 @@ static void cls (uint8_t fill)
 
 static void dispchr (int chr)
     {
+    if (( row < 0 ) || ( row >= pmode->trow ) || ( col < 0 ) || ( col >= pmode->tcol ))
+        {
+#if DEBUG > 0
+        printf ("Cursor out of range: row = %d, col = %d, screen = %dx%d\n",
+            row, col, pmode->trow, pmode->tcol);
+#endif
+        return;
+        }
 #if DEBUG > 1
     if ((chr >= 0x20) && (chr <= 0x7F)) printf ("dispchr ('%c')\n", chr);
     else printf ("dispchr (0x%02X)\n", chr);
@@ -610,6 +618,15 @@ static void wrap (void)
     newline (&col, &row);
     }
 
+static void tabxy (int x, int y)
+    {
+    if (( x >= 0 ) && ( x < pmode->tcol ) && ( y >= 0 ) && ( y < pmode->trow ))
+        {
+        row = y;
+        col = x;
+        }
+    }
+
 void showchr (int chr)
     {
     if (col > pmode->tcol) wrap ();
@@ -654,7 +671,7 @@ static void modechg (int mode)
 #if DEBUG > 0
     printf ("modechg (%d)\n", mode);
 #endif
-    if ( mode < sizeof (modes) / sizeof (modes[0]) )
+    if (( mode >= 0 ) && ( mode < sizeof (modes) / sizeof (modes[0]) ))
         {
         bBlank = true;
         pmode = &modes[mode];
@@ -899,8 +916,7 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 31: // TAB(X,Y)
-            col = data1 >> 24 & 0xFF;
-            row = code & 0xFF;
+            tabxy (data1 >> 24 & 0xFF, data1 >> 24 & 0xFF);
             if ( bPrint ) printf ("\033[%i;%iH", row + 1, col + 1);
             break;
 
@@ -945,7 +961,7 @@ int setup_vdu (void)
     printf ("setup_vdu: Set clock frequency %d kHz.\n", clock_get_hz (clk_sys) / 1000);
 #endif
     memset (framebuf, 0, sizeof (framebuf));
-    modechg (11);
+    modechg (8);
     multicore_launch_core1 (setup_video);
 
     // Do not return until Core 1 has claimed DMA channels

@@ -1770,12 +1770,13 @@ int main (int argc, char* argv[])
 	    gpio_put(LED_PIN, 0);
 	    sleep_ms(500);
 	    }
+    printf ("BBC Basic main build " __DATE__ " " __TIME__ "\n");
 #endif
 # ifdef FREE
 	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,sigbus);
 # else
 	extern void __attribute__((used,naked)) HardFault_Handler(void);
-	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,HardFault_Handler);
+	// exception_set_exclusive_handler(HARDFAULT_EXCEPTION,HardFault_Handler);
 # endif
 	char *cmdline[]={"/autorun.bbc",0};
 	argc=1; argv=cmdline;
