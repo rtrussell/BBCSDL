@@ -1,10 +1,6 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                         *
 *       Copyright (C) R. T. Russell, 2021                         *
-
-        Modified 2021 by Eric Olson and Memotech-Bill for
-        Raspberry Pico
-
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
 *       Version 0.36a, 09-Aug-2021                                *
 \*****************************************************************/

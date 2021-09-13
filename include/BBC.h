@@ -220,6 +220,36 @@ typedef struct tagPARM
 	double f[8] ;
 } PARM, *LPPARM ;
 
+// A variant holds an 80-bit long double, a 64-bit long long or a string descriptor.
+// n.b. GCC pads a long double to 16 bytes (128 bits) for alignment reasons but only
+// the least-significant 80-bits need to be stored on the heap, in files etc.
+// When a long double is 64-bits rather than 80-bits (e.g. ARM) it will be necessary
+// to force the type word (.i.t or .s.t member) to a value other than 0 or -1.
+typedef union __attribute__ ((packed)) __attribute__ ((aligned (4))) tagVAR
+{
+#if defined(__arm__) || defined(__aarch64__) || defined(__EMSCRIPTEN__)
+    double f ;
+#else
+        long double f ;
+#endif
+        struct
+        {
+          long long n ;
+          short t ; // = 0
+        } i ;
+        struct
+        {
+          heapptr p ; // Assumed to be 32 bits
+          unsigned int l ; // Must be unsigned for overflow tests in 'math'
+          short t ; // = -1
+        } s ;
+    struct
+    {
+      double d ;
+      short t ; // unused (loadn/storen only)
+    } d ;
+} VAR, *LPVAR ;
+
 // String descriptor:
 typedef struct __attribute__ ((packed)) __attribute__ ((aligned (4))) tagSTR
 {
@@ -331,36 +361,6 @@ extern void *libtop;
 #endif
 
 // NOTE: the following alignment macros must match those in bbccon.c exactly
-// A variant holds an 80-bit long double, a 64-bit long long or a string descriptor.
-// n.b. GCC pads a long double to 16 bytes (128 bits) for alignment reasons but only
-// the least-significant 80-bits need to be stored on the heap, in files etc.
-// When a long double is 64-bits rather than 80-bits (e.g. ARM) it will be necessary
-// to force the type word (.i.t or .s.t member) to a value other than 0 or -1.
-typedef union __attribute__ ((packed)) __attribute__ ((aligned (4))) tagVAR
-{
-#if defined(__arm__) || defined(__aarch64__) || defined(__EMSCRIPTEN__)
-    double f ;
-#else
-        long double f ;
-#endif
-        struct
-        {
-          long long n ;
-          short t ; // = 0
-        } i ;
-        struct
-        {
-          heapptr p ; // Assumed to be 32 bits
-          unsigned int l ; // Must be unsigned for overflow tests in 'math'
-          short t ; // = -1
-        } s ;
-    struct
-    {
-      double d ;
-      short t ; // unused (loadn/storen only)
-    } d ;
-} VAR, *LPVAR ;
-
 // Alignment helper types:
 typedef __attribute__((aligned(1))) int unaligned_int;
 typedef __attribute__((aligned(1))) intptr_t unaligned_intptr_t;

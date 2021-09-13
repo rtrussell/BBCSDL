@@ -1,10 +1,6 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                          *
 *       Copyright (C) R. T. Russell, 2021                          *
-
-        Modified 2021 by Eric Olson and Memotech-Bill for
-        Raspberry Pico
-
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
 *       Version 0.36a, 22-Aug-2021                                 *
 \******************************************************************/
@@ -24,14 +20,8 @@
 
 typedef __attribute__((aligned(1))) int unaligned_int;
 
-static inline int ILOAD(void* p){
-        if((int)p&0x03) return *((unaligned_int*)p);
-        else return *((int*)p);
-}
-static inline void ISTORE(void* p, int i){
-        if((int)p&0x03) *((unaligned_int*)p) = i;
-        else *((int *)p) = i;
-}
+#define ILOAD(p)    *((unaligned_int*)(p))
+#define ISTORE(p,i) *((unaligned_int*)(p)) = i
 
 #define ESCTIME 200  // Milliseconds to wait for escape sequence
 #define QRYTIME 1000 // Milliseconds to wait for cursor query response
@@ -75,10 +65,10 @@ extern char __StackLimit;
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include "dlfcn.h"
-#define PLATFORM "Linux"
-#define WM_TIMER 275
 #define myftell ftell
 #define myfseek fseek
+#define PLATFORM "Linux"
+#define WM_TIMER 275
 # endif
 #endif
 
@@ -113,12 +103,8 @@ void *userRAM = NULL ;
 void *progRAM = NULL ;
 void *userTOP = NULL ;
 const int bLowercase = 0 ;    // Dummy
-const char szVersion[] = "Altered Basic "PLATFORM" Console "VERSION;
-const char szNotice[] = 
-	"Created by Eric Olson with help\r\n"
-	"using altered source from BBC BASIC\r\n"
-	"(C) Copyright R. T. Russell, "YEAR"\r\n"
-	"Modified by Memotech-Bill" ;
+const char szVersion[] = "BBC BASIC for "PLATFORM" Console "VERSION ;
+const char szNotice[] = "(C) Copyright R. T. Russell, "YEAR ;
 char *szLoadDir ;
 char *szLibrary ;
 char *szUserDir ;
@@ -1528,7 +1514,6 @@ void osshut (void *chan)
 // Start interpreter:
 int entry (void *immediate)
 {
-        // memset (&stavar[1], 0, (char *)datend - (char *)&stavar[1]) ;
 
 	accs = (char*) userRAM ;		// String accumulator
 	buff = (char*) accs + ACCSLEN ;		// Temporary string buffer
@@ -1561,6 +1546,7 @@ int entry (void *immediate)
 		text (szNotice) ;
 		crlf () ;
 	    }
+
 	return basic (progRAM, userTOP, immediate) ;
 }
 
