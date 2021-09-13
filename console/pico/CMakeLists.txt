@@ -49,7 +49,7 @@ if (TARGET tinyusb_device)
     target_sources(bbcbasic PRIVATE 
 		../../mcu/fatfs/ff.c ../../mcu/fatfs/ffsystem.c
 		../../mcu/fatfs/ffunicode.c ../../mcu/fatfs/ff.h
-        ../../mcu/fatfs/diskio.h
+        ../../mcu/fatfs/diskio.h ../../mcu/ffconf.h
 		../../mcu/ff_disk.c ../../mcu/sd_spi2.c)
     target_link_libraries(bbcbasic hardware_dma hardware_pio)
     target_include_directories(bbcbasic PRIVATE ../../mcu/fatfs)
