@@ -3,7 +3,7 @@
 #define VID_CORE    1
 #define USE_INTERP  1
 #define HIRES       0   // CAUTION - Enabling HIRES requires extreme Pico overclock
-#define DEBUG       0
+#define DEBUG       1
 
 #include "pico/platform.h"
 #include "pico.h"
@@ -20,7 +20,7 @@
 #include "bsp/board.h"
 #include "tusb.h"
 #include "class/hid/hid.h"
-// #include "bbccon.h"
+#include "bbccon.h"
 #include <stdio.h>
 
 #if HIRES
@@ -30,6 +30,7 @@
 #define SWIDTH  640
 #define SHEIGHT 480
 #endif
+#define VGA_FLAG    0x1234  // Used to syncronise cores
 
 static uint8_t  framebuf[SWIDTH * SHEIGHT / 8];
 static uint16_t renderbuf[256 * 8];
@@ -45,10 +46,8 @@ static int gfg;         // Graphics foreground colour
 static int gbg;         // Graphics background colour
 static bool bPrint = false;     // Enable output to printer (UART)
 
-uint g_frame = 0;
-uint g_scan = 0;
-
 // Temporary definitions for testing
+#if 0
 #define ESCFLG  1
 #define KILL    2
 #define VDUDIS  1
@@ -57,6 +56,7 @@ static uint8_t  scroln;
 static uint8_t  flags;
 static uint8_t  cmcflg;
 static uint8_t  vflags;
+#endif
 
 static uint16_t curpal[16];
 
@@ -220,12 +220,90 @@ static const MODE modes[] = {
 static const MODE *pmode;
 
 extern int getkey (unsigned char *pkey);
+
+/****** Routines executed on Core 1 **********************************************************/
+
 #if USE_INTERP
 static bool bCfgInt = false;    // Configure interpolators
-static void setup_interp (void);
 extern void convert_from_pal16_8 (uint32_t *dest, uint8_t *src, uint32_t count);
 extern void convert_from_pal16_4 (uint32_t *dest, uint8_t *src, uint32_t count);
 extern void convert_from_pal16 (uint32_t *dest, uint8_t *src, uint32_t count);
+#endif
+
+#if HIRES
+extern const scanvideo_timing_t vga_timing_800x600_60_default;
+#endif
+
+// The interpolators are core specific, so must be
+// configured on the same core as the render_loop
+#if USE_INTERP
+static void setup_interp (void)
+    {
+    if ( pmode != NULL )
+        {
+        interp_config c = interp_default_config();
+        if ( pmode->nppb == 8 )
+            {
+            interp_config_set_shift (&c, 20);
+            interp_config_set_mask (&c, 4, 11);
+            interp_set_config (interp0, 0, &c);
+            interp_config_set_shift (&c, 12);
+            }
+        else if ( pmode->nppb == 4 )
+            {
+            interp_config_set_shift (&c, 21);
+            interp_config_set_mask (&c, 3, 10);
+            interp_set_config (interp0, 0, &c);
+            interp_config_set_shift (&c, 13);
+            }
+        else
+            {
+            interp_config_set_shift (&c, 22);
+            interp_config_set_mask (&c, 2, 9);
+            interp_set_config (interp0, 0, &c);
+            interp_config_set_shift (&c, 14);
+            }
+        interp_config_set_cross_input (&c, true);
+        interp_set_config (interp0, 1, &c);
+        interp_set_base (interp0, 0, (uintptr_t)renderbuf);
+        interp_set_base (interp0, 1, (uintptr_t)renderbuf);
+#if DEBUG > 1
+        printf ("Interpolator test:\n");
+        for (uint32_t i = 0; i < 256; ++i )
+            {
+#if 1
+            static uint16_t buf[32];
+            static uint8_t dfb[4];
+            dfb[0] = i;
+            dfb[1] = i;
+            dfb[2] = i;
+            dfb[3] = i;
+            convert_from_pal16_8 ((uint32_t *) buf, dfb, 4);
+            printf ("interp (%3d) = I", i);
+            for (int j = 0; j < 32; ++j)
+                {
+                if ( buf[j] ) printf ("*");
+                else printf (" ");
+                }
+            printf ("I\n");
+#else
+            interp_set_accumulator (interp0, 0, i << 24);
+            uint16_t *prb = (uint16_t *) interp_peek_lane_result (interp0, 0);
+            printf ("interp (%3d) = 0x%08X:", i, prb);
+            for (int j = 0; j < 8; ++j)
+                {
+                if ( *prb ) printf (" %04X", *prb);
+                else printf (" ----");
+                ++prb;
+                }
+            printf ("\n");
+#endif
+            }
+#endif
+        bCfgInt = false;
+        bBlank = false;
+        }
+    }
 #endif
 
 void __time_critical_func(render_loop) (void)
@@ -238,8 +316,6 @@ void __time_critical_func(render_loop) (void)
         struct scanvideo_scanline_buffer *buffer = scanvideo_begin_scanline_generation (true);
         uint32_t *twopix = buffer->data;
         int iScan = scanvideo_scanline_number (buffer->scanline_id) - pmode->vmgn;
-        g_scan = iScan;
-        if ( g_scan == 0 ) ++g_frame;
         if (( bBlank ) || (iScan < 0) || (iScan >= pmode->grow * pmode->yscl))
             {
             twopix[0] = COMPOSABLE_COLOR_RUN;
@@ -314,6 +390,33 @@ void __time_critical_func(render_loop) (void)
         scanvideo_end_scanline_generation (buffer);
         }
     }
+
+void setup_video (void)
+    {
+#if DEBUG > 0
+#if USE_INTERP
+    printf ("setup_video: Using interpolator\n");
+#endif
+    printf ("setup_video: System clock speed %d kHz\n", clock_get_hz (clk_sys) / 1000);
+    printf ("setup_video: Starting video\n");
+#endif
+#if HIRES
+    scanvideo_setup (&vga_mode_800x600_60);
+#else
+    scanvideo_setup (&vga_mode_640x480_60);
+#endif
+    multicore_fifo_push_blocking (VGA_FLAG);
+    scanvideo_timing_enable (true);
+#if DEBUG > 0
+    printf ("setup_video: System clock speed %d kHz\n", clock_get_hz (clk_sys) / 1000);
+#endif
+#if DEBUG > 0
+    printf ("setup_video: Starting render\n");
+#endif
+    render_loop ();
+    }
+
+/****** Routines executed on Core 0 **********************************************************/
 
 static void genrb (void)
     {
@@ -546,78 +649,6 @@ static void clrreset (void)
     genrb ();
     }
 
-// The interpolators are core specific, so must be
-// configured on the same core as the render_loop
-#if USE_INTERP
-static void setup_interp (void)
-    {
-    if ( pmode != NULL )
-        {
-        interp_config c = interp_default_config();
-        if ( pmode->nppb == 8 )
-            {
-            interp_config_set_shift (&c, 20);
-            interp_config_set_mask (&c, 4, 11);
-            interp_set_config (interp0, 0, &c);
-            interp_config_set_shift (&c, 12);
-            }
-        else if ( pmode->nppb == 4 )
-            {
-            interp_config_set_shift (&c, 21);
-            interp_config_set_mask (&c, 3, 10);
-            interp_set_config (interp0, 0, &c);
-            interp_config_set_shift (&c, 13);
-            }
-        else
-            {
-            interp_config_set_shift (&c, 22);
-            interp_config_set_mask (&c, 2, 9);
-            interp_set_config (interp0, 0, &c);
-            interp_config_set_shift (&c, 14);
-            }
-        interp_config_set_cross_input (&c, true);
-        interp_set_config (interp0, 1, &c);
-        interp_set_base (interp0, 0, (uintptr_t)renderbuf);
-        interp_set_base (interp0, 1, (uintptr_t)renderbuf);
-#if DEBUG > 0
-        printf ("Interpolator test:\n");
-        for (uint32_t i = 0; i < 256; ++i )
-            {
-#if 1
-            static uint16_t buf[32];
-            static uint8_t dfb[4];
-            dfb[0] = i;
-            dfb[1] = i;
-            dfb[2] = i;
-            dfb[3] = i;
-            convert_from_pal16_8 ((uint32_t *) buf, dfb, 4);
-            printf ("interp (%3d) = I", i);
-            for (int j = 0; j < 32; ++j)
-                {
-                if ( buf[j] ) printf ("*");
-                else printf (" ");
-                }
-            printf ("I\n");
-#else
-            interp_set_accumulator (interp0, 0, i << 24);
-            uint16_t *prb = (uint16_t *) interp_peek_lane_result (interp0, 0);
-            printf ("interp (%3d) = 0x%08X:", i, prb);
-            for (int j = 0; j < 8; ++j)
-                {
-                if ( *prb ) printf (" %04X", *prb);
-                else printf (" ----");
-                ++prb;
-                }
-            printf ("\n");
-#endif
-            }
-#endif
-        bCfgInt = false;
-        bBlank = false;
-        }
-    }
-#endif
-
 static void modechg (int mode)
     {
 #if DEBUG > 0
@@ -628,13 +659,13 @@ static void modechg (int mode)
         bBlank = true;
         pmode = &modes[mode];
         clrreset ();
-#if DEBUG > 0
-        printf ("modechg: New mode set\n");
-#endif
 #if USE_INTERP
         bCfgInt = true;
 #else
         bBlank = false;
+#endif
+#if DEBUG > 0
+        printf ("modechg: New mode set\n");
 #endif
         }
     }
@@ -656,6 +687,10 @@ void xeqvdu (int code, int data1, int data2)
 
     switch (vdu)
         {
+        case 1: // Next character to printer only
+            putchar (code & 0xFF);
+            break;
+            
         case 2: // PRINTER ON
             bPrint = true;
             break;
@@ -799,6 +834,7 @@ void xeqvdu (int code, int data1, int data2)
             if ( phy < 16 ) curpal[pal] = defpal[phy];
             else if ( phy == 16 ) curpal[pal] = PICO_SCANVIDEO_PIXEL_FROM_RGB8(r, g, b);
             else if ( phy == 255 ) curpal[pal] = PICO_SCANVIDEO_PIXEL_FROM_RGB5(r, g, b);
+            genrb ();
         }
 
         case 20: // RESET COLOURS
@@ -834,6 +870,12 @@ void xeqvdu (int code, int data1, int data2)
                 }
             break;
 
+        case 24: // DEFINE GRAPHICS VIEWPORT - TODO
+            break;
+
+        case 25: // PLOT - TODO
+            break;
+
         case 26: // RESET VIEWPORTS
             col = 0;
             row = 0;
@@ -841,6 +883,12 @@ void xeqvdu (int code, int data1, int data2)
 
         case 27: // SEND NEXT TO OUTC
             showchr (code & 0xFF);
+            break;
+
+        case 28: // SET TEXT VIEWPORT - TODO
+            break;
+
+        case 29: // SET GRAPHICS ORIGIN - TODO
             break;
 
         case 30: // CURSOR HOME
@@ -871,102 +919,39 @@ void xeqvdu (int code, int data1, int data2)
     if ( bPrint ) fflush (stdout);
     }
 
-void setup_video (void)
-    {
-#if DEBUG > 0
-#if USE_INTERP
-    printf ("setup_video: Using interpolator\n");
-#endif
-    printf ("setup_video: System clock speed %d kHz\n", clock_get_hz (clk_sys) / 1000);
-    printf ("setup_video: Starting video\n");
-#endif
-#if HIRES
-    scanvideo_setup(&vga_mode_800x600_60);
-#else
-    scanvideo_setup(&vga_mode_640x480_60);
-#endif
-    scanvideo_timing_enable(true);
-#if DEBUG > 0
-    printf ("setup_video: System clock speed %d kHz\n", clock_get_hz (clk_sys) / 1000);
-#endif
-#if DEBUG > 0
-    printf ("setup_video: Starting render\n");
-#endif
-    render_loop ();
-    }
-
-#if HIRES
-extern const scanvideo_timing_t vga_timing_800x600_60_default;
-#endif
-
 int setup_vdu (void)
     {
 #if DEBUG > 0
 #if HIRES
-    printf ("setup_con: 800x600 " __DATE__ " " __TIME__ "\n");
+    printf ("setup_vdu: 800x600 " __DATE__ " " __TIME__ "\n");
 #else
-    printf ("setup_con: 640x480 " __DATE__ " " __TIME__ "\n");
+    printf ("setup_vdu: 640x480 " __DATE__ " " __TIME__ "\n");
 #endif
 #if USE_INTERP
-    printf ("setup_con: Using interpolator\n");
+    printf ("setup_vdu: Using interpolator\n");
 #else
-    printf ("setup_con: Without interpolator\n");
+    printf ("setup_vdu: Without interpolator\n");
 #endif
     sleep_ms(500);
 #endif
 #if HIRES   // 800x600 VGA
     set_sys_clock_khz (7 * vga_timing_800x600_60_default.clock_freq / 1000, true);
-#else
+#else       // 640x480 VGA
     set_sys_clock_khz (6 * vga_timing_640x480_60_default.clock_freq / 1000, true);
 #endif
     stdio_init_all();
 #if DEBUG > 0
     sleep_ms(500);
-    printf ("setup_con: Set clock frequency %d kHz.\n", clock_get_hz (clk_sys) / 1000);
+    printf ("setup_vdu: Set clock frequency %d kHz.\n", clock_get_hz (clk_sys) / 1000);
 #endif
     memset (framebuf, 0, sizeof (framebuf));
-#if USE_INTERP
-    interp_claim_lane (interp0, 0);
-    interp_claim_lane (interp0, 1);
-#endif
     modechg (11);
-    /*
-    for (int i = 0; i < SHEIGHT; ++i)
-        {
-        framebuf[(pmode->nbpl+1)*i] = i;
-        }
-    */
     multicore_launch_core1 (setup_video);
-    }
 
-#if DEBUG > 0
-void dumpfb (void)
-    {
-    printf ("Dump Framebuffer:\n");
-    for (int i = 0; i < 20; ++i)
+    // Do not return until Core 1 has claimed DMA channels
+    uint32_t test =- multicore_fifo_pop_blocking ();
+    if ( test != VGA_FLAG )
         {
-        for (int j = 0; j < 16; ++j)
-            {
-            uint8_t pix = framebuf[pmode->nbpl * i + j];
-            if ( pix > 0 ) printf (" 0x%02X", pix);
-            else printf ("     ");
-            }
-        printf ("\n");
+        printf ("Unexpected value 0x%04X from multicore FIFO\n", test);
         }
     }
-
-void fillfb (void)
-    {
-    for (int i = 0; i < 16; ++i)
-        {
-        for (int j = 0; j < 8; ++j)
-            {
-            for (int k = 0; k < 16; ++k)
-                {
-                framebuf[(8*i+j)*pmode->nbpl+2*k] = 16 * i + k;
-                framebuf[(8*i+j)*pmode->nbpl+2*k+1] = 0;
-                }
-            }
-        }
-    }
-#endif
