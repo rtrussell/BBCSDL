@@ -1487,8 +1487,8 @@ static void plotns (unsigned char al, int cx, int cy)
 	case 8:		// PLOT 64-71, Plot a single 'dot' (size depends on mode)
 		rect.x = cx ;
 		rect.y = cy ;
-		rect.w = pixelx & 0xffff;
-		rect.h = pixely & 0xffff;
+		rect.w = pixelx & 0xFFFF;
+		rect.h = pixely & 0xFFFF;
 		setcol (col) ;
 		SDL_RenderFillRect(memhdc, &rect) ;
 		break ;
