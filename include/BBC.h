@@ -3,16 +3,12 @@
 *       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       BBC.h constant, variable and structure declarations        *
-*       Version 1.25d, 02-Sep-2021                                 *
+*       Version 1.25b, 22-Aug-2021                                 *
 \******************************************************************/
 
 // Constants:
 #define STACK_NEEDED 512
-#ifdef PICO
-#define ACCSLEN 1024  // Must be the same in bbcsdl.h and bbccon.h
-#else
 #define ACCSLEN 65536 // Must be the same in bbcsdl.h and bbccon.h
-#endif
 
 // Sentinels:
 #define CALCHK	0xC3414C43
@@ -228,11 +224,11 @@ typedef struct tagPARM
 // n.b. GCC pads a long double to 16 bytes (128 bits) for alignment reasons but only
 // the least-significant 80-bits need to be stored on the heap, in files etc.
 // When a long double is 64-bits rather than 80-bits (e.g. ARM) it will be necessary
-// to force the type word (.i.t or .s.t member) to a value other than 0 or -1. 
+// to force the type word (.i.t or .s.t member) to a value other than 0 or -1.
 typedef union __attribute__ ((packed)) __attribute__ ((aligned (4))) tagVAR
 {
 #if defined(__arm__) || defined(__aarch64__) || defined(__EMSCRIPTEN__)
-	double f ;
+    double f ;
 #else
         long double f ;
 #endif
@@ -247,12 +243,12 @@ typedef union __attribute__ ((packed)) __attribute__ ((aligned (4))) tagVAR
           unsigned int l ; // Must be unsigned for overflow tests in 'math'
           short t ; // = -1
         } s ;
-	struct
-	{
-	  double d ;
-	  short t ; // unused (loadn/storen only)
-	} d ;
-} VAR, *LPVAR ; 
+    struct
+    {
+      double d ;
+      short t ; // unused (loadn/storen only)
+    } d ;
+} VAR, *LPVAR ;
 
 // String descriptor:
 typedef struct __attribute__ ((packed)) __attribute__ ((aligned (4))) tagSTR
@@ -359,6 +355,12 @@ extern char *szTempDir ;	// @tmp$
 extern const char szNotice [] ;
 extern void *userRAM ;
 
+// Defined in bbccon.c
+#ifdef PICO
+extern void *libtop;
+#endif
+
+// NOTE: the following alignment macros must match those in bbccon.c exactly
 // Alignment helper types:
 typedef __attribute__((aligned(1))) int unaligned_int;
 typedef __attribute__((aligned(1))) intptr_t unaligned_intptr_t;

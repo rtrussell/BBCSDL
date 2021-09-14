@@ -1,9 +1,8 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                          *
 *       Copyright (C) R. T. Russell, 2021                          *
-*                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.37a, 03-Sep-2021                                 *
+*       Version 0.36a, 22-Aug-2021                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -16,12 +15,20 @@
 #include <time.h>
 #include <math.h>
 #include "bbccon.h"
-#define HISTORY 100  // Number of items in command history
+
+// NOTE: the following alignment macros must match those in BBC.h exactly!
+
+typedef __attribute__((aligned(1))) int unaligned_int;
+
+#define ILOAD(p)    *((unaligned_int*)(p))
+#define ISTORE(p,i) *((unaligned_int*)(p)) = i
+
 #define ESCTIME 200  // Milliseconds to wait for escape sequence
 #define QRYTIME 1000 // Milliseconds to wait for cursor query response
 #define QSIZE 16     // Twice longest expected escape sequence
 
 #ifdef _WIN32
+#define HISTORY 100  // Number of items in command history
 #include <windows.h>
 #include <conio.h>
 typedef int timer_t ;
@@ -35,6 +42,23 @@ typedef int timer_t ;
 #define ENABLE_VIRTUAL_TERMINAL_INPUT 0x200
 BOOL WINAPI K32EnumProcessModules (HANDLE, HMODULE*, DWORD, LPDWORD) ;
 #else
+# ifdef PICO
+#define HISTORY 10  // Number of items in command history
+#include <hardware/flash.h>
+#include <hardware/exception.h>
+#include <hardware/watchdog.h>
+#include <pico/bootrom.h>
+#include <pico/stdlib.h>
+#include <pico/time.h>
+#ifdef STDIO_USB
+#include "tusb.h"
+#endif
+#define WM_TIMER 275
+#include "lfswrap.h"
+extern char __StackLimit;
+# define PLATFORM "Pico"
+# else
+#define HISTORY 100  // Number of items in command history
 #include <termios.h>
 #include <signal.h>
 #include <pthread.h>
@@ -45,6 +69,7 @@ BOOL WINAPI K32EnumProcessModules (HANDLE, HMODULE*, DWORD, LPDWORD) ;
 #define myfseek fseek
 #define PLATFORM "Linux"
 #define WM_TIMER 275
+# endif
 #endif
 
 #ifdef __WIN64__
@@ -62,7 +87,9 @@ dispatch_queue_t timerqueue ;
 #endif
 
 #undef MAX_PATH
+#ifndef MAX
 #define MAX(X,Y) (((X) > (Y)) ? (X) : (Y))
+#endif
 
 // Program constants:
 #define SCREEN_WIDTH  640
@@ -86,6 +113,9 @@ char *szCmdLine ;
 int MaximumRAM = MAXIMUM_RAM ;
 timer_t UserTimerID ;
 unsigned int palette[256] ;
+#ifdef PICO
+void *libtop;
+#endif
 
 // Array of VDU command lengths:
 static int vdulen[] = {
@@ -133,6 +163,14 @@ static int putinp (unsigned char inp)
 {
 	unsigned char bl = inpqw ;
 	unsigned char al = (bl + 1) % QSIZE ;
+#ifdef STDIO_UART
+	static unsigned char bFirst = 1;
+	if ( bFirst )
+	    {
+	    bFirst = 0;
+	    if ( inp == 0xFF ) return 0;
+	    }
+#endif
 	if (al != inpqr)
 	    {
 		inputq[bl] = inp ;
@@ -142,9 +180,25 @@ static int putinp (unsigned char inp)
 	return 0 ;
 }
 
+#ifdef PICO
+inline static void myPoll(){
+    static int c = PICO_ERROR_TIMEOUT;
+    for(;;){
+        if ((c != PICO_ERROR_TIMEOUT) && (putinp(c) == 0))
+            break;
+        c=getchar_timeout_us(0);
+        if (c == PICO_ERROR_TIMEOUT)
+            break;
+    }
+}
+#endif
+
 // Get from STDIN queue:
 static int getinp (unsigned char *pinp)
 {
+#ifdef PICO
+	myPoll();
+#endif
 	unsigned char bl = inpqr ;
 	if (bl != inpqw)
 	    {
@@ -293,6 +347,9 @@ static int putkey (char key)
 // Get keycode (if any) from keyboard queue:
 int getkey (unsigned char *pkey)
 {
+#ifdef PICO
+	myPoll();
+#endif
 	unsigned char bl = kbdqr ;
 	if (bl != kbdqw)
 	    {
@@ -309,15 +366,23 @@ unsigned int GetTicks (void)
 #ifdef _WIN32
 	return timeGetTime () ;
 #else
+# ifdef PICO
+	absolute_time_t t=get_absolute_time();
+	return to_ms_since_boot(t);
+# else
 	struct timespec ts ;
 	if (clock_gettime (CLOCK_MONOTONIC, &ts))
 		clock_gettime (CLOCK_REALTIME, &ts) ;
 	return (ts.tv_sec * 1000) + (ts.tv_nsec / 1000000) ;
+# endif
 #endif
 }
 
 static int kbchk (void)
 {
+#ifdef PICO
+	myPoll();
+#endif
 	return (inpqr != inpqw) ;
 }
 
@@ -603,7 +668,13 @@ heapptr xtrap (void)
 // Report a 'fatal' error:
 void faterr (const char *msg)
 {
+#ifdef PICO
+	extern void waitconsole();
+	waitconsole() ;
+	fprintf (stdout, "%s\r\n", msg) ;
+#else
 	fprintf (stderr, "%s\r\n", msg) ;
+#endif
 	error (256, "") ;
 }
 
@@ -919,13 +990,14 @@ void osline (char *buffer)
 				    }
 				break ;
 
-			case 9:
 			case 132:
 			case 133:
 			case 140:
 			case 141:
 				break ;
 
+			case 9:
+				key = ' ';
 			default:
 				if (p < (buffer + 255))
 				    {
@@ -1002,10 +1074,10 @@ int getims (void)
 
 	time (&tt) ;
 	at = ctime (&tt) ;
-	*(int *)(accs + 0) = *(int *)(at + 0) ; // Day-of-week
-	*(int *)(accs + 4) = *(int *)(at + 8) ; // Day-of-month
-	*(int *)(accs + 7) = *(int *)(at + 4) ; // Month
-	*(int *)(accs + 11) = *(int *)(at + 20) ; // Year
+	ISTORE(accs + 0, ILOAD(at + 0)) ; // Day-of-week
+	ISTORE(accs + 4, ILOAD(at + 8)) ; // Day-of-month
+	ISTORE(accs + 7, ILOAD(at + 4)) ; // Month
+	ISTORE(accs + 11, ILOAD(at + 20)) ; // Year
 	if (*(accs + 4) == ' ') *(accs + 4) = '0' ;
 	memcpy (accs + 16, at + 11, 8) ; // Time
 	accs[3] = '.' ;
@@ -1066,10 +1138,15 @@ void mouseto (int x, int y)
 // Get address of an API function:
 void *sysadr (char *name)
 {
+#ifdef PICO
+	extern void *sympico (char *name) ;
+	return sympico (name) ;
+#else
 	void *addr = NULL ;
 	if (addr != NULL)
 		return addr ; 
 	return dlsym (RTLD_DEFAULT, name) ;
+#endif
 }
 
 // Call an emulated OS subroutine (if CALL or USR to an address < 0x10000)
@@ -1556,6 +1633,35 @@ void SystemIO (int flag)
 }
 #endif
 
+#ifdef PICO
+static bool UserTimerProc (struct repeating_timer *prt)
+    {
+//    myPoll ();
+    if (timtrp)
+	putevt (timtrp, WM_TIMER, 0, 0) ;
+    flags |= ALERT ; // Always, for periodic ESCape detection
+    return true;
+    }
+
+static struct repeating_timer s_rpt_timer;
+timer_t StartTimer (int period)
+    {
+    timer_t dummy;
+    add_repeating_timer_ms (period, UserTimerProc, NULL, &s_rpt_timer);
+    return dummy;
+    }
+
+void StopTimer (timer_t timerid)
+    {
+    cancel_repeating_timer (&s_rpt_timer);
+    return;
+    }
+
+void SystemIO (int flag) {
+	return;
+}
+#endif
+
 #ifdef __APPLE__
 static void UserTimerProc (dispatch_source_t timerid)
 {
@@ -1626,8 +1732,53 @@ static void SetLoadDir (char *path)
 #endif
 }
 
+#ifdef PICO
+void sigbus(void){
+	printf("SIGBUS exception caught...\n");
+	for(;;);
+}
+void waitconsole(void){
+	static int waitdone=0;
+	if(waitdone) return;
+# ifdef STDIO_USB
+	printf("Waiting for usb host");
+	while (!tud_cdc_connected()) {
+		printf(".");
+		sleep_ms(500);
+	}
+# else
+	// Wait for UART connection
+	const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+	gpio_init(LED_PIN);
+	gpio_set_dir(LED_PIN, GPIO_OUT);
+	for (int i = 10; i > 0; --i )
+	    {
+	    gpio_put(LED_PIN, 1);
+	    sleep_ms(500);
+	    gpio_put(LED_PIN, 0);
+	    sleep_ms(500);
+	    printf ("%d seconds to start\n", i);
+	    }
+# endif
+	waitdone=1;
+	printf("\n");
+}
+#endif
+
 int main (int argc, char* argv[])
 {
+#ifdef PICO
+    stdio_init_all();
+# ifdef FREE
+	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,sigbus);
+# else
+	extern void __attribute__((used,naked)) HardFault_Handler(void);
+	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,HardFault_Handler);
+# endif
+	char *cmdline[]={"/autorun.bbc",0};
+	argc=1; argv=cmdline;
+	mount ();
+#endif
 int i ;
 char *env, *p, *q ;
 int exitcode = 0 ;
@@ -1695,9 +1846,29 @@ pthread_t hThread = NULL ;
 		MaximumRAM /= 2 ;
 #endif
 
+#ifdef PICO
+	platform = 6 ;
+	MaximumRAM = MINIMUM_RAM;
+	userRAM = &__StackLimit;
+	if (userRAM + MaximumRAM > (void *)0x20040000) userRAM = 0 ;
+/*
+	The address 0x20040000 is 8K less than total RAM on the Pico to
+	leave space for the current stack when zeroing.  This only works
+	for a custom linker script that allocates most of the RAM to the
+	stack.  For the default script userRAM = malloc(MaximumRAM);
+*/
+	if (userRAM) bzero(userRAM,MaximumRAM) ;
+#endif
+
 	if ((userRAM == NULL) || (userRAM == (void *)-1))
 	    {
+#ifdef PICO
+		waitconsole();
+		fprintf(stdout, "Couldn't allocate memory\r\n") ;
+		sleep(5);
+#else
 		fprintf(stderr, "Couldn't allocate memory\r\n") ;
+#endif
 		return 9 ;
 	    }
 
@@ -1776,10 +1947,25 @@ pthread_t hThread = NULL ;
 	    }
 	else
 	    {
+#ifdef PICO
+		waitconsole();
+#endif
 		immediate = (void *) 1 ;
 		*szAutoRun = '\0' ;
 	    }
 
+#ifdef PICO
+	strcpy(szTempDir, "/tmp");
+	strcpy(szUserDir, "/user");
+	strcpy(szLibrary, "/lib");
+	strcpy(szLoadDir, "/");
+	mkdir(szTempDir, 0770);
+	mkdir(szUserDir, 0770);
+	mkdir(szLibrary, 0770);
+	strcat(szTempDir, "/");
+	strcat(szUserDir, "/");
+	strcat(szLibrary, "/");
+#else
 	env = getenv ("TMPDIR") ;
 	if (!env) env = getenv ("TMP") ;
 	if (!env) env = getenv ("TEMP") ;
@@ -1796,19 +1982,20 @@ pthread_t hThread = NULL ;
 	if (p)
 		*p = '\0' ;
 
-#ifdef _WIN32
+# ifdef _WIN32
 	strcat (szTempDir, "\\") ;
 	strcat (szLibrary, "\\lib\\") ;
 	strcat (szUserDir, "\\bbcbasic\\") ;
 	mkdir (szUserDir) ;
-#else
+# else
 	strcat (szTempDir, "/") ;
 	strcat (szLibrary, "/lib/") ;
 	strcat (szUserDir, "/bbcbasic/") ;
 	mkdir (szUserDir, 0777) ;
-#endif
+# endif
 
 	SetLoadDir (szAutoRun) ;
+#endif
 
 	if (argc < 2)
 		*szCmdLine = 0 ;
@@ -1826,6 +2013,7 @@ pthread_t hThread = NULL ;
 		SetConsoleMode (GetStdHandle(STD_INPUT_HANDLE), ENABLE_VIRTUAL_TERMINAL_INPUT) ; 
 	hThread = CreateThread (NULL, 0, myThread, 0, 0, NULL) ;
 #else
+# ifndef PICO
 	tcgetattr (STDIN_FILENO, &orig_termios) ;
 	struct termios raw = orig_termios ;
 	raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON) ;
@@ -1836,6 +2024,7 @@ pthread_t hThread = NULL ;
 	raw.c_cc[VTIME] = 1 ;
 	tcsetattr (STDIN_FILENO, TCSAFLUSH, &raw) ;
         pthread_create(&hThread, NULL, &myThread, NULL);
+# endif
 #endif
 
 #ifdef __APPLE__
@@ -1845,6 +2034,7 @@ pthread_t hThread = NULL ;
 	UserTimerID = StartTimer (250) ;
 
 	flags = 0 ;
+
 	exitcode = entry (immediate) ;
 
 	if (UserTimerID)
@@ -1863,9 +2053,17 @@ pthread_t hThread = NULL ;
 	if (orig_stdin != -1)
 		SetConsoleMode (GetStdHandle(STD_INPUT_HANDLE), orig_stdin) ;
 #else
+# ifdef PICO
+	printf ("\033[0m\033[!p") ;
+	printf ("\nExiting with code %d...rebooting...\n",
+		exitcode);
+	watchdog_reboot(0,0,50);
+    for(;;) sleep(5);
+# else
 	if (isatty (STDOUT_FILENO))
 		printf ("\033[0m\033[!p") ;
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) ;
+# endif
 #endif
 
 	exit (exitcode) ;

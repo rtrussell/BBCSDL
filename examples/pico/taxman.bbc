@@ -1,0 +1,200 @@
+100 REM TAXMAN - first published in People's Computer Company
+104 REM          vol. 2, no. 1 - September 1973
+108 REM edited for 40 column screens - scruss, 2019-11
+112 DIM l(50),t(10)
+116 PRINT
+120 PRINT
+124 PRINT "Hi, I'm the taxman"
+128 PRINT "Do you want the regulations?"
+132 PRINT "(1=Yes, 0=No)";
+136 INPUT r
+140 IF r=1 THEN 744
+144 REM *** initialization
+148 GOSUB 632
+152 REM *** the human takes a number
+156 GOSUB 216
+160 REM *** compute the human's and taxman's totals
+164 GOSUB 344
+168 REM *** print the new list
+172 GOSUB 396
+176 REM *** check if any numbers still have factors
+180 GOSUB 448
+184 IF m=1 THEN 156
+188 REM *** find the winner
+192 GOSUB 552
+196 REM *** again?
+200 GOTO 596
+204 REM 
+208 REM *** the human moves
+212 REM
+216 PRINT
+220 PRINT
+224 PRINT "You take";
+228 INPUT k
+232 LET k=INT(k)
+236 IF k<=0 THEN 596
+240 IF k<=n THEN 256
+244 PRINT k;" is not in the list"
+248 PRINT " --  try again."
+252 GOTO 220
+256 IF l(k)=0 THEN 244
+260 REM  find all the factors
+264 IF k>1 THEN 284
+268 PRINT "There are no factors of ";k
+272 PRINT "for me. Are you trying to"
+276 PRINT "short-change the taxman?"
+280 GOTO 220
+284 LET m=0
+288 FOR i=1 TO k/2
+292   IF l(i)=0 THEN 312
+296   IF k<>i*INT(k/i) THEN 312
+300   LET m=m+1
+304   LET t(m)=i
+308   LET l(i)=0
+312 NEXT i
+316 REM check whether there were any factors
+320 IF m=0 THEN 268
+324 LET l(k)=0
+328 RETURN
+332 REM
+336 REM *** compute the human's and taxman's totals
+340 REM
+344 LET y=y+k
+348 PRINT "Your total is ";y
+352 PRINT "I get ";
+356 FOR i=1 TO m
+360   PRINT t(i);
+364   LET z=z+t(i)
+368 NEXT i
+372 PRINT
+376 PRINT "My total is ";z
+380 RETURN
+384 REM
+388 REM *** print the new list
+392 REM
+396 PRINT
+400 PRINT "New list: ";
+404 LET m=0
+408 FOR i=1 TO n
+412   IF l(i)=0 THEN 424
+416   PRINT i;
+420   LET m=1
+424 NEXT i
+428 RETURN
+432 REM
+436 REM *** check if any numbers still have factors
+440 REM
+444 REM check if the list is empty
+448 IF m=0 THEN 536
+452 FOR i=n TO 4 STEP -1
+456   FOR j=2 TO i/2
+460     IF l(j)=0 THEN 476
+464     IF i<>j*INT(i/j) THEN 476
+468     LET m=1
+472     RETURN
+476   NEXT j
+480 NEXT i
+484 REM  the taxman gets the rest of the numbers
+488 PRINT
+492 PRINT "I get ";
+496 FOR i=1 TO n
+500   IF l(i)=0 THEN 512
+504   PRINT i;
+508   LET z=z+i
+512 NEXT i
+516 PRINT
+520 PRINT "because no factors of any number"
+524 PRINT "are left."
+528 PRINT "My total is ";z
+532 LET m=0
+536 RETURN
+540 REM
+544 REM *** find the winner
+548 REM
+552 PRINT
+556 IF z>y THEN 572
+560 PRINT "You ";y;" Taxman ";z
+564 PRINT "You win !!!"
+568 RETURN
+572 PRINT "Taxman ";z;" You ";y
+576 PRINT "The taxman wins."
+580 RETURN
+584 REM 
+588 REM *** again?
+592 REM
+596 PRINT
+600 PRINT
+604 PRINT "Again (1=yes, 0=no)";
+608 INPUT r
+612 IF r=0 THEN 896
+616 GOTO 148
+620 REM
+624 REM *** initialization
+628 REM
+632 PRINT
+636 PRINT "How many numbers do you want"
+640 PRINT "in the list";
+644 INPUT n
+648 LET n=INT(n)
+652 IF n<=0 THEN 896
+656 IF n<=50 THEN 672
+660 PRINT "At this time, regulations allow a"
+664 PRINT "maximum of 50 numbers."
+668 GOTO 632
+672 LET y=0
+676 LET z=0
+680 PRINT
+684 PRINT "The list is:";
+688 FOR i=1 TO n
+692   PRINT i;
+696   LET l(i)=1
+700 NEXT i
+704 IF n>1 THEN 728
+708 PRINT
+712 PRINT "How very generous of you to forfeit"
+716 PRINT "all to the taxman."
+720 PRINT "Taxman  1 You  0. The taxman wins."
+724 GOTO 596
+728 RETURN
+732 REM
+736 REM *** instructions
+740 REM
+744 PRINT
+748 PRINT "You try to beat the taxman."
+752 PRINT
+756 PRINT "We start with a list of whole numbers"
+760 PRINT "in numerical order (you decide how"
+764 PRINT "many)."
+768 PRINT
+772 PRINT "You take a number from the list --"
+776 PRINT "the taxman gets all the factors of"
+780 PRINT "your number that are still left."
+784 PRINT "Your number and all of its factors"
+788 PRINT "are then deleted from the list."
+792 PRINT
+796 PRINT "(Hit RETURN to continue)";
+800 INPUT r
+804 PRINT
+808 PRINT "For example, suppose you want ten"
+812 PRINT "numbers to be in the list. Then the"
+816 PRINT "list would be: 1 2 3 4 5 6 7 8 9 10"
+820 PRINT
+824 PRINT "If you took 8, the taxman would get:"
+828 PRINT "1, 2, and 4 and the new list would be:"
+832 PRINT "3 5 6 7 9 10"
+836 PRINT
+840 PRINT "The taxman must get something every"
+844 PRINT "time so you can only pick a number"
+848 PRINT "that has factors left."
+852 PRINT
+856 PRINT "(Hit RETURN to continue)";
+860 INPUT r
+864 PRINT
+868 PRINT "When none of the remaining numbers has"
+872 PRINT "any factors, the taxman gets them!!"
+876 PRINT
+880 PRINT "Your score is the sum of numbers"
+884 PRINT "you take. If you want to give up,"
+888 PRINT "take 0. Good luck !!!"
+892 GOTO 148
+896 END

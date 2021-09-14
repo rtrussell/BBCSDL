@@ -45,7 +45,7 @@ void crlf (void) ;		// Output a newline
 unsigned int rnd (void) ;	// Return a pseudo-random number
 
 // Declared in bbccli.c:
-char *setup (char *, char *, char *, char, unsigned char *) ;
+char *setup (char *, char *, char *, char, int *) ;
 void oscli (char *) ;		// Execute an emulated OS command
 
 // Interpreter entry point:
