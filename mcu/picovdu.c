@@ -198,8 +198,8 @@ static const MODE modes[] = {
     { 2, 640, 240,  80, 24,   0,  0, 8,  80, 2, 10},  // Mode  3 - 20KB
     { 2, 320, 256,  40, 32, 112,  0, 8,  80, 1,  8},  // Mode  4 - 10KB
     { 4, 160, 256,  20, 32, 112,  0, 8,  80, 1,  8},  // Mode  5 - 10KB
-    { 2, 320, 240,  40, 25,   0,  0, 8,  80, 2, 10},  // Mode  6 - 10KB
-    { 2, 640, 256,  40, 25, 112,  0, 8,  80, 1,  8},  // Mode  7 - Teletext TODO
+    { 2, 320, 240,  40, 24,   0,  0, 8,  80, 2, 10},  // Mode  6 - 10KB
+    {16, 320, 225,  40, 25,   7,  0, 4, 160, 2,  9},  // Mode  7 - 37.5KB - Teletext TODO
     { 2, 640, 480,  80, 30,   0,  0, 8,  80, 1, 16},  // Mode  8 - 37.5KB
     { 4, 320, 480,  40, 30,   0,  0, 8,  80, 1, 16},  // Mode  9 - 37.5KB
     {16, 160, 480,  20, 30,   0,  0, 8,  80, 1, 16},  // Mode 10 - 37.5KB
@@ -207,7 +207,7 @@ static const MODE modes[] = {
     { 2, 320, 480,  40, 30,   0,  0, 8,  80, 1, 16},  // Mode 12 - 18.75KB
     { 4, 160, 480,  20, 30,   0,  0, 8,  80, 1, 16},  // Mode 13 - 18.75KB
     { 2, 320, 480,  40, 24,   0,  0, 8,  80, 1, 20},  // Mode 14 - 18.75KB
-    { 2, 640, 480,  40, 24,   0,  0, 8,  80, 1, 16},  // Mode 15 - Teletext ?
+    {16, 320, 240,  40, 24,   0,  0, 4, 160, 2, 10},  // Mode 15 - 37.5KB - Teletext ?
     };
 #endif
 
@@ -550,6 +550,8 @@ static void dispchr (int chr)
     if ( pmode->nclr == 2 )
         {
         pfb += col;
+        uint8_t fpx = cpx02[fg];
+        uint8_t bpx = cpx02[bg];
         for (int i = 0; i < fhgt; ++i)
             {
 #if DEBUG > 1
@@ -562,11 +564,12 @@ static void dispchr (int chr)
                 }
             printf ("\n");
 #endif
-            *pfb = *pch;
+            uint8_t pix = ( (*pch) & fpx ) | ( (~ (*pch)) & bpx );
+            *pfb = pix;
             pfb += pmode->nbpl;
             if ( bDbl )
                 {
-                *pfb = *pch;
+                *pfb = pix;
                 pfb += pmode->nbpl;
                 }
             ++pch;
