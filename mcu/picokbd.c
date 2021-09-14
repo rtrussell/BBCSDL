@@ -11,7 +11,10 @@
 
 // Defined in bbccon.c
 extern int putkey (char key);
+// Defined in picovdu.c
+extern void video_periodic (void);
 
+static bool bRepeat;
 static uint8_t led_flags = 0;
 
 void set_leds (uint8_t leds)
@@ -210,10 +213,25 @@ static inline void process_kbd_report(hid_keyboard_report_t const *p_new_report)
 #ifdef DEBUG
             printf ("Key %d reported.\n", key);
 #endif
-            if ( find_key_in_report(&prev_report, key) < 0 )
+            int kp = find_key_in_report(&prev_report, key);
+            if ( kp < 0 )
                 {
                 key_press (p_new_report->modifier, key);
+                bRepeat = true;
                 }
+            else
+                {
+                prev_report.keycode[kp] = 0;
+                }
+            }
+        }
+    for (int i = 0; i < 6; ++i)
+        {
+        uint8_t key = prev_report.keycode[i];
+        if ( key )
+            {
+            // Key release
+            bRepeat = true;
             }
         }
     prev_report = *p_new_report;
@@ -377,8 +395,14 @@ static bool keyboard_periodic (struct repeating_timer *prt)
 #ifdef DEBUG
     // printf (".");
 #endif
-    tuh_task();
-    hid_task();
+    bRepeat = true;
+    while ( bRepeat )
+        {
+        bRepeat = false;
+        tuh_task();
+        hid_task();
+        }
+    video_periodic ();
     return true;
     }
 
@@ -388,5 +412,5 @@ void setup_keyboard (void)
     printf ("setup_keyboard " __DATE__ " " __TIME__ "\n");
 #endif
     tusb_init();
-    add_repeating_timer_ms (250, keyboard_periodic, NULL, &s_kbd_timer);
+    add_repeating_timer_ms (100, keyboard_periodic, NULL, &s_kbd_timer);
     }

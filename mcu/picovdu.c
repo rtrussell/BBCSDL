@@ -35,16 +35,22 @@
 static uint8_t  framebuf[SWIDTH * SHEIGHT / 8];
 static uint16_t renderbuf[256 * 8];
 
-static bool bBlank = true;      // Blank video screen
-static int col = 0;     // Cursor column position
-static int row = 0;     // Cursor row position
-static int fg;          // Text foreground colour
-static int bg;          // Text backgound colour
-static uint8_t bgfill;  // Pixel fill for background colour
-static int gmd;         // Graphics mode
-static int gfg;         // Graphics foreground colour
-static int gbg;         // Graphics background colour
-static bool bPrint = false;     // Enable output to printer (UART)
+static bool bBlank = true;              // Blank video screen
+static int col = 0;                     // Cursor column position
+static int row = 0;                     // Cursor row position
+static int fg;                          // Text foreground colour
+static int bg;                          // Text backgound colour
+static uint8_t bgfill;                  // Pixel fill for background colour
+static int gmd;                         // Graphics mode
+static int gfg;                         // Graphics foreground colour
+static int gbg;                         // Graphics background colour
+static bool bPrint = false;             // Enable output to printer (UART)
+static int csrtop;                      // Top of cursor
+static int csrhgt;                      // Height of cursor
+static bool bCsrVis = false;            // Cursor currently rendered
+static uint8_t nCsrHide = 0;            // Cursor hide count
+static uint32_t nFlash = 0;             // Time counter for cursor flash
+static critical_section_t cs_csr;       // Critical section controlling cursor flash
 
 static uint16_t curpal[16];
 
@@ -406,6 +412,264 @@ void setup_video (void)
 
 /****** Routines executed on Core 0 **********************************************************/
 
+static void flipcsr (void)
+    {
+    if (( row < 0 ) || ( row >= pmode->trow ) || ( col < 0 ) || ( col >= pmode->tcol ))
+        {
+        bCsrVis = false;
+        return;
+        }
+    uint8_t *pfb = framebuf + (row * pmode->thgt + csrtop) * pmode->nbpl;
+    if ( pmode->nclr == 2 )
+        {
+        pfb += col;
+        for (int i = 0; i < csrhgt; ++i)
+            {
+            *pfb ^= 0xFF;
+            pfb += pmode->nbpl;
+            }
+        }
+    else if ( pmode->nclr == 4 )
+        {
+        pfb += 2 * col;
+        for (int i = 0; i < csrhgt; ++i)
+            {
+            *((uint16_t *)pfb) ^= 0xFFFF;
+            pfb += pmode->nbpl;
+            }
+        }
+    else if ( pmode->nclr == 16 )
+        {
+        pfb += 4 * col;
+        for (int i = 0; i < csrhgt; ++i)
+            {
+            *((uint32_t *)pfb) ^= 0xFFFFFFFF;
+            pfb += pmode->nbpl;
+            }
+        }
+    bCsrVis = ! bCsrVis;
+    }
+
+static void hidecsr (void)
+    {
+    critical_section_enter_blocking (&cs_csr);
+    ++nCsrHide;
+    if ( bCsrVis ) flipcsr ();
+    critical_section_exit (&cs_csr);
+    }
+
+static void showcsr (void)
+    {
+    critical_section_enter_blocking (&cs_csr);
+    if ( nCsrHide > 0 ) --nCsrHide;
+    if (( nCsrHide == 0 ) && ( ! bCsrVis )) flipcsr ();
+    critical_section_exit (&cs_csr);
+    }
+
+static void flashcsr (void)
+    {
+    critical_section_enter_blocking (&cs_csr);
+    if ( nCsrHide == 0 ) flipcsr ();
+    critical_section_exit (&cs_csr);
+    }
+
+static void csrdef (int data2)
+    {
+    uint32_t p1 = data2 & 0xFF;
+    uint32_t p2 = ( data2 >> 8 ) & 0xFF;
+    uint32_t p3 = ( data2 >> 16 ) & 0xFF;
+    if ( p1 == 1 )
+        {
+        if ( p2 == 0 ) nCsrHide |= 80;
+        else nCsrHide &= 0x7F;
+        }
+    else if ( p1 == 0 )
+        {
+        if ( p2 == 10 )
+            {
+            if ( p3 < pmode->thgt ) csrtop = p3;
+            }
+        else if ( p2 == 11 )
+            {
+            if ( p3 < pmode->thgt ) csrhgt = p3 - csrtop + 1;
+            }
+        }
+    }
+
+static void scrldn (void)
+    {
+    hidecsr ();
+    memmove (framebuf + pmode->thgt * pmode->nbpl, framebuf,
+        (pmode->grow - pmode->thgt) * pmode->nbpl);
+    memset (framebuf, bgfill, pmode->thgt * pmode->nbpl);
+    showcsr ();
+    }
+
+static void scrlup (void)
+    {
+    hidecsr ();
+    memmove (framebuf, framebuf + pmode->thgt * pmode->nbpl,
+        (pmode->grow - pmode->thgt) * pmode->nbpl);
+    memset (framebuf + (pmode->grow - pmode->thgt) * pmode->nbpl,
+        bgfill, pmode->thgt * pmode->nbpl);
+    showcsr ();
+    }
+
+static void cls (uint8_t fill)
+    {
+    hidecsr ();
+    memset (framebuf, fill, pmode->grow * pmode->nbpl);
+    showcsr ();
+    }
+
+static void dispchr (int chr)
+    {
+    if (( row < 0 ) || ( row >= pmode->trow ) || ( col < 0 ) || ( col >= pmode->tcol ))
+        {
+#if DEBUG > 0
+        printf ("Cursor out of range: row = %d, col = %d, screen = %dx%d\n",
+            row, col, pmode->trow, pmode->tcol);
+#endif
+        return;
+        }
+#if DEBUG > 1
+    if ((chr >= 0x20) && (chr <= 0x7F)) printf ("dispchr ('%c')\n", chr);
+    else printf ("dispchr (0x%02X)\n", chr);
+#endif
+    hidecsr ();
+    uint32_t fhgt = pmode->thgt;
+    bool bDbl = false;
+    if ( fhgt > 10 )
+        {
+        fhgt /= 2;
+        bDbl = true;
+        }
+    const uint8_t *pch = font_10[chr];
+    uint8_t *pfb = framebuf + row * pmode->thgt * pmode->nbpl;
+    if ( fhgt == 8 ) ++pch;
+    if ( pmode->nclr == 2 )
+        {
+        pfb += col;
+        for (int i = 0; i < fhgt; ++i)
+            {
+#if DEBUG > 1
+            printf ("0x%02X:", *pch);
+            for (int j = 0; j < 8; ++j)
+                {
+                uint16_t clr = renderbuf[8*(*pch)+j];
+                if ( clr > 0 ) printf (" 0x%04X", clr);
+                else printf ("       ");
+                }
+            printf ("\n");
+#endif
+            *pfb = *pch;
+            pfb += pmode->nbpl;
+            if ( bDbl )
+                {
+                *pfb = *pch;
+                pfb += pmode->nbpl;
+                }
+            ++pch;
+            }
+        }
+    else if ( pmode->nclr == 4 )
+        {
+        pfb += 2 * col;
+        uint16_t fpx = cpx04[fg];
+        uint16_t bpx = cpx04[bg];
+        for (int i = 0; i < fhgt; ++i)
+            {
+            uint16_t mask = pmsk04[*pch];
+            uint16_t pix = ( mask & fpx ) | ( (~ mask) & bpx );
+            *((uint16_t *)pfb) = pix;
+            pfb += pmode->nbpl;
+            if ( bDbl )
+                {
+                *((uint16_t *)pfb) = pix;
+                pfb += pmode->nbpl;
+                }
+            ++pch;
+            }
+        }
+    else if ( pmode->nclr == 16 )
+        {
+        pfb += 4 * col;
+        uint32_t fpx = cpx16[fg];
+        uint32_t bpx = cpx16[bg];
+        for (int i = 0; i < fhgt; ++i)
+            {
+            uint32_t mask = pmsk16[*pch];
+            uint32_t pix = ( mask & fpx ) | ( (~ mask) & bpx );
+            *((uint32_t *)pfb) = pix;
+            pfb += pmode->nbpl;
+            if ( bDbl )
+                {
+                *((uint32_t *)pfb) = pix;
+                pfb += pmode->nbpl;
+                }
+            ++pch;
+            }
+        }
+    showcsr ();
+    }
+
+static void newline (int *px, int *py)
+    {
+    if (++(*py) == pmode->trow)
+        {
+        if ((scroln & 0x80) && (--scroln == 0x7F))
+            {
+            unsigned char ch;
+            scroln = 0x7F + pmode->trow;;
+            do
+                {
+                sleep_us (5000);
+                } 
+            while ((getkey (&ch) == 0) && ((flags & (ESCFLG | KILL)) == 0));
+            }
+        scrlup ();
+        *py = pmode->trow - 1;
+        }
+	if ( bPrint )
+        {
+        printf ("\n");
+        if (*px) printf ("\033[%i;%iH", *py + 1, *px + 1);
+        }
+    }
+
+static void wrap (void)
+    {
+    if ( bPrint ) printf ("\r");
+    hidecsr ();
+    col = 0;
+    newline (&col, &row);
+    showcsr ();
+    }
+
+static void tabxy (int x, int y)
+    {
+#if DEBUG > 0
+    printf ("tab: row = %d, col = %d\n", y, x);
+#endif
+    if (( x >= 0 ) && ( x < pmode->tcol ) && ( y >= 0 ) && ( y < pmode->trow ))
+        {
+        hidecsr ();
+        row = y;
+        col = x;
+        showcsr ();
+        }
+    }
+
+void showchr (int chr)
+    {
+    hidecsr ();
+    if (col >= pmode->tcol) wrap ();
+    dispchr (chr);
+    if ( bPrint ) putchar (chr);
+    if ((++col == pmode->tcol) && ((cmcflg & 1) == 0)) wrap ();
+    showcsr ();
+    }
+
 static void genrb (void)
     {
 #if DEBUG > 0
@@ -466,169 +730,11 @@ static void genrb (void)
 #endif
     }
 
-static void scrldn (void)
-    {
-    memmove (framebuf + pmode->thgt * pmode->nbpl, framebuf,
-        (pmode->grow - pmode->thgt) * pmode->nbpl);
-    memset (framebuf, bgfill, pmode->thgt * pmode->nbpl);
-    }
-
-static void scrlup (void)
-    {
-    memmove (framebuf, framebuf + pmode->thgt * pmode->nbpl,
-        (pmode->grow - pmode->thgt) * pmode->nbpl);
-    memset (framebuf + (pmode->grow - pmode->thgt) * pmode->nbpl,
-        bgfill, pmode->thgt * pmode->nbpl);
-    }
-
-static void cls (uint8_t fill)
-    {
-    memset (framebuf, fill, pmode->grow * pmode->nbpl);
-    }
-
-static void dispchr (int chr)
-    {
-    if (( row < 0 ) || ( row >= pmode->trow ) || ( col < 0 ) || ( col >= pmode->tcol ))
-        {
-#if DEBUG > 0
-        printf ("Cursor out of range: row = %d, col = %d, screen = %dx%d\n",
-            row, col, pmode->trow, pmode->tcol);
-#endif
-        return;
-        }
-#if DEBUG > 1
-    if ((chr >= 0x20) && (chr <= 0x7F)) printf ("dispchr ('%c')\n", chr);
-    else printf ("dispchr (0x%02X)\n", chr);
-#endif
-    uint32_t fhgt = pmode->thgt;
-    bool bDbl = false;
-    if ( fhgt > 10 )
-        {
-        fhgt /= 2;
-        bDbl = true;
-        }
-    const uint8_t *pch = font_10[chr];
-    uint8_t *pfb = framebuf + row * pmode->thgt * pmode->nbpl;
-    if ( fhgt == 8 ) ++pch;
-    if ( pmode->nclr == 2 )
-        {
-        pfb += col;
-        for (int i = 0; i < fhgt; ++i)
-            {
-#if DEBUG > 1
-            printf ("0x%02X:", *pch);
-            for (int j = 0; j < 8; ++j)
-                {
-                uint16_t clr = renderbuf[8*(*pch)+j];
-                if ( clr > 0 ) printf (" 0x%04X", clr);
-                else printf ("       ");
-                }
-            printf ("\n");
-#endif
-            *pfb = *pch;
-            pfb += pmode->nbpl;
-            if ( bDbl )
-                {
-                *pfb = *pch;
-                pfb += pmode->nbpl;
-                }
-            ++pch;
-            }
-        }
-    else if ( pmode->nclr == 4 )
-        {
-        pfb += 2 * col;
-        uint16_t fpx = cpx04[fg];
-        uint16_t bpx = cpx04[bg];
-        for (int i = 0; i < fhgt; ++i)
-            {
-            uint16_t mask = pmsk04[*pch];
-            uint16_t pix = ( mask & fpx ) | ( (~ mask) & bpx );
-            *((uint16_t *)pfb) = pix;
-            pfb += pmode->nbpl;
-            if ( bDbl )
-                {
-                *((uint16_t *)pfb) = pix;
-                pfb += pmode->nbpl;
-                }
-            ++pch;
-            }
-        }
-    else if ( pmode->nclr == 16 )
-        {
-        pfb += 2 * col;
-        uint32_t fpx = cpx16[fg];
-        uint32_t bpx = cpx16[bg];
-        for (int i = 0; i < fhgt; ++i)
-            {
-            uint32_t mask = pmsk16[*pch];
-            uint32_t pix = ( mask & fpx ) | ( (~ mask) & bpx );
-            *((uint32_t *)pfb) = pix;
-            pfb += pmode->nbpl;
-            if ( bDbl )
-                {
-                *((uint32_t *)pfb) = pix;
-                pfb += pmode->nbpl;
-                }
-            ++pch;
-            }
-        }
-    }
-
-static void newline (int *px, int *py)
-    {
-    if (++(*py) == pmode->trow)
-        {
-        if ((scroln & 0x80) && (--scroln == 0x7F))
-            {
-            unsigned char ch;
-            scroln = 0x7F + pmode->trow;;
-            do
-                {
-                sleep_us (5000);
-                } 
-            while ((getkey (&ch) == 0) && ((flags & (ESCFLG | KILL)) == 0));
-            }
-        scrlup ();
-        *py = pmode->trow - 1;
-        }
-	if ( bPrint )
-        {
-        printf ("\n");
-        if (*px) printf ("\033[%i;%iH", *py + 1, *px + 1);
-        }
-    }
-
-static void wrap (void)
-    {
-    if ( bPrint ) printf ("\r");
-    col = 0;
-    newline (&col, &row);
-    }
-
-static void tabxy (int x, int y)
-    {
-#if DEBUG > 0
-    printf ("tab: row = %d, col = %d\n", y, x);
-#endif
-    if (( x >= 0 ) && ( x < pmode->tcol ) && ( y >= 0 ) && ( y < pmode->trow ))
-        {
-        row = y;
-        col = x;
-        }
-    }
-
-void showchr (int chr)
-    {
-    if (col > pmode->tcol) wrap ();
-    dispchr (chr);
-    if ( bPrint ) putchar (chr);
-    if ((col == pmode->tcol) && ((cmcflg & 1) == 0)) wrap ();
-    else if ((signed char)(chr & 0xFF) >= -64) col++;
-    }
-
 static void clrreset (void)
     {
+    bg = 0;
+    bgfill = 0;
+    gbg = 0;
     if ( pmode->nclr == 2 )
         {
 #if DEBUG > 0
@@ -636,6 +742,8 @@ static void clrreset (void)
 #endif
         curpal[0] = defpal[0];
         curpal[1] = defpal[15];
+        fg = 1;
+        gfg = 1;
         }
     else if ( pmode->nclr == 4 )
         {
@@ -646,6 +754,8 @@ static void clrreset (void)
         curpal[1] = defpal[9];
         curpal[2] = defpal[11];
         curpal[3] = defpal[15];
+        fg = 3;
+        gfg = 3;
         }
     else
         {
@@ -653,6 +763,8 @@ static void clrreset (void)
         printf ("clrreset: nclr = 16\n");
 #endif
         memcpy (curpal, defpal, sizeof (defpal));
+        fg = 15;
+        gfg = 15;
         }
     genrb ();
     }
@@ -666,7 +778,15 @@ static void modechg (int mode)
         {
         bBlank = true;
         pmode = &modes[mode];
+        nCsrHide |= 0x80;
         clrreset ();
+        cls (bgfill);
+        col = 0;
+        row = 0;
+        csrtop = pmode->thgt - 1;
+        csrhgt = 1;
+        nCsrHide = 0;
+        showcsr ();
 #if USE_INTERP
         bCfgInt = true;
 #else
@@ -685,6 +805,22 @@ static inline int clrmsk (int clr)
     return ( clr & 0x01 );
     }
 
+/* Process character sequences:
+   code (bits 8-15)     - Control byte
+   code (bits 0-7)      - Last parameter byte
+   data1 (bits 24-31)   - 2nd from last parameter byte
+   data1 (bits 16-23)   - 3rd from last parameter byte
+   data1 (bits 8-15)    - 4th from last parameter byte
+   data1 (bits 0-7)     - 5th from last parameter byte
+   data2 (bits 24-31)   - 6th from last parameter byte
+   data2 (bits 16-23)   - 7th from last parameter byte
+   data2 (bits 8-15)    - 8th from last parameter byte
+   data2 (bits 0-7)     - 9th from last parameter byte
+
+   The control byte is always in the higher byte of code.
+   Successive parameter bytes then effectively push earlier
+   parameters further down the above list.
+*/
 void xeqvdu (int code, int data1, int data2)
     {
     if ( pmode == NULL ) return;
@@ -699,6 +835,7 @@ void xeqvdu (int code, int data1, int data2)
     if ((vflags & VDUDIS) && (vdu != 6))
         return;
 
+    hidecsr ();
     switch (vdu)
         {
         case 1: // 0x01 - Next character to printer only
@@ -809,7 +946,7 @@ void xeqvdu (int code, int data1, int data2)
         case 17: // 0x11 - COLOUR n
             if ( code & 0x80 )
                 {
-                bg = clrmsk (code >> 4);
+                bg = clrmsk (code);
                 if ( pmode->nclr == 16 )        bgfill = (uint8_t) cpx16[bg];
                 else if ( pmode->nclr == 4 )    bgfill = (uint8_t) cpx04[bg];
                 else                            bgfill = cpx02[bg];
@@ -836,9 +973,9 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 18: // 0x12 - GCOL m, n
-            gmd = code & 0x0F;
-            gfg = clrmsk (data1);
-            gbg = clrmsk (data1 >> 4);
+            gmd = ( data1 >> 24 ) & 0x07;
+            if ( code & 0x80 ) gbg = clrmsk (code);
+            else    gfg = clrmsk (code);
             if ( bPrint )
                 {
                 vdu = 30 + (data1 & 7);
@@ -852,11 +989,11 @@ void xeqvdu (int code, int data1, int data2)
 
         case 19: // 0x13 - SET CURPAL
         {
-            int pal = code & 0x0F;
-            int phy = data1 & 0xFF;
-            int r = ( data1 >> 8 ) & 0xFF;
-            int g = ( data1 >> 16 ) & 0xFF;
-            int b = data1 >> 24;
+            int pal = data1 & 0x0F;
+            int phy = ( data1 >> 8 ) & 0xFF;
+            int r = ( data1 >> 16 ) & 0xFF;
+            int g = data1 >> 24;
+            int b = code & 0xFF;
             if ( phy < 16 ) curpal[pal] = defpal[phy];
             else if ( phy == 16 ) curpal[pal] = PICO_SCANVIDEO_PIXEL_FROM_RGB8(r, g, b);
             else if ( phy == 255 ) curpal[pal] = PICO_SCANVIDEO_PIXEL_FROM_RGB5(r, g, b);
@@ -893,7 +1030,12 @@ void xeqvdu (int code, int data1, int data2)
             printf ("VDU 0x17: code = 0x%04X, data1 = 0x%08X, data2 = 0x%08X\n",
                 code, data1, data2);
 #endif
-            if ((data2 & 0xFF) == 22)
+            vdu = data2 & 0xFF;
+            if ( vdu <= 1 )
+                {
+                csrdef (data2);
+                }
+            else if ( vdu == 22 )
                 {
                 col = 0;
                 row = 0;
@@ -929,7 +1071,7 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 31: // 0x1F - TAB(X,Y)
-            tabxy (data1 >> 24 & 0xFF, code & 0xFF);
+            tabxy (data1 >> 24, code & 0xFF);
             if ( bPrint ) printf ("\033[%i;%iH", row + 1, col + 1);
             break;
 
@@ -945,7 +1087,17 @@ void xeqvdu (int code, int data1, int data2)
                 showchr (vdu);
                 }
         }
+    showcsr ();
     if ( bPrint ) fflush (stdout);
+    }
+
+void video_periodic (void)
+    {
+    if ( ++nFlash >= 5 )
+        {
+        flashcsr ();
+        nFlash = 0;
+        }
     }
 
 int setup_vdu (void)
@@ -973,6 +1125,7 @@ int setup_vdu (void)
     sleep_ms(500);
     printf ("setup_vdu: Set clock frequency %d kHz.\n", clock_get_hz (clk_sys) / 1000);
 #endif
+    critical_section_init (&cs_csr);
     memset (framebuf, 0, sizeof (framebuf));
     modechg (8);
     multicore_launch_core1 (setup_video);
