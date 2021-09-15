@@ -6,6 +6,7 @@
 *.o
 *.ko
 *.obj
+build/
 
 # Linker output
 *.ilk
@@ -41,3 +42,8 @@
 *.su
 *.idb
 *.pdb
+
+# Editor files
+*~
+#*
+.#*

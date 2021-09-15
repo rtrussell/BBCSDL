@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2021                         *
 *                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.36a, 09-Aug-2021                                *
+*       Version 0.37a, 14-Sep-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -12,7 +12,13 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <string.h>
+#ifdef PICO
+#include "lfswrap.h"
+extern char *szLoadDir ;  // @dir$
+extern int dirlen;
+#else
 #include <dirent.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "bbccon.h"
@@ -33,7 +39,11 @@ typedef dispatch_source_t timer_t ;
 #undef MAX_PATH
 #define NCMDS 39	// number of OSCLI commands
 #define POWR2 32	// largest power-of-2 less than NCMDS
+#ifdef PICO
+#define COPYBUFLEN 512	// length of buffer used for *COPY command
+#else
 #define COPYBUFLEN 4096	// length of buffer used for *COPY command
+#endif
 #define _S_IWRITE 0x0080
 #define _S_IREAD 0x0100
 #define MAX_PATH 260
@@ -79,7 +89,7 @@ static char *cmds[NCMDS] = {
 		"help", "hex", "input", "key", "list", "load", "lock", "lowercase",
 		"md", "mkdir", "output", "quit", "rd", "refresh",
 		"ren", "rename", "rmdir", "run", "save", "spool", "spoolon",
-		"timer", "tv", "type", "unlock"} ;
+		"timer", "tv", "type", "unlock" } ;
 
 enum {
 		BYE, CD, CHDIR, COPY, DEL, DELETE, DIRCMD,
@@ -87,7 +97,7 @@ enum {
 		HELP, HEX, INPUT, KEY, LIST, LOAD, LOCK, LOWERCASE,
 		MD, MKDIR, OUTPUT, QUIT, RD, REFRESH,
 		REN, RENAME, RMDIR, RUN, SAVE, SPOOL, SPOOLON,
-		TIMER, TV, TYPE, UNLOCK} ;
+		TIMER, TV, TYPE, UNLOCK } ;
 
 // Change to a new screen mode:
 static void newmode (short wx, short wy, short cx, short cy, short nc, signed char bc) 
@@ -200,7 +210,11 @@ void xeqvdu (int code, int data1, int data2)
 #ifdef _WIN32
 	if (!_isatty (_fileno (stdin)) || !_isatty (_fileno (stdout)))
 #else
+# ifdef PICO
+    if (0)
+# else
 	if (!isatty (STDIN_FILENO) || !isatty (STDOUT_FILENO))
+# endif
 #endif
 	    {
 		fwrite (&vdu, 1, 1, stdout) ;
@@ -637,6 +651,11 @@ void oscli (char *cmd)
 			    }
 			if (chdir (path))
 				error (206, "Bad directory") ;
+#ifdef PICO
+			getcwd (szLoadDir,255) ;
+			dirlen = strlen (szLoadDir) ;
+			szLoadDir[dirlen++] = '/' ;
+#endif
 			return ;
 
 		case COPY:			// *COPY oldfile newfile

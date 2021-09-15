@@ -9,6 +9,7 @@
 // Constants:
 #define STACK_NEEDED 512
 #ifdef PICO
+void *libtop;
 #define ACCSLEN 1024  // Must be the same in bbcsdl.h and bbccon.h
 #else
 #define ACCSLEN 65536 // Must be the same in bbcsdl.h and bbccon.h
@@ -369,8 +370,14 @@ typedef __attribute__((aligned(1))) char* unaligned_char_ptr;
 typedef __attribute__((aligned(1))) VAR unaligned_VAR;
 
 // Helper macros to fix alignment problem:
+#ifdef PICO
+static inline int ILOAD(void* p){ return (intptr_t)p&3 ? *((unaligned_int*)p) : *((int*)p); }
+static inline void ISTORE(void* p, int i){ if ((intptr_t)p&3) *((unaligned_int*)p) = i; else *((int *)p) = i; }
+#else
 #define ILOAD(p)    *((unaligned_int*)(p))
-#define ISTORE(p,i) *((unaligned_int*)(p)) = i 
+#define ISTORE(p,i) *((unaligned_int*)(p)) = i
+#endif 
+
 #define TLOAD(p)    *((unaligned_intptr_t*)(p))
 #define TSTORE(p,i) *((unaligned_intptr_t*)(p)) = i 
 #define ULOAD(p)    *((unaligned_uint*)(p))

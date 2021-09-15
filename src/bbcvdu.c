@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.24a, 24-Jul-2021                                *
+*       Version 1.25a, 11-Sep-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1180,7 +1180,6 @@ static void minit (signed char bc)
 		txtfor = 0 ;
 		bakgnd = colmsk << 8 ;
 		txtbak = colmsk ;
-		palette[(int) colmsk] = 0xFFFFFFFF ; // opaque peak white
 	    }
 
 	vflags &= ~UFONT ;

@@ -1236,7 +1236,7 @@ VAR xeq (void)
 	while (1) // for each statement
 	    {
 #ifdef PICO
-		if(&al < (signed char *)libtop + 0x800)
+		if((&al < (signed char *)libtop + 0x800) && (&al >= (signed char *)userRAM))
 			error(0, "Recursion too deep!");
 #endif
 	 	if (flags & (KILL + PAUSE + ALERT + ESCFLG))
