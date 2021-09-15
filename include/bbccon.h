@@ -3,20 +3,21 @@
 *       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       bbccon.h constant definitions                              *
-*       Version v0.36, 21-Aug-2021                                 *
+*       Version v0.37, 14-Sep-2021                                 *
 \******************************************************************/
 
 // System constants :
 
 #define YEAR    "2021"          // Copyright year
-#define VERSION "v0.36c"         // Version string
+#define VERSION "v0.37"         // Version string
 #ifdef PICO
-#define ACCSLEN 1024            // Must be the same in BBC.h
-#define DEFAULT_RAM PAGE_OFFSET+0x20000  // Initial amount of RAM to allocate
+#define ACCSLEN 1024  // Must be the same in bbcsdl.h and bbccon.h
+#define DEFAULT_RAM PAGE_OFFSET+0x20000 // Initial amount of RAM to allocate
 #else
-#define	ACCSLEN 65536		// Must be the same in BBC.h
+#define ACCSLEN 65536 // Must be the same in bbcsdl.h and bbccon.h
 #define DEFAULT_RAM PAGE_OFFSET+0x200000 // Initial amount of RAM to allocate
 #endif
+
 #define PAGE_OFFSET ACCSLEN + 0x1300     // Offset of PAGE from memory base
 #define MINIMUM_RAM PAGE_OFFSET+0x20000  // Minimum amount of RAM to allocate
 #define MAXIMUM_RAM 0x10000000  // Maximum amount of RAM to allocate
@@ -44,7 +45,7 @@
 #define	BIT6		0x40
 #define	BIT7		0x80
 
-// Bits in _flags byte (must be the same as in BBCEQUS.INC):
+// Bits in [vflags]:
 
 #define	IOFLAG		BIT0	// Insert/overtype
 #define	EGAFLG		BIT1	// EGA-compatible modes (*EGA [ON])
@@ -195,3 +196,4 @@ extern const char szNotice[] ;	// Copyright string
 extern int bChanged ;		// Display refresh required
 extern unsigned int platform ;	// OS platform
 extern unsigned int palette[256] ;
+

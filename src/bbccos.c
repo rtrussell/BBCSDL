@@ -1,12 +1,9 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                         *
 *       Copyright (C) R. T. Russell, 2021                         *
-
-        Modified 2021 by Eric Olson and Memotech-Bill for
-        Raspberry Pico
-
+*                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.36a, 09-Aug-2021                                *
+*       Version 0.37a, 14-Sep-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -17,7 +14,8 @@
 #include <string.h>
 #ifdef PICO
 #include "lfswrap.h"
-extern char __StackLimit;
+extern char *szLoadDir ;  // @dir$
+extern int dirlen;
 #else
 #include <dirent.h>
 #endif
@@ -39,9 +37,13 @@ typedef dispatch_source_t timer_t ;
 #endif
 
 #undef MAX_PATH
-#define NCMDS 40	// number of OSCLI commands
+#define NCMDS 39	// number of OSCLI commands
 #define POWR2 32	// largest power-of-2 less than NCMDS
+#ifdef PICO
 #define COPYBUFLEN 512	// length of buffer used for *COPY command
+#else
+#define COPYBUFLEN 4096	// length of buffer used for *COPY command
+#endif
 #define _S_IWRITE 0x0080
 #define _S_IREAD 0x0100
 #define MAX_PATH 260
@@ -86,7 +88,7 @@ static char *cmds[NCMDS] = {
 		"dump", "era", "erase", "esc", "exec", "float", "fx",
 		"help", "hex", "input", "key", "list", "load", "lock", "lowercase",
 		"md", "mkdir", "output", "quit", "rd", "refresh",
-		"ren", "rename", "rmdir", "run", "save", "sbrk", "spool", "spoolon",
+		"ren", "rename", "rmdir", "run", "save", "spool", "spoolon",
 		"timer", "tv", "type", "unlock" } ;
 
 enum {
@@ -94,7 +96,7 @@ enum {
 		DUMP, ERA, ERASE, ESC, EXEC, FLOAT, FX,
 		HELP, HEX, INPUT, KEY, LIST, LOAD, LOCK, LOWERCASE,
 		MD, MKDIR, OUTPUT, QUIT, RD, REFRESH,
-		REN, RENAME, RMDIR, RUN, SAVE, SBRK, SPOOL, SPOOLON,
+		REN, RENAME, RMDIR, RUN, SAVE, SPOOL, SPOOLON,
 		TIMER, TV, TYPE, UNLOCK } ;
 
 // Change to a new screen mode:
@@ -572,14 +574,13 @@ static int wild (char *ebx, char *edx)
 	return 0 ;
 }
 
-extern char *szLoadDir ;  // @dir$
-extern int dirlen;
 void oscli (char *cmd)
 {
 	int b = 0, h = POWR2, n ;
 	char cpy[256] ;
 	char path[MAX_PATH], path2[MAX_PATH] ;
 	FILE *srcfile, *dstfile ;
+	DIR *d ;
 	char *p, *q, dd ;
 	unsigned char flag ;
 
@@ -652,11 +653,9 @@ void oscli (char *cmd)
 			    }
 			if (chdir (path))
 				error (206, "Bad directory") ;
+#ifdef PICO
 			getcwd (szLoadDir,255) ;
 			dirlen = strlen (szLoadDir) ;
-#ifdef _WIN32
-			szLoadDir[dirlen++] = '\\' ;
-#else
 			szLoadDir[dirlen++] = '/' ;
 #endif
 			return ;
@@ -736,7 +735,7 @@ void oscli (char *cmd)
 			text (p) ;
 			crlf () ;
 
-			DIR *d = opendir (q) ;
+			d = opendir (q) ;
 			if (d == NULL)
 				error (254, "Bad command") ;
 
@@ -1077,15 +1076,6 @@ void oscli (char *cmd)
 			while (n) ;
 			fclose (srcfile) ;
 			crlf () ; // Zero COUNT
-			return ;
-
-		case SBRK:
-			printf("Current sbrk address is %p.\r\n",sbrk(0)) ;
-			printf("Current stack address: %p.\r\n",&b) ;
-#ifdef PICO
-			printf("System malloc heap remaining %llu.\r\n",
-			(unsigned long long int)(&__StackLimit-(char *)sbrk(0))) ;
-#endif
 			return ;
 
 		case UNLOCK:

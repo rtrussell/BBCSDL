@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.24a, 24-Jul-2021                                *
+*       Version 1.25a, 11-Sep-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -71,7 +71,7 @@ static short logicop[] =
         0x150A,	// GCOL 4 - NOT (GL_INVERT)
         0x1505,	// GCOL 5 - GL_NOOP
         0x1504,	// GCOL 6 - GL_AND_INVERTED
-        0x150D,	// GCOL 7 - GL_OR_INVERTED
+        0x150D	// GCOL 7 - GL_OR_INVERTED
 } ;
 
 static SDL_BlendMode blendop[] = 
@@ -83,7 +83,7 @@ static SDL_BlendMode blendop[] =
 	0,		    // GCOL 4 (populated in vduinit)
         0,		    // GCOL 5 (populated in vduinit)
 	SDL_BLENDMODE_MOD,  // GCOL 6 - multiply by NOT src
-	SDL_BLENDMODE_ADD,  // GCOL 7 - add to NOT src
+	SDL_BLENDMODE_ADD   // GCOL 7 - add to NOT src
 } ;
 
 // It is important that solid colours aren't dithered, since
@@ -1180,7 +1180,6 @@ static void minit (signed char bc)
 		txtfor = 0 ;
 		bakgnd = colmsk << 8 ;
 		txtbak = colmsk ;
-		palette[(int) colmsk] = 0xFFFFFFFF ; // opaque peak white
 	    }
 
 	vflags &= ~UFONT ;
@@ -1487,8 +1486,8 @@ static void plotns (unsigned char al, int cx, int cy)
 	case 8:		// PLOT 64-71, Plot a single 'dot' (size depends on mode)
 		rect.x = cx ;
 		rect.y = cy ;
-		rect.w = pixelx ;
-		rect.h = pixely ;
+		rect.w = pixelx & 0xFFFF ;
+		rect.h = pixely & 0xFFFF ;
 		setcol (col) ;
 		SDL_RenderFillRect(memhdc, &rect) ;
 		break ;
@@ -1664,12 +1663,20 @@ static void plot (char code, short xs, short ys)
 	int xpos = xs, ypos = ys ;
 
 	if ((code & BIT2) != 0)
+	    {
+		*((unsigned char*)&pixelx + 3) = 0 ;
+		*((unsigned char*)&pixely + 3) = 0 ;
 		ascale (&xpos, &ypos) ;
+	    }
 	else
-	{
+	    {
+		xpos += *((unsigned char*)&pixelx + 3) ;
+		ypos += *((unsigned char*)&pixely + 3) ;
+		*((unsigned char*)&pixelx + 3) = xpos & 1 ;
+		*((unsigned char*)&pixely + 3) = ypos & 1 ;
 		xpos = lastx + (xpos >> 1) ;
 		ypos = lasty - (ypos >> 1) ;
-	}
+	    }
 	plotns (code, xpos, ypos) ;
 }
 

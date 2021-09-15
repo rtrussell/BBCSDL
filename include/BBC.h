@@ -3,12 +3,17 @@
 *       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       BBC.h constant, variable and structure declarations        *
-*       Version 1.25b, 22-Aug-2021                                 *
+*       Version 1.25d, 02-Sep-2021                                 *
 \******************************************************************/
 
 // Constants:
 #define STACK_NEEDED 512
+#ifdef PICO
+void *libtop;
+#define ACCSLEN 1024  // Must be the same in bbcsdl.h and bbccon.h
+#else
 #define ACCSLEN 65536 // Must be the same in bbcsdl.h and bbccon.h
+#endif
 
 // Sentinels:
 #define CALCHK	0xC3414C43
@@ -220,6 +225,36 @@ typedef struct tagPARM
 	double f[8] ;
 } PARM, *LPPARM ;
 
+// A variant holds an 80-bit long double, a 64-bit long long or a string descriptor.
+// n.b. GCC pads a long double to 16 bytes (128 bits) for alignment reasons but only
+// the least-significant 80-bits need to be stored on the heap, in files etc.
+// When a long double is 64-bits rather than 80-bits (e.g. ARM) it will be necessary
+// to force the type word (.i.t or .s.t member) to a value other than 0 or -1. 
+typedef union __attribute__ ((packed)) __attribute__ ((aligned (4))) tagVAR
+{
+#if defined(__arm__) || defined(__aarch64__) || defined(__EMSCRIPTEN__)
+	double f ;
+#else
+        long double f ;
+#endif
+        struct
+        {
+          long long n ;
+          short t ; // = 0
+        } i ;
+        struct
+        {
+          heapptr p ; // Assumed to be 32 bits
+          unsigned int l ; // Must be unsigned for overflow tests in 'math'
+          short t ; // = -1
+        } s ;
+	struct
+	{
+	  double d ;
+	  short t ; // unused (loadn/storen only)
+	} d ;
+} VAR, *LPVAR ; 
+
 // String descriptor:
 typedef struct __attribute__ ((packed)) __attribute__ ((aligned (4))) tagSTR
 {
@@ -325,9 +360,33 @@ extern char *szTempDir ;	// @tmp$
 extern const char szNotice [] ;
 extern void *userRAM ;
 
-// Defined in bbccon.c
-#ifdef PICO
-extern void *libtop;
-#endif
+// Alignment helper types:
+typedef __attribute__((aligned(1))) int unaligned_int;
+typedef __attribute__((aligned(1))) intptr_t unaligned_intptr_t;
+typedef __attribute__((aligned(1))) unsigned int unaligned_uint;
+typedef __attribute__((aligned(1))) unsigned short unaligned_ushort;
+typedef __attribute__((aligned(1))) void* unaligned_void_ptr;
+typedef __attribute__((aligned(1))) char* unaligned_char_ptr;
+typedef __attribute__((aligned(1))) VAR unaligned_VAR;
 
-#include <align.h>
+// Helper macros to fix alignment problem:
+#ifdef PICO
+static inline int ILOAD(void* p){ return (intptr_t)p&3 ? *((unaligned_int*)p) : *((int*)p); }
+static inline void ISTORE(void* p, int i){ if ((intptr_t)p&3) *((unaligned_int*)p) = i; else *((int *)p) = i; }
+#else
+#define ILOAD(p)    *((unaligned_int*)(p))
+#define ISTORE(p,i) *((unaligned_int*)(p)) = i
+#endif 
+
+#define TLOAD(p)    *((unaligned_intptr_t*)(p))
+#define TSTORE(p,i) *((unaligned_intptr_t*)(p)) = i 
+#define ULOAD(p)    *((unaligned_uint*)(p))
+#define USTORE(p,i) *((unaligned_uint*)(p)) = i 
+#define SLOAD(p)    *((unaligned_ushort*)(p))
+#define SSTORE(p,i) *((unaligned_ushort*)(p)) = i 
+#define VLOAD(p)    *((unaligned_void_ptr*)(p))
+#define VSTORE(p,i) *((unaligned_void_ptr*)(p)) = i 
+#define CLOAD(p)    *((unaligned_char_ptr*)(p))
+#define CSTORE(p,i) *((unaligned_char_ptr*)(p)) = i 
+#define NLOAD(p)    *((unaligned_VAR*)(p))
+#define NSTORE(p,i) *((unaligned_VAR*)(p)) = i
