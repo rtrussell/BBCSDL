@@ -22,12 +22,12 @@
  *  SOFTWARE
  */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include "uf2format.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     if (argc != 4) {
         fprintf(stderr, "USAGE: %s file.bin file.uf2 address\n", argv[0]);
         return 1;
