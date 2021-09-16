@@ -174,8 +174,8 @@ static const MODE modes[] = {
     { 2, 320, 256,  40, 32,  44, 80, 8,  80, 2,  8},  // Mode  4 - 10KB
     { 4, 160, 256,  20, 32,  44, 80, 8,  80, 2,  8},  // Mode  5 - 10KB
     { 2, 320, 250,  40, 25,  44, 80, 8,  80, 2, 10},  // Mode  6 - 10KB
-    { 2, 640, 256,  40, 25,  44, 80, 8,  80, 2,  8},  // Mode  7 - Teletext TODO
-    { 2, 640, 512,  80, 32,  44, 80, 8,  80, 2, 16},  // Mode  8 - 40KB
+    {16, 320, 225,  40, 25,  75, 80, 8,  80, 2,  8},  // Mode  7 - Teletext TODO
+    { 2, 640, 512,  80, 32,  44, 80, 8,  80, 1, 16},  // Mode  8 - 40KB
     { 4, 320, 512,  40, 32,  44, 80, 8,  80, 1, 16},  // Mode  9 - 40KB
     {16, 160, 512,  20, 32,  44, 80, 8,  80, 1, 16},  // Mode 10 - 40KB
     { 2, 640, 500,  80, 25,  47, 80, 8,  80, 1, 20},  // Mode 11 - 40KB
@@ -199,7 +199,7 @@ static const MODE modes[] = {
     { 2, 320, 256,  40, 32, 112,  0, 8,  80, 1,  8},  // Mode  4 - 10KB
     { 4, 160, 256,  20, 32, 112,  0, 8,  80, 1,  8},  // Mode  5 - 10KB
     { 2, 320, 240,  40, 24,   0,  0, 8,  80, 2, 10},  // Mode  6 - 10KB
-    {16, 320, 225,  40, 25,   7,  0, 4, 160, 2,  9},  // Mode  7 - 37.5KB - Teletext TODO
+    {16, 320, 225,  40, 25,  15,  0, 4, 160, 2,  9},  // Mode  7 - 37.5KB - Teletext TODO
     { 2, 640, 480,  80, 30,   0,  0, 8,  80, 1, 16},  // Mode  8 - 37.5KB
     { 4, 320, 480,  40, 30,   0,  0, 8,  80, 1, 16},  // Mode  9 - 37.5KB
     {16, 160, 480,  20, 30,   0,  0, 8,  80, 1, 16},  // Mode 10 - 37.5KB
@@ -227,6 +227,151 @@ extern void convert_from_pal16 (uint32_t *dest, uint8_t *src, uint32_t count);
 #if HIRES
 extern const scanvideo_timing_t vga_timing_800x600_60_default;
 #endif
+
+void __time_critical_func(render_mode7) (void)
+    {
+#if DEBUG > 0
+    printf ("Entered mode 7 rendering\n");
+#endif
+    while (pmode == &modes[7])
+        {
+        if ( bCfgInt )
+            {
+            bCfgInt = false;
+            bBlank = false;
+#if DEBUG > 0
+            printf ("Mode 7 display enabled\n");
+#endif
+            }
+        struct scanvideo_scanline_buffer *buffer = scanvideo_begin_scanline_generation (true);
+        uint32_t *twopix = buffer->data;
+        int iScan = scanvideo_scanline_number (buffer->scanline_id) - pmode->vmgn;
+        if (( bBlank ) || (iScan < 0) || (iScan >= pmode->grow * pmode->yscl))
+            {
+            twopix[0] = COMPOSABLE_COLOR_RUN;
+            twopix[2] = SWIDTH - 2 | ( COMPOSABLE_EOL_ALIGN << 16 );
+            buffer->data_used = 2;
+            }
+        else
+            {
+            iScan /= pmode->yscl;
+            int iRow = iScan / pmode->thgt;
+            iScan -= iRow * pmode->thgt;
+            uint8_t *pch = &framebuf[iRow * pmode->tcol];
+            uint8_t ch = 0;
+            uint32_t *pxline = twopix;
+            uint32_t bgnd = curpal[0];
+            bgnd |= bgnd << 16;
+            uint32_t fgnd = curpal[15];
+            fgnd |= fgnd << 16;
+            bool bFlash = false;
+            bool bDouble = false;
+            bool bGraph = false;
+            bool bHold = false;
+            for (int iCol = 0; iCol < pmode->tcol; ++iCol)
+                {
+                uint8_t by = *pch;
+                if ( by < 0x80 ) ch = by;
+                else if ( !bHold ) ch = 0;
+                if ( ch >= 0x20 )
+                    {
+                    ch = font_10[ch][iScan+1];
+                    ++twopix;
+                    if ( ch & 0x01 ) *twopix = fgnd;
+                    else             *twopix = bgnd;
+                    ++twopix;
+                    if ( ch & 0x02 ) *twopix = fgnd;
+                    else             *twopix = bgnd;
+                    ++twopix;
+                    if ( ch & 0x04 ) *twopix = fgnd;
+                    else             *twopix = bgnd;
+                    ++twopix;
+                    if ( ch & 0x08 ) *twopix = fgnd;
+                    else             *twopix = bgnd;
+                    ++twopix;
+                    if ( ch & 0x10 ) *twopix = fgnd;
+                    else             *twopix = bgnd;
+                    ++twopix;
+                    if ( ch & 0x20 ) *twopix = fgnd;
+                    else             *twopix = bgnd;
+                    ++twopix;
+                    if ( ch & 0x40 ) *twopix = fgnd;
+                    else             *twopix = bgnd;
+                    ++twopix;
+                    if ( ch & 0x80 ) *twopix = fgnd;
+                    else             *twopix = bgnd;
+                    }
+                else
+                    {
+                    *(++twopix) = bgnd;
+                    *(++twopix) = bgnd;
+                    *(++twopix) = bgnd;
+                    *(++twopix) = bgnd;
+                    *(++twopix) = bgnd;
+                    *(++twopix) = bgnd;
+                    *(++twopix) = bgnd;
+                    *(++twopix) = bgnd;
+                    }
+                if ((by >= 0x80) && (by <= 0x87))
+                    {
+                    bGraph = false;
+                    fgnd = curpal[by & 0x07];
+                    fgnd |= fgnd << 16;
+                    }
+                elseif (by == 0x88)
+                    {
+                    bFlash = true;
+                    }
+                elseif (by == 0x89)
+                    {
+                    bFlash = false;
+                    }
+                elseif (by == 0x8C)
+                    {
+                    bDouble = false;
+                    }
+                elseif (by == 0x8D)
+                    {
+                    bDouble = true;
+                    }
+                elseif ((by >= 0x90) && (by <= 0x97))
+                    {
+                    bGraph = true;
+                    fgnd = curpal[by & 0x07];
+                    fgnd |= fgnd << 16;
+                    }
+                else if (by == 0x9C)
+                    {
+                    bgnd = curpal[0];
+                    bgnd |= bgnd << 16;
+                    }
+                else if (by == 0x9D)
+                    {
+                    bgnd = fgnd;
+                    }
+                else if (by == 0x9E)
+                    {
+                    bHold = true;
+                    }
+                else if (by == 0x9F)
+                    {
+                    bHold = false;
+                    }
+                ++pch;
+                }
+            ++twopix;
+            *twopix = COMPOSABLE_EOL_ALIGN << 16;   // Implicit zero (black) in low word
+            ++twopix;
+            pxline[0] = ( pxline[1] << 16 ) | COMPOSABLE_RAW_RUN;
+            pxline[1] = ( pxline[1] & 0xFFFF0000 ) | ( pmode->nbpl * pmode->nppb - 2 );
+            buffer->data_used = twopix - buffer->data;
+            }
+        scanvideo_end_scanline_generation (buffer);
+        }
+#if DEBUG > 0
+    printf ("Quit mode 7 rendering\n");
+#endif
+    }
 
 // The interpolators are core specific, so must be
 // configured on the same core as the render_loop
@@ -304,6 +449,7 @@ void __time_critical_func(render_loop) (void)
     {
     while (true)
         {
+        if ( pmode == &modes[7] ) render_mode7 ();
 #if USE_INTERP
         if ( bCfgInt ) setup_interp ();
 #endif
@@ -328,6 +474,7 @@ void __time_critical_func(render_loop) (void)
                 *twopix = 0;                                // 2 black pixels
                 }
             uint32_t *pxline = twopix;
+            ++twopix;
             uint8_t *pfb = framebuf + iScan * pmode->nbpl;
             if ( pmode->nppb == 8 )
                 {
@@ -536,6 +683,11 @@ static void dispchr (int chr)
     if ((chr >= 0x20) && (chr <= 0x7F)) printf ("dispchr ('%c')\n", chr);
     else printf ("dispchr (0x%02X)\n", chr);
 #endif
+    if ( pmode == &modes[7] )
+        {
+        framebuf[row * pmode->tcol + col] = chr;
+        return;
+        }
     hidecsr ();
     uint32_t fhgt = pmode->thgt;
     bool bDbl = false;
@@ -788,8 +940,11 @@ static void modechg (int mode)
         row = 0;
         csrtop = pmode->thgt - 1;
         csrhgt = 1;
-        nCsrHide = 0;
-        showcsr ();
+        if ( mode != 7 )
+            {
+            nCsrHide = 0;
+            showcsr ();
+            }
 #if USE_INTERP
         bCfgInt = true;
 #else
@@ -834,6 +989,7 @@ void xeqvdu (int code, int data1, int data2)
     else if ((vdu == 10) || (vdu == 13)) printf ("%c", vdu);
     else if (vdu == 32) printf ("_");
     else printf (" 0x%02X ", vdu);
+    fflush (stdout);
 
     if ((vflags & VDUDIS) && (vdu != 6))
         return;

@@ -1,6 +1,10 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                          *
 *       Copyright (C) R. T. Russell, 2021                          *
+
+        Modified 2021 by Eric Olson and Memotech-Bill for
+        Raspberry Pico
+
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
 *       Version 0.36a, 22-Aug-2021                                 *
 \******************************************************************/
@@ -113,6 +117,9 @@ char *szCmdLine ;
 int MaximumRAM = MAXIMUM_RAM ;
 timer_t UserTimerID ;
 unsigned int palette[256] ;
+#ifdef PICO
+void *libtop;
+#endif
 
 // Array of VDU command lengths:
 static int vdulen[] = {
@@ -323,7 +330,7 @@ static heapptr getevt (void)
 }
 
 // Put keycode to keyboard queue:
-static int putkey (char key)
+int putkey (char key)
 {
 	unsigned char bl = kbdqw ;
 	unsigned char al = bl + 1 ;
@@ -794,8 +801,8 @@ void oswrch (unsigned char vdu)
 			int ecx = (vdu >> 4) & 3 ;
 			if (ecx == 0) ecx++ ;
 			pqueue -= ecx - 9 ;
-				for ( ; ecx > 0 ; ecx--)
-					xeqvdu (*pqueue++ << 8, 0, 0) ;
+            for ( ; ecx > 0 ; ecx--)
+                xeqvdu (*pqueue++ << 8, 0, 0) ;
 			fflush (stdout) ;
 			return ;
 		    }
@@ -1743,19 +1750,6 @@ void waitconsole(void){
 		printf(".");
 		sleep_ms(500);
 	}
-# else
-	// Wait for UART connection
-	const uint LED_PIN = PICO_DEFAULT_LED_PIN;
-	gpio_init(LED_PIN);
-	gpio_set_dir(LED_PIN, GPIO_OUT);
-	for (int i = 10; i > 0; --i )
-	    {
-	    gpio_put(LED_PIN, 1);
-	    sleep_ms(500);
-	    gpio_put(LED_PIN, 0);
-	    sleep_ms(500);
-	    printf ("%d seconds to start\n", i);
-	    }
 # endif
 	waitdone=1;
 	printf("\n");
@@ -1766,6 +1760,21 @@ int main (int argc, char* argv[])
 {
 #ifdef PICO
     stdio_init_all();
+#ifndef STDIO_USB
+	// Wait for UART connection
+	const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+	gpio_init(LED_PIN);
+	gpio_set_dir(LED_PIN, GPIO_OUT);
+	for (int i = 10; i > 0; --i )
+	    {
+	    printf ("%d seconds to start\n", i);
+	    gpio_put(LED_PIN, 1);
+	    sleep_ms(500);
+	    gpio_put(LED_PIN, 0);
+	    sleep_ms(500);
+	    }
+    printf ("BBC Basic main build " __DATE__ " " __TIME__ "\n");
+#endif
 # ifdef FREE
 	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,sigbus);
 # else
@@ -1774,6 +1783,10 @@ int main (int argc, char* argv[])
 # endif
 	char *cmdline[]={"/autorun.bbc",0};
 	argc=1; argv=cmdline;
+#ifdef PICO_VGA
+    setup_vdu ();
+    setup_keyboard ();
+#endif
 	mount ();
 #endif
 int i ;
