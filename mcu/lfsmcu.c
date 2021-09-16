@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "lfspico.h"
+#include "lfsmcu.h"
 
 void lfs_bbc_init(void){
 }

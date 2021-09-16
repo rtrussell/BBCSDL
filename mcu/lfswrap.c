@@ -1,5 +1,6 @@
-/*  lfswrap.c -- Wrappers for LittleFS and other glue for the Pico.
+/*  lfswrap.c -- Wrappers for LittleFS and other glue.
     Written 2021 by Eric Olson
+    FatFS support added by Memotech-Bill
 
     This is free software released under the exact same terms as
     stated in license.txt for the Basic interpreter.  */
@@ -10,11 +11,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pico/time.h>
+#ifdef PICO
+// #include <pico/time.h>
+#endif
 
 #include "lfswrap.h"
 #ifdef HAVE_LFS
-#include "lfspico.h"
+#include "lfsmcu.h"
 
 lfs_t lfs_root;
 lfs_bbc_t lfs_root_context;
@@ -192,42 +195,42 @@ static inline struct dirent * deptr (DIR *dirp)
 #endif
 #endif
 
-static int picoslash(char c)
+static int fswslash(char c)
     {
     if(c=='/'||c=='\\') return 1;
     return 0;
     }
 
-static int picovert(char c)
+static int fswvert(char c)
     {
-    if(picoslash(c)||c==0) return 1;
+    if(fswslash(c)||c==0) return 1;
     return 0;
     }
 
-static const char *picoedge(const char *p)
+static const char *fswedge(const char *p)
     {
     const char *q=p;
     while(*q)
 	{
-	if(picoslash(*q)) return q+1;
+	if(fswslash(*q)) return q+1;
 	q++;
 	}
     return q;
     }
 
-static int picosame(const char *q,const char *p)
+static int fswsame(const char *q,const char *p)
     {
     for(;;)
 	{
-	if(picovert(*p))
+	if(fswvert(*p))
 	    {
-	    if(picovert(*q))
+	    if(fswvert(*q))
 		{
 		return 1;
 		} else {
 		return 0;
 		}
-	    } else if(picovert(*q)) {
+	    } else if(fswvert(*q)) {
 	    return 0;
 	    } else if(*q!=*p) {
 	    return 0;
@@ -236,75 +239,75 @@ static int picosame(const char *q,const char *p)
 	}
     }
 
-static void picorem(char *pcwd)
+static void fswrem(char *pcwd)
     {
     char *p=pcwd,*q=0;
     while(*p)
 	{
-	if(picoslash(*p)) q=p;
+	if(fswslash(*p)) q=p;
 	p++;
 	}
     if(q) *q=0;
     else *pcwd=0;
     }
 
-static void picoadd(char *pcwd,const char *p)
+static void fswadd(char *pcwd,const char *p)
     {
     char *q=pcwd;
     while(*q) q++;
     *q++='/'; 
-    while(!(picovert(*p))) *q++=*p++;
+    while(!(fswvert(*p))) *q++=*p++;
     *q=0;
     }
 
-static char picocwd[260]="";
+static char fswcwd[260]="";
 char *myrealpath(const char *restrict p, char *restrict r)
     {
     if(r==0) r=malloc(260);
     if(r==0) return 0;
-    strcpy(r,picocwd);
-    if(picosame(p,"/"))
+    strcpy(r,fswcwd);
+    if(fswsame(p,"/"))
 	{
 	*r=0;
 	if(!*p) return r;
 	p++;
 	}
-    const char *f=picoedge(p);
+    const char *f=fswedge(p);
     while(f-p>0)
 	{
-	if(picosame(p,"/")||picosame(p,"./"))
+	if(fswsame(p,"/")||fswsame(p,"./"))
 	    {
-	    } else if(picosame(p,"../"))
+	    } else if(fswsame(p,"../"))
 	    {
-	    picorem(r);
+	    fswrem(r);
 	    } else {
-	    picoadd(r,p);
+	    fswadd(r,p);
 	    }
-	p=f; f=picoedge(p);
+	p=f; f=fswedge(p);
 	}
     return r;
     }
 
-static char picopath[260];
+static char fswpath[260];
 int mychdir(const char *p)
     {
-    myrealpath(p,picopath);
+    myrealpath(p,fswpath);
 #ifdef HAVE_FAT
-    if ( isfat (picopath) )
+    if ( isfat (fswpath) )
 	{
-	if ( f_chdir (fat_path (picopath)) != FR_OK ) return -1;
-	strcpy(picocwd,picopath);
+	if ( f_chdir (fat_path (fswpath)) != FR_OK ) return -1;
+	strcpy(fswcwd,fswpath);
 	return 0;
 	}
 #endif
 #ifdef HAVE_LFS
     lfs_dir_t d;
-    if(lfs_dir_open(&lfs_root,&d,picopath)<0)
+    if(lfs_dir_open(&lfs_root,&d,fswpath)<0)
 	{
 	return -1;
 	}
     lfs_dir_close(&lfs_root,&d);
-    strcpy(picocwd,picopath);
+    strcpy(fswcwd,fswpath);
     return 0;
 #endif
     }
@@ -312,17 +315,17 @@ int mychdir(const char *p)
 int mymkdir(const char *p, mode_t m)
     {
     (void) m;
-    myrealpath(p,picopath);
+    myrealpath(p,fswpath);
 #ifdef HAVE_FAT
-    if ( isfat (picopath) )
+    if ( isfat (fswpath) )
 	{
-	printf ("mkdir (%s)\n", picopath);
-	if ( f_mkdir (fat_path (picopath)) != FR_OK ) return -1;
+	printf ("mkdir (%s)\n", fswpath);
+	if ( f_mkdir (fat_path (fswpath)) != FR_OK ) return -1;
 	return 0;
 	}
 #endif
 #ifdef HAVE_LFS
-    int r=lfs_mkdir(&lfs_root,picopath);
+    int r=lfs_mkdir(&lfs_root,fswpath);
     if(r<0) return -1;
     return 0;
 #endif
@@ -330,16 +333,16 @@ int mymkdir(const char *p, mode_t m)
 
 int myrmdir(const char *p)
     {
-    myrealpath(p,picopath);
+    myrealpath(p,fswpath);
 #ifdef HAVE_FAT
-    if ( isfat (picopath) )
+    if ( isfat (fswpath) )
 	{
-	if ( f_unlink (fat_path (picopath)) != FR_OK ) return -1;
+	if ( f_unlink (fat_path (fswpath)) != FR_OK ) return -1;
 	return 0;
 	}
 #endif
 #ifdef HAVE_LFS
-    int r=lfs_remove(&lfs_root,picopath);
+    int r=lfs_remove(&lfs_root,fswpath);
     if(r<0) return -1;
     return 0;
 #endif
@@ -352,7 +355,7 @@ int mychmod(const char *p, mode_t m)
 
 char *mygetcwd(char *b, size_t s)
     {
-    strncpy(b,picocwd,s);
+    strncpy(b,fswcwd,s);
     return b;
     }
 
@@ -398,12 +401,12 @@ FILE *myfopen(char *p, char *mode)
 #if defined(HAVE_FAT) || defined(HAVE_LFS)
     FILE *fp = (FILE *) malloc (sizeof (multi_file));
     if ( fp == NULL ) return NULL;
-    myrealpath(p,picopath);
+    myrealpath(p,fswpath);
 #else
     return NULL;
 #endif
 #ifdef HAVE_FAT
-    if ( isfat (picopath) )
+    if ( isfat (fswpath) )
 	{
 	unsigned char om = 0;
 	switch (mode[0])
@@ -421,7 +424,7 @@ FILE *myfopen(char *p, char *mode)
 		if ( mode[1] == '+' ) om |= FA_READ;
 		break;
 	    }
-	if ( f_open (fatptr (fp), fat_path (picopath), om) != FR_OK )
+	if ( f_open (fatptr (fp), fat_path (fswpath), om) != FR_OK )
 	    {
 	    free (fp);
 	    return NULL;
@@ -447,7 +450,7 @@ FILE *myfopen(char *p, char *mode)
 	    if ( mode[1] == '+' ) of = LFS_O_CREAT | LFS_O_TRUNC | LFS_O_RDWR | LFS_O_APPEND;
 	    break;
 	}
-    if ( lfs_file_open (&lfs_root, lfsptr (fp), picopath, of) < 0 )
+    if ( lfs_file_open (&lfs_root, lfsptr (fp), fswpath, of) < 0 )
 	{
 	free (fp);
 	return NULL;
@@ -579,15 +582,15 @@ DIR *myopendir(const char *name)
 #if defined(HAVE_FAT) || defined(HAVE_LFS)
     DIR *dirp = (DIR *) malloc (sizeof (dir_info));
     if ( dirp == NULL ) return NULL;
-    myrealpath(name, picopath);
+    myrealpath(name, fswpath);
 #else
     return NULL;
 #endif
 #ifdef HAVE_FAT
-    if ( isfat (picopath) )
+    if ( isfat (fswpath) )
 	{
-	if ( picopath[7] == '\0' ) strcpy (&picopath[7], "/");
-	if ( f_opendir (fatdir(dirp), fat_path(picopath)) != FR_OK )
+	if ( fswpath[7] == '\0' ) strcpy (&fswpath[7], "/");
+	if ( f_opendir (fatdir(dirp), fat_path(fswpath)) != FR_OK )
 	    {
 	    free (dirp);
 	    return NULL;
@@ -604,7 +607,7 @@ DIR *myopendir(const char *name)
         }
     set_fatdir (dirp, false);
 #ifdef HAVE_FAT
-    if ( picopath[0] == '\0' )
+    if ( fswpath[0] == '\0' )
 	{
 	((dir_info *)dirp)->df = dfFstRoot;
 	}
@@ -696,9 +699,13 @@ int mount (void)
     int istat = 0;
 #ifdef HAVE_LFS
     struct lfs_bbc_config lfs_bbc_cfg =
+#ifdef PICO
 	{
 	.buffer=(uint8_t *)XIP_BASE+ROOT_OFFSET
 	};
+#else
+#error Define location of LFS storage
+#endif
     lfs_bbc_createcfg(&lfs_root_cfg, &lfs_bbc_cfg);
     int lfs_err = lfs_mount(&lfs_root, &lfs_root_cfg);
     if (lfs_err)
@@ -708,7 +715,7 @@ int mount (void)
 	if (lfs_err)
 	    {
 	    waitconsole();
-	    printf("unable for format littlefs\n");
+	    printf("unable to format littlefs\n");
 	    istat |= 2;
 	    }
 	}

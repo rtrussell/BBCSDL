@@ -1,6 +1,6 @@
 CFLAGS=-O2 -Wall -I.. -I../littlefs
 TARGETS=filesystem.uf2 filesystem.elf filesystem.lfs mklfsimage uf2conv
-SOURCES=mklfsimage.c ../lfspico.c ../littlefs/lfs.a
+SOURCES=mklfsimage.c ../lfsmcu.c ../littlefs/lfs.a
 
 all: $(TARGETS)
 
@@ -25,7 +25,7 @@ tree:
 
 filesystem.lfs: ../../lib/* mklfsimage tree
 	rm -f filesystem.lfs
-	./mklfsimage tree ../../examples/pico
+	./mklfsimage tree ../../console/pico/examples
 	./mklfsimage -p tests ../../tests
 
 mklfsimage: $(SOURCES)

@@ -10,7 +10,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "lfspico.h"
+#include "lfsmcu.h"
 
 static char* imagefn = "filesystem.lfs";
 static char* dprefix = "/";

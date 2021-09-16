@@ -27,10 +27,10 @@ if (TARGET tinyusb_device)
     ../../src/bbccos.c
     ../../src/bbdata_arm_32.s
     ../../src/bbpico.c
-    ../../mcu/sympico.c
     ../../mcu/lfswrap.c 
     ../../mcu/m0FaultDispatch/m0FaultDispatch.c
     ../../mcu/fault.c
+    ../../mcu/pico/sympico.c
     )
   pico_set_printf_implementation(bbcbasic compiler)
   target_compile_options(bbcbasic PRIVATE -O1 -g)
@@ -39,6 +39,7 @@ if (TARGET tinyusb_device)
     pico_stdlib
     hardware_flash
     hardware_exception
+    pico_printf_headers
     )
   target_compile_definitions(bbcbasic PUBLIC PICO)
   target_include_directories(bbcbasic PRIVATE
@@ -51,7 +52,7 @@ if (TARGET tinyusb_device)
     message(STATUS "Including LFS filesystem for flash storage")
     target_compile_definitions(bbcbasic PUBLIC -DHAVE_LFS)
     target_sources(bbcbasic PRIVATE
-      ../../mcu/lfspico.c
+      ../../mcu/lfsmcu.c
       ../../mcu/littlefs/lfs.c
       ../../mcu/littlefs/lfs_util.c
       )
@@ -63,13 +64,13 @@ if (TARGET tinyusb_device)
   if ( ${FAT} )
     message(STATUS "Including FAT filesystem for SD card storage")
     target_compile_definitions(bbcbasic PUBLIC -DHAVE_FAT)
-    pico_generate_pio_header(bbcbasic ${CMAKE_CURRENT_LIST_DIR}/../../mcu/sd_spi.pio)
+    pico_generate_pio_header(bbcbasic ${CMAKE_CURRENT_LIST_DIR}/../../mcu/pico/sd_spi.pio)
     target_sources(bbcbasic PRIVATE
       ../../mcu/fatfs/ff.c
       ../../mcu/fatfs/ffsystem.c
       ../../mcu/fatfs/ffunicode.c
-      ../../mcu/ff_disk.c
-      ../../mcu/sd_spi2.c
+      ../../mcu/pico/ff_disk.c
+      ../../mcu/pico/sd_spi2.c
       )
     target_link_libraries(bbcbasic hardware_dma hardware_pio)
   endif()
@@ -82,9 +83,9 @@ if (TARGET tinyusb_device)
     pico_enable_stdio_usb(bbcbasic 0)
     pico_enable_stdio_uart(bbcbasic 1)
     target_sources(bbcbasic PRIVATE
-      ../../mcu/picokbd.c
-      ../../mcu/picovdu.c
-      ../../mcu/framebuffer.S
+      ../../mcu/pico_vga/picokbd.c
+      ../../mcu/pico_vga/picovdu.c
+      ../../mcu/pico_vga/framebuffer.S
       )
     target_compile_definitions(bbcbasic PUBLIC
       PICO_STACK_SIZE=0x2B800
@@ -96,6 +97,9 @@ if (TARGET tinyusb_device)
     target_compile_definitions(bbcbasic PUBLIC
       -DPICO_SCANVIDEO_MAX_SCANLINE_BUFFER_WORDS=402
       -DPICO_SCANVIDEO_SCANLINE_BUFFER_COUNT=8
+      )
+    target_include_directories(bbcbasic PRIVATE
+      ../../mcu/pico_vga
       )
     target_link_libraries(bbcbasic
       pico_scanvideo_dpi
@@ -110,14 +114,15 @@ if (TARGET tinyusb_device)
     pico_enable_stdio_usb(bbcbasic 0)
     pico_enable_stdio_uart(bbcbasic 1)
     target_compile_definitions(bbcbasic PRIVATE -DSTDIO_UART)
-    target_compile_definitions(bbcbasic PUBLIC PICO PICO_STACK_SIZE=0x3C000)
+    target_compile_definitions(bbcbasic PUBLIC PICO_STACK_SIZE=0x3C000)
     pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/bbc_pico.ld)
   else()
     message(STATUS "BBC Basic console I/O will be on USB")
     pico_enable_stdio_usb(bbcbasic 1)
     pico_enable_stdio_uart(bbcbasic 0)
     target_compile_definitions(bbcbasic PRIVATE -DSTDIO_USB)
-    target_compile_definitions(bbcbasic PUBLIC PICO PICO_STACK_SIZE=0x3C000)
+    target_compile_definitions(bbcbasic PUBLIC CFG_TUD_CDC=1)
+    target_compile_definitions(bbcbasic PUBLIC PICO_STACK_SIZE=0x3C000)
     pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/bbc_pico.ld)
   endif()
   
