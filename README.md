@@ -103,11 +103,12 @@ The following limitations are noted:
 
 ## TO DO - For the second development line
 
-* Sort out the memory map for this mode
-* Enhance text processing (viewports)
-* Implement teletext mode
-* Implement graphics
-* 800x600 VGA output (currently only 640x480)
+* Sort out the memory map for this mode - DONE but needs revisiting
+* Enhance text processing (viewports) - DONE
+* Implement teletext mode - DONE
+* Implement graphics - DONE
+* Improved keyboard processing
+* 800x600 VGA output (currently only 640x480)?
 * Sound?
 * Testing - Lots of it
 * Documentation
