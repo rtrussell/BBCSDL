@@ -51,10 +51,14 @@ static bool bCsrVis = false;            // Cursor currently rendered
 static uint8_t nCsrHide = 0;            // Cursor hide count (Bit 7 = Cursor off, Bit 6 = Outside screen)
 static uint32_t nFlash = 0;             // Time counter for cursor flash
 static critical_section_t cs_csr;       // Critical section controlling cursor flash
+static int tvt;                         // Top of text viewport
+static int tvb;                         // Bottom of text viewport
+static int tvl;                         // Left edge of graphics viewport
+static int tvr;                         // Right edge of graphics viewport
 static int gxo;                         // X coordinate of graphics origin
 static int gyo;                         // Y coordinate of graphics origin
 static int gvt;                         // Top of graphics viewport
-static int gvb;                         // Bottom of graffics viewport
+static int gvb;                         // Bottom of graphics viewport
 static int gvl;                         // Left edge of graphics viewport
 static int gvr;                         // Right edge of graphics viewport
 typedef struct
@@ -769,53 +773,168 @@ static void csrdef (int data2)
         }
     }
 
+static void home (void)
+    {
+    hidecsr ();
+    row = tvt;
+    col = tvl;
+    if ( scroln & 0x80 ) scroln = 0x80 + tvb - tvt + 1;
+    showcsr ();
+    }
+
 static void scrldn (void)
     {
+    hidecsr ();
     if ( pmode == &modes[7] )
         {
-        memmove (framebuf + pmode->tcol, framebuf, ( pmode->trow - 1 ) * pmode->tcol);
-        memset (framebuf, ' ', pmode->tcol);
+        if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
+            {
+            memmove (framebuf + ( tvt + 1 ) * pmode->tcol,
+                framebuf + tvt * pmode->tcol,
+                ( tvb - tvt ) * pmode->tcol);
+            memset (framebuf + tvt * pmode->tcol, ' ', pmode->tcol);
+            }
+        else
+            {
+            uint8_t *fb1 = framebuf + tvb * pmode->tcol + tvl;
+            uint8_t *fb2 = fb1 + pmode->tcol;
+            int nr = tvb - tvt;
+            int nb = tvr - tvl + 1;
+            for (int ir = 0; ir < nr; ++ir)
+                {
+                fb1 -= pmode->tcol;
+                fb2 -= pmode->tcol;
+                memcpy (fb2, fb1, nb);
+                }
+            memset (fb1, ' ', nb);
+            }
+        }
+    else if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
+        {
+        memmove (framebuf + ( tvt + 1 ) * pmode->thgt * pmode->nbpl,
+            framebuf + tvt * pmode->thgt * pmode->nbpl,
+            ( tvb - tvt ) * pmode->thgt * pmode->nbpl);
+        memset (framebuf + tvt * pmode->thgt * pmode->nbpl, bgfill, pmode->thgt * pmode->nbpl);
         }
     else
         {
-        hidecsr ();
-        memmove (framebuf + pmode->thgt * pmode->nbpl, framebuf,
-            (pmode->grow - pmode->thgt) * pmode->nbpl);
-        memset (framebuf, bgfill, pmode->thgt * pmode->nbpl);
-        showcsr ();
+        uint8_t *fb1 = framebuf + tvb * pmode->thgt * pmode->nbpl
+            + ( tvl << clrdef[pmode->ncbt].bitsh );
+        uint8_t *fb2 = fb1 + pmode->thgt * pmode->nbpl;
+        int nr = ( tvb - tvt ) * pmode->thgt;
+        int nb = ( tvr - tvl + 1 ) << clrdef[pmode->ncbt].bitsh;
+        for (int ir = 0; ir < nr; ++ir)
+            {
+            fb1 -= pmode->nbpl;
+            fb2 -= pmode->nbpl;
+            memcpy (fb2, fb1, nb);
+            }
+        for (int ir = 0; ir < pmode->thgt; ++ir)
+            {
+            fb2 -= pmode->nbpl;
+            memset (fb2, bgfill, nb);
+            }
         }
+    showcsr ();
     }
 
 static void scrlup (void)
     {
+    hidecsr ();
     if ( pmode == &modes[7] )
         {
-        memmove (framebuf, framebuf + pmode->tcol, ( pmode->trow - 1 ) * pmode->tcol);
-        memset (framebuf + ( pmode->trow - 1 ) * pmode->tcol, ' ', pmode->tcol);
+        if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
+            {
+            memmove (framebuf, framebuf + pmode->tcol, ( pmode->trow - 1 ) * pmode->tcol);
+            memset (framebuf + ( pmode->trow - 1 ) * pmode->tcol, ' ', pmode->tcol);
+            }
+        else
+            {
+            uint8_t *fb1 = framebuf + tvt * pmode->tcol + tvl;
+            uint8_t *fb2 = fb1 + pmode->tcol;
+            int nr = tvb - tvt;
+            int nb = tvr - tvl + 1;
+            for (int ir = 0; ir < nr; ++ir)
+                {
+                memcpy (fb1, fb2, nb);
+                fb1 += pmode->tcol;
+                fb2 += pmode->tcol;
+                }
+            memset (fb2, ' ', nb);
+            }
+        }
+    else if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
+        {
+        memmove (framebuf + tvt * pmode->thgt * pmode->nbpl,
+            framebuf + ( tvt + 1 ) * pmode->thgt * pmode->nbpl,
+            ( tvb - tvt ) * pmode->thgt * pmode->nbpl);
+        memset (framebuf + tvb * pmode->thgt * pmode->nbpl, bgfill, pmode->thgt * pmode->nbpl);
         }
     else
         {
-        hidecsr ();
-        memmove (framebuf, framebuf + pmode->thgt * pmode->nbpl,
-            (pmode->grow - pmode->thgt) * pmode->nbpl);
-        memset (framebuf + (pmode->grow - pmode->thgt) * pmode->nbpl,
-            bgfill, pmode->thgt * pmode->nbpl);
-        showcsr ();
+        uint8_t *fb1 = framebuf + tvt * pmode->thgt * pmode->nbpl
+            + ( tvl << clrdef[pmode->ncbt].bitsh );
+        uint8_t *fb2 = fb1 + pmode->thgt * pmode->nbpl;
+        int nr = ( tvb - tvt ) * pmode->thgt;
+        int nb = ( tvr - tvl + 1 ) << clrdef[pmode->ncbt].bitsh;
+        for (int ir = 0; ir < nr; ++ir)
+            {
+            memcpy (fb1, fb2, nb);
+            fb1 += pmode->nbpl;
+            fb2 += pmode->nbpl;
+            }
+        for (int ir = 0; ir < pmode->thgt; ++ir)
+            {
+            memset (fb1, bgfill, nb);
+            fb1 += pmode->nbpl;
+            }
         }
+    showcsr ();
     }
 
-static void cls (uint8_t fill)
+static void cls ()
     {
+#if DEBUG > 0
+    printf ("cls: bgfill = 0x%02\n", bgfill);
+#endif
+    hidecsr ();
     if ( pmode == &modes[7] )
         {
-        memset (framebuf, ' ', pmode->trow * pmode->tcol);
+        if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
+            {
+            memset (framebuf + tvt * pmode->tcol, ' ', ( tvb - tvt + 1 ) * pmode->tcol);
+            }
+        else
+            {
+            uint8_t *fb1 = framebuf + tvt * pmode->tcol + tvl;
+            int nr = tvb - tvt + 1;
+            int nb = tvr - tvl + 1;
+            for (int ir = 0; ir < nr; ++ir)
+                {
+                memset (fb1, ' ', nb);
+                fb1 += pmode->tcol;
+                }
+            }
+        }
+    else if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
+        {
+        memset (framebuf + tvt * pmode->thgt * pmode->nbpl, bgfill,
+            ( tvb - tvt + 1 ) * pmode->thgt * pmode->nbpl);
         }
     else
         {
-        hidecsr ();
-        memset (framebuf, fill, pmode->grow * pmode->nbpl);
-        showcsr ();
+        uint8_t *fb1 = framebuf + tvt * pmode->thgt * pmode->nbpl
+            + ( tvl << clrdef[pmode->ncbt].bitsh );
+        int nr = ( tvb - tvt + 1 ) * pmode->thgt;
+        int nb = ( tvr - tvl + 1 ) << clrdef[pmode->ncbt].bitsh;
+        for (int ir = 0; ir < nr; ++ir)
+            {
+            memset (fb1, bgfill, nb);
+            fb1 += pmode->nbpl;
+            }
         }
+    home ();
+    showcsr ();
     }
 
 static void dispchr (int chr)
@@ -921,12 +1040,13 @@ static void dispchr (int chr)
 
 static void newline (int *px, int *py)
     {
-    if (++(*py) == pmode->trow)
+    hidecsr ();
+    if (++(*py) > tvb)
         {
         if ((scroln & 0x80) && (--scroln == 0x7F))
             {
             unsigned char ch;
-            scroln = 0x7F + pmode->trow;;
+            scroln = 0x80 + tvb - tvt + 1;
             do
                 {
                 sleep_us (5000);
@@ -934,20 +1054,21 @@ static void newline (int *px, int *py)
             while ((getkey (&ch) == 0) && ((flags & (ESCFLG | KILL)) == 0));
             }
         scrlup ();
-        *py = pmode->trow - 1;
+        *py = tvb;
         }
 	if ( bPrint )
         {
         printf ("\n");
         if (*px) printf ("\033[%i;%iH", *py + 1, *px + 1);
         }
+    showcsr ();
     }
 
 static void wrap (void)
     {
     if ( bPrint ) printf ("\r");
     hidecsr ();
-    col = 0;
+    col = tvl;
     newline (&col, &row);
     showcsr ();
     }
@@ -957,7 +1078,9 @@ static void tabxy (int x, int y)
 #if DEBUG > 0
     printf ("tab: row = %d, col = %d\n", y, x);
 #endif
-    if (( x >= 0 ) && ( x < pmode->tcol ) && ( y >= 0 ) && ( y < pmode->trow ))
+    x += tvl;
+    y += tvt;
+    if (( x >= tvl ) && ( x <= tvr ) && ( y >= tvt ) && ( y <= tvb ))
         {
         hidecsr ();
         row = y;
@@ -966,13 +1089,25 @@ static void tabxy (int x, int y)
         }
     }
 
+static void twind (int vl, int vb, int vr, int vt)
+    {
+    if (( vl < 0 ) || ( vl > vr ) || ( vr >= pmode->tcol )
+        || ( vt < 0 ) || ( vt > vb ) || ( vb >= pmode->trow )) return;
+    tvl = vl;
+    tvr = vr;
+    tvt = vt;
+    tvb = vb;
+    if (( col < tvl ) || ( col > tvr ) || ( row < tvt ) || ( row > tvb ))
+        home ();
+    }
+
 void showchr (int chr)
     {
     hidecsr ();
-    if (col >= pmode->tcol) wrap ();
+    if (col > tvr) wrap ();
     dispchr (chr);
     if ( bPrint ) putchar (chr);
-    if ((++col == pmode->tcol) && ((cmcflg & 1) == 0)) wrap ();
+    if ((++col > tvr) && ((cmcflg & 1) == 0)) wrap ();
     showcsr ();
     }
 
@@ -1088,6 +1223,24 @@ static void clrreset (void)
     genrb ();
     }
 
+static void rstview (void)
+    {
+    hidecsr ();
+    tvt = 0;
+    tvb = pmode->trow - 1;
+    tvl = 0;
+    tvr = pmode->tcol - 1;
+    gxo = 0;
+    gyo = 0;
+    gvt = 0;
+    gvb = pmode->grow - 1;
+    gvl = 0;
+    gvr = pmode->gcol - 1;
+    col = 0;
+    row = 0;
+    showcsr ();
+    }
+
 static void modechg (int mode)
     {
 #if DEBUG > 0
@@ -1099,17 +1252,10 @@ static void modechg (int mode)
         pmode = &modes[mode];
         nCsrHide |= CSR_OFF;
         clrreset ();
-        cls (bgfill);
-        col = 0;
-        row = 0;
+        rstview ();
+        cls ();
         csrtop = pmode->thgt - 1;
         csrhgt = 1;
-        gxo = 0;
-        gyo = 0;
-        gvt = 0;
-        gvb = pmode->grow - 1;
-        gvl = 0;
-        gvr = pmode->gcol - 1;
         memset (pltpt, 0, sizeof (pltpt));
         nCsrHide = 0;
         showcsr ();
@@ -1150,6 +1296,45 @@ static inline void pixop (int op, uint32_t *fb, uint32_t msk, uint32_t cpx)
             *fb &= ~msk;
             *fb |= cpx;
             break;
+        }
+    }
+
+static void hline (int clrop, int xp1, int xp2, int yp)
+    {
+    int op = clrop >> 8;
+    CLRDEF *cdef = &clrdef[pmode->ncbt];
+    if (( yp < gvt ) || ( yp > gvb )) return;
+    if ( xp1 > xp2 )
+        {
+        int tmp = xp1;
+        xp1 = xp2;
+        xp2 = tmp;
+        }
+    if (( xp2 < gvl ) || ( xp1 > gvr )) return;
+    if ( xp1 < gvl ) xp1 = gvl;
+    if ( xp2 > gvr ) xp2 = gvr;
+    xp1 <<= cdef->bitsh;
+    xp2 <<= cdef->bitsh;
+    uint32_t *fb1 = (uint32_t *)(framebuf + yp * pmode->nbpl);
+    uint32_t *fb2 = fb1 + ( xp2 >> 5 );
+    fb1 += ( xp1 >> 5 );
+    uint32_t msk1 = fwdmsk[xp1 & 0x1F];
+    uint32_t msk2 = bkwmsk[xp2 & 0x1F];
+    uint32_t cpx = cdef->cpx[clrop & cdef->clrmsk];
+    if ( fb2 == fb1 )
+        {
+        pixop (op, fb1, msk1 & msk2, cpx);
+        }
+    else
+        {
+        pixop (op, fb1, msk1, cpx);
+        ++fb1;
+        while ( fb1 < fb2 )
+            {
+            pixop (op, fb1, 0xFFFFFFFF, cpx);
+            ++fb1;
+            }
+        pixop (op, fb1, msk2, cpx);
         }
     }
 
@@ -1388,45 +1573,6 @@ static void clipline (int clrop, int xp1, int yp1, int xp2, int yp2, uint32_t do
     line (clrop, xp1, yp1, xp2, yp2, dots, skip);
     }
 
-static void hline (int clrop, int xp1, int xp2, int yp)
-    {
-    int op = clrop >> 8;
-    CLRDEF *cdef = &clrdef[pmode->ncbt];
-    if (( yp < gvt ) || ( yp > gvb )) return;
-    if ( xp1 > xp2 )
-        {
-        int tmp = xp1;
-        xp1 = xp2;
-        xp2 = tmp;
-        }
-    if (( xp2 < gvl ) || ( xp1 > gvr )) return;
-    if ( xp1 < gvl ) xp1 = gvl;
-    if ( xp2 > gvr ) xp2 = gvr;
-    xp1 <<= cdef->bitsh;
-    xp2 <<= cdef->bitsh;
-    uint32_t *fb1 = (uint32_t *)(framebuf + yp * pmode->nbpl);
-    uint32_t *fb2 = fb1 + ( xp2 >> 5 );
-    fb1 += ( xp1 >> 5 );
-    uint32_t msk1 = fwdmsk[xp1 & 0x1F];
-    uint32_t msk2 = bkwmsk[xp2 & 0x1F];
-    uint32_t cpx = cdef->cpx[clrop & cdef->clrmsk];
-    if ( fb2 == fb1 )
-        {
-        pixop (op, fb1, msk1 & msk2, cpx);
-        }
-    else
-        {
-        pixop (op, fb1, msk1, cpx);
-        ++fb1;
-        while ( fb1 < fb2 )
-            {
-            pixop (op, fb1, 0xFFFFFFFF, cpx);
-            ++fb1;
-            }
-        pixop (op, fb1, msk2, cpx);
-        }
-    }
-
 static void clrgraph (void)
     {
     int clr = clrmsk (gbg);
@@ -1638,7 +1784,8 @@ static void gwind (int vl, int vb, int vr, int vt)
     vr = gxscale (vr);
     vt = gyscale (vt);
     vb = gyscale (vb);
-    if (( vl < 0 ) || ( vr >= pmode->gcol ) || ( vt < 0 ) || ( vb >= pmode->grow )) return;
+    if (( vl < 0 ) || ( vl > vr ) || ( vr >= pmode->gcol )
+        || ( vt < 0 ) || ( vt > vb ) || ( vb >= pmode->grow )) return;
     gvl = vl;
     gvr = vr;
     gvt = vt;
@@ -1867,17 +2014,18 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 8: // 0x08 - LEFT
-            if (col == 0)
+            hidecsr ();
+            if (col == tvl)
                 {
-                col = pmode->tcol;
-                if (row == 0)
+                col = tvr + 1;
+                if (row == tvt)
                     {
                     scrldn ();
                     if ( bPrint ) printf ("\033M");
                     }
                 else
                     {
-                    row --;
+                    row--;
                     if ( bPrint ) printf ("\033[%i;%iH", row + 1, col + 1);
                     }
                 }
@@ -1886,10 +2034,12 @@ void xeqvdu (int code, int data1, int data2)
                 col--;
                 if ( bPrint ) putchar (vdu);
                 }
+            showcsr ();
             break;
 
         case 9: // 0x09 - RIGHT
-            if (col == pmode->tcol)
+            hidecsr ();
+            if (col > tvr)
                 {
                 wrap ();
                 }
@@ -1898,6 +2048,7 @@ void xeqvdu (int code, int data1, int data2)
                 col++;
                 if ( bPrint ) printf ("\033[C");
                 }
+            showcsr ();
             break;
 
         case 10: // 0x0A - LINE FEED
@@ -1905,25 +2056,27 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 11: // 0x0B - UP
-            if ( row == 0 ) scrldn ();
+            hidecsr ();
+            if ( row == tvt ) scrldn ();
             else --row;
             if ( bPrint ) printf ("\033M");
+            showcsr ();
             break;
 
         case 12: // 0x0C - CLEAR SCREEN
-            cls (bgfill);
+            cls ();
             if ( bPrint ) printf ("\033[H\033[J");
-            col = 0;
-            row = 0;
             break;
 
         case 13: // 0x0D - RETURN
+            hidecsr ();
             if ( bPrint ) putchar (vdu);
-            col = 0;
+            col = tvl;
+            showcsr ();
             break;
 
         case 14: // 0x0E - PAGING ON
-            scroln = 0x80 + row;
+            scroln = 0x80 + tvb - row + 1;
             break;
 
         case 15: // 0x0F - PAGING OFF
@@ -1945,14 +2098,14 @@ void xeqvdu (int code, int data1, int data2)
                 bg = clrmsk (code);
                 bgfill = (uint8_t) clrdef[pmode->ncbt].cpx[bg];
 #if DEBUG > 0
-                printf ("Background colour %d\n", code & 0x7F);
+                printf ("Background colour %d, bgfill = 0x%02X\n", bg, bgfill);
 #endif
                 }
             else
                 {
                 fg = clrmsk (code);
 #if DEBUG > 0
-                printf ("Foreground colour %d\n", code & 0x7F);
+                printf ("Foreground colour %d\n", fg);
 #endif
                 }
             if ( bPrint )
@@ -2030,10 +2183,7 @@ void xeqvdu (int code, int data1, int data2)
                 }
             else if ( vdu == 22 )
                 {
-                hidecsr ();
-                col = 0;
-                row = 0;
-                showcsr ();
+                home ();
                 }
             break;
 
@@ -2051,22 +2201,17 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 26: // 0x1A - RESET VIEWPORTS
-            gxo = 0;
-            gyo = 0;
-            gvt = 0;
-            gvb = pmode->grow - 1;
-            gvl = 0;
-            gvr = pmode->gcol - 1;
-            col = 0;
-            row = 0;
+            rstview ();
             break;
 
         case 27: // 0x1B - SEND NEXT TO OUTC
             showchr (code & 0xFF);
             break;
 
-        case 28: // 0x1C - SET TEXT VIEWPORT - TODO
-            break;
+        case 28: // 0x1C - SET TEXT VIEWPORT
+            twind ((data1 >> 8) & 0xFF, (data1 >> 16) & 0xFF,
+                (data1 >> 24) & 0xFF, code & 0xFF);
+            break ;
 
         case 29: // 0x1D - SET GRAPHICS ORIGIN
             gxo = (data1 >> 8) & 0xFFFF;
@@ -2075,11 +2220,7 @@ void xeqvdu (int code, int data1, int data2)
 
         case 30: // 0x1E - CURSOR HOME
             if ( bPrint ) printf ("\033[H");
-            hidecsr ();
-            col = 0;
-            row = 0;
-            showcsr ();
-            scroln &= 0x80;
+            home ();
             break;
 
         case 31: // 0x1F - TAB(X,Y)
