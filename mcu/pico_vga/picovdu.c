@@ -31,6 +31,7 @@
 #define SHEIGHT 480
 #endif
 #define VGA_FLAG    0x1234  // Used to syncronise cores
+#define NPLT        3       // Length of plot history
 
 static uint8_t  framebuf[SWIDTH * SHEIGHT / 8];
 static uint16_t renderbuf[256 * 8];
@@ -41,9 +42,8 @@ static int row = 0;                     // Cursor row position
 static int fg;                          // Text foreground colour
 static int bg;                          // Text backgound colour
 static uint8_t bgfill;                  // Pixel fill for background colour
-static int gmd;                         // Graphics mode
-static int gfg;                         // Graphics foreground colour
-static int gbg;                         // Graphics background colour
+static int gfg;                         // Graphics foreground colour & mode
+static int gbg;                         // Graphics background colour & mode
 static bool bPrint = false;             // Enable output to printer (UART)
 static int csrtop;                      // Top of cursor
 static int csrhgt;                      // Height of cursor
@@ -51,6 +51,18 @@ static bool bCsrVis = false;            // Cursor currently rendered
 static uint8_t nCsrHide = 0;            // Cursor hide count (Bit 7 = Cursor off, Bit 6 = Outside screen)
 static uint32_t nFlash = 0;             // Time counter for cursor flash
 static critical_section_t cs_csr;       // Critical section controlling cursor flash
+static int gxo;                         // X coordinate of graphics origin
+static int gyo;                         // Y coordinate of graphics origin
+static int gvt;                         // Top of graphics viewport
+static int gvb;                         // Bottom of graffics viewport
+static int gvl;                         // Left edge of graphics viewport
+static int gvr;                         // Right edge of graphics viewport
+typedef struct
+    {
+    int x;
+    int y;
+    } GPOINT;
+static GPOINT pltpt[NPLT];              // History of plotted points
 
 #define CSR_OFF 0x80                    // Cursor turned off
 #define CSR_INV 0x40                    // Cursor invalid (off-screen)
@@ -83,8 +95,8 @@ static const uint32_t ttcsr = PICO_SCANVIDEO_PIXEL_FROM_RGB8(255u, 255u, 255u)
 
 #include "font_10.h"
 #include "font_tt.h"
-static const uint8_t cpx02[] = { 0x00, 0xFF };
-static const uint16_t cpx04[] = { 0x0000, 0x5555, 0xAAAA, 0xFFFF };
+static const uint32_t cpx02[] = { 0x00000000, 0xFFFFFFFF };
+static const uint32_t cpx04[] = { 0x00000000, 0x55555555, 0xAAAAAAAA, 0xFFFFFFFF };
 static const uint32_t cpx16[] = { 0x00000000, 0x11111111, 0x22222222, 0x33333333,
     0x44444444, 0x5555555, 0x6666666, 0x7777777,
     0x88888888, 0x9999999, 0xAAAAAAA, 0xBBBBBBB,
@@ -156,66 +168,94 @@ static const uint32_t pmsk16[256] = {
     0xFFF0F000, 0xFFF0F00F, 0xFFF0F0F0, 0xFFF0F0FF, 0xFFF0FF00, 0xFFF0FF0F, 0xFFF0FFF0, 0xFFF0FFFF,
     0xFFFF0000, 0xFFFF000F, 0xFFFF00F0, 0xFFFF00FF, 0xFFFF0F00, 0xFFFF0F0F, 0xFFFF0FF0, 0xFFFF0FFF,
     0xFFFFF000, 0xFFFFF00F, 0xFFFFF0F0, 0xFFFFF0FF, 0xFFFFFF00, 0xFFFFFF0F, 0xFFFFFFF0, 0xFFFFFFFF };
+static const uint32_t fwdmsk[] = {
+    0xFFFFFFFF, 0xFFFFFFFE, 0xFFFFFFFC, 0xFFFFFFF8, 0xFFFFFFF0, 0xFFFFFFE0, 0xFFFFFFC0, 0xFFFFFF80,
+    0xFFFFFF00, 0xFFFFFE00, 0xFFFFFC00, 0xFFFFF800, 0xFFFFF000, 0xFFFFE000, 0xFFFFC000, 0xFFFF8000,
+    0xFFFF0000, 0xFFFE0000, 0xFFFC0000, 0xFFF80000, 0xFFF00000, 0xFFE00000, 0xFFC00000, 0xFF800000,
+    0xFF000000, 0xFE000000, 0xFC000000, 0xF8000000, 0xF0000000, 0xE0000000, 0XC0000000, 0x80000000 };
+static const uint32_t bkwmsk[] = {
+    0x00000001, 0x00000003, 0x00000007, 0x0000000F, 0x0000001F, 0x0000003F, 0x0000007F, 0x000000FF,
+    0x000001FF, 0x000003FF, 0x000007FF, 0x00000FFF, 0x00001FFF, 0x00003FFF, 0x00007FFF, 0x0000FFFF,
+    0x0001FFFF, 0x0003FFFF, 0x0007FFFF, 0x000FFFFF, 0x001FFFFF, 0x003FFFFF, 0x007FFFFF, 0x00FFFFFF,
+    0x01FFFFFF, 0x03FFFFFF, 0x07FFFFFF, 0x0FFFFFFF, 0x1FFFFFFF, 0x3FFFFFFF, 0x7FFFFFFF, 0xFFFFFFFF };
 
 typedef struct
     {
-    uint32_t nclr;      // Number of colours (2, 4 or 16)
-    uint32_t gcol;      // Number of displayed pixel columns
-    uint32_t grow;      // Number of displayed pixel rows
-    uint32_t tcol;      // Number of text columns
-    uint32_t trow;      // Number of text row
-    uint32_t vmgn;      // Number of black lines at top (and bottom)
-    uint32_t hmgn;      // Number of black pixels to left (and to right)
-    uint32_t nppb;      // Number of pixels per byte
-    uint32_t nbpl;      // Number of bytes per line
-    uint32_t yscl;      // Y scale (number of repeats of each line)
-    uint32_t thgt;      // Text height
+    uint32_t        nclr;       // Number of colours
+    const uint32_t *cpx;        // Colour patterns
+    uint32_t        bitsh;      // Shift X coordinate to get bit position
+    uint32_t        clrmsk;     // Colour mask
+    } CLRDEF;
+
+static CLRDEF clrdef[] = {
+//   nclr,   cpx, bsh, clrm
+    {   0,  NULL,   0, 0x00},
+    {   2, cpx02,   0, 0x01},
+    {   4, cpx04,   1, 0x03},
+    {   8,  NULL,   0, 0x07},
+    {  16, cpx16,   2, 0x0F}
+    };
+        
+
+typedef struct
+    {
+    uint32_t    ncbt;       // Number of colour bits
+    uint32_t    gcol;       // Number of displayed pixel columns
+    uint32_t    grow;       // Number of displayed pixel rows
+    uint32_t    tcol;       // Number of text columns
+    uint32_t    trow;       // Number of text row
+    uint32_t    vmgn;       // Number of black lines at top (and bottom)
+    uint32_t    hmgn;       // Number of black pixels to left (and to right)
+    uint32_t    nppb;       // Number of pixels per byte
+    uint32_t    nbpl;       // Number of bytes per line
+    uint32_t    yscl;       // Y scale (number of repeats of each line)
+    uint32_t    thgt;       // Text height
     } MODE;
 
 #if HIRES    // 800x600 VGA
 static const MODE modes[] = {
-// nclr gcol grow tcol trw  vmg hmg pb nbpl ys thg
-    { 2, 640, 256,  80, 32,  44, 80, 8,  80, 2,  8},  // Mode  0 - 20KB
-    { 4, 320, 256,  40, 32,  44, 80, 8,  80, 2,  8},  // Mode  1 - 20KB
-    {16, 160, 256,  20, 32,  44, 80, 8,  80, 2,  8},  // Mode  2 - 20KB
-    { 2, 640, 250,  80, 25,  47, 80, 8,  80, 2, 10},  // Mode  3 - 20KB
-    { 2, 320, 256,  40, 32,  44, 80, 8,  80, 2,  8},  // Mode  4 - 10KB
-    { 4, 160, 256,  20, 32,  44, 80, 8,  80, 2,  8},  // Mode  5 - 10KB
-    { 2, 320, 250,  40, 25,  44, 80, 8,  80, 2, 10},  // Mode  6 - 10KB
-    { 8, 320, 225,  40, 25,  75, 80, 8,  80, 2,TTH},  // Mode  7 - Teletext TODO
-    { 2, 640, 512,  80, 32,  44, 80, 8,  80, 1, 16},  // Mode  8 - 40KB
-    { 4, 320, 512,  40, 32,  44, 80, 8,  80, 1, 16},  // Mode  9 - 40KB
-    {16, 160, 512,  20, 32,  44, 80, 8,  80, 1, 16},  // Mode 10 - 40KB
-    { 2, 640, 500,  80, 25,  47, 80, 8,  80, 1, 20},  // Mode 11 - 40KB
-    { 2, 320, 512,  40, 32,  44, 80, 8,  80, 1, 16},  // Mode 12 - 20KB
-    { 4, 160, 512,  20, 32,  44, 80, 8,  80, 1, 16},  // Mode 13 - 20KB
-    { 2, 320, 500,  40, 25,  44, 80, 8,  80, 1, 20},  // Mode 14 - 20KB
-    { 2, 640, 512,  40, 25,  44, 80, 8,  80, 1, 16},  // Mode 15 - Teletext ?
-    { 2, 800, 600, 100, 30,   0,  0, 8, 100, 1, 20},  // Mode 16 - 59KB
-    { 4, 400, 600,  50, 30,   0,  0, 8, 100, 1, 20},  // Mode 17 - 59KB
-    {16, 200, 600,  25, 30,   0,  0, 8, 100, 1, 20},  // Mode 18 - 59KB
-    { 4, 800, 300, 100, 30,   0,  0, 4, 200, 2, 20},  // Mode 19 - 59KB
-    {16, 400, 300,  50, 30,   0,  0, 4, 200, 2, 10}   // Mode 20 - 59KB
+// ncbt gcol grow tcol trw  vmg hmg pb nbpl ys thg
+    { 1, 640, 256,  80, 32,  44, 80, 8,  80, 2,  8},  // Mode  0 - 20KB
+    { 2, 320, 256,  40, 32,  44, 80, 8,  80, 2,  8},  // Mode  1 - 20KB
+    { 4, 160, 256,  20, 32,  44, 80, 8,  80, 2,  8},  // Mode  2 - 20KB
+    { 1, 640, 250,  80, 25,  47, 80, 8,  80, 2, 10},  // Mode  3 - 20KB
+    { 1, 320, 256,  40, 32,  44, 80, 8,  80, 2,  8},  // Mode  4 - 10KB
+    { 2, 160, 256,  20, 32,  44, 80, 8,  80, 2,  8},  // Mode  5 - 10KB
+    { 1, 320, 250,  40, 25,  44, 80, 8,  80, 2, 10},  // Mode  6 - 10KB
+    { 3, 320, 225,  40, 25,  75, 80, 8,  80, 2,TTH},  // Mode  7 - Teletext TODO
+    { 1, 640, 512,  80, 32,  44, 80, 8,  80, 1, 16},  // Mode  8 - 40KB
+    { 2, 320, 512,  40, 32,  44, 80, 8,  80, 1, 16},  // Mode  9 - 40KB
+    { 4, 160, 512,  20, 32,  44, 80, 8,  80, 1, 16},  // Mode 10 - 40KB
+    { 1, 640, 500,  80, 25,  47, 80, 8,  80, 1, 20},  // Mode 11 - 40KB
+    { 1, 320, 512,  40, 32,  44, 80, 8,  80, 1, 16},  // Mode 12 - 20KB
+    { 2, 160, 512,  20, 32,  44, 80, 8,  80, 1, 16},  // Mode 13 - 20KB
+    { 1, 320, 500,  40, 25,  44, 80, 8,  80, 1, 20},  // Mode 14 - 20KB
+    { 1, 640, 512,  40, 25,  44, 80, 8,  80, 1, 16},  // Mode 15 - Teletext ?
+    { 1, 800, 600, 100, 30,   0,  0, 8, 100, 1, 20},  // Mode 16 - 59KB
+    { 2, 400, 600,  50, 30,   0,  0, 8, 100, 1, 20},  // Mode 17 - 59KB
+    { 4, 200, 600,  25, 30,   0,  0, 8, 100, 1, 20},  // Mode 18 - 59KB
+    { 2, 800, 300, 100, 30,   0,  0, 4, 200, 2, 20},  // Mode 19 - 59KB
+    { 4, 400, 300,  50, 30,   0,  0, 4, 200, 2, 10}   // Mode 20 - 59KB
     };
 #else   // 640x480 VGA
 static const MODE modes[] = {
-// nclr gcol grow tcol trw  vmg hmg pb nbpl ys thg
-    { 2, 640, 256,  80, 32, 112,  0, 8,  80, 1,  8},  // Mode  0 - 20KB
-    { 4, 320, 256,  40, 32, 112,  0, 8,  80, 1,  8},  // Mode  1 - 20KB
-    {16, 160, 256,  20, 32, 112,  0, 8,  80, 1,  8},  // Mode  2 - 20KB
-    { 2, 640, 240,  80, 24,   0,  0, 8,  80, 2, 10},  // Mode  3 - 20KB
-    { 2, 320, 256,  40, 32, 112,  0, 8,  80, 1,  8},  // Mode  4 - 10KB
-    { 4, 160, 256,  20, 32, 112,  0, 8,  80, 1,  8},  // Mode  5 - 10KB
-    { 2, 320, 240,  40, 24,   0,  0, 8,  80, 2, 10},  // Mode  6 - 10KB
-    { 8, 320, 225,  40, 25,  15,  0, 4, 160, 2,TTH},  // Mode  7 - ~1KB - Teletext
-    { 2, 640, 480,  80, 30,   0,  0, 8,  80, 1, 16},  // Mode  8 - 37.5KB
-    { 4, 320, 480,  40, 30,   0,  0, 8,  80, 1, 16},  // Mode  9 - 37.5KB
-    {16, 160, 480,  20, 30,   0,  0, 8,  80, 1, 16},  // Mode 10 - 37.5KB
-    { 2, 640, 480,  80, 24,   0,  0, 8,  80, 1, 20},  // Mode 11 - 37.5KB
-    { 2, 320, 480,  40, 30,   0,  0, 8,  80, 1, 16},  // Mode 12 - 18.75KB
-    { 4, 160, 480,  20, 30,   0,  0, 8,  80, 1, 16},  // Mode 13 - 18.75KB
-    { 2, 320, 480,  40, 24,   0,  0, 8,  80, 1, 20},  // Mode 14 - 18.75KB
-    {16, 320, 240,  40, 24,   0,  0, 4, 160, 2, 10},  // Mode 15 - 37.5KB - Teletext ?
+// ncbt gcol grow tcol trw  vmg hmg pb nbpl ys thg
+    { 1, 640, 256,  80, 32, 112,  0, 8,  80, 1,  8},  // Mode  0 - 20KB
+    { 2, 320, 256,  40, 32, 112,  0, 8,  80, 1,  8},  // Mode  1 - 20KB
+    { 4, 160, 256,  20, 32, 112,  0, 8,  80, 1,  8},  // Mode  2 - 20KB
+    { 1, 640, 240,  80, 24,   0,  0, 8,  80, 2, 10},  // Mode  3 - 20KB
+    { 1, 320, 256,  40, 32, 112,  0, 8,  80, 1,  8},  // Mode  4 - 10KB
+    { 2, 160, 256,  20, 32, 112,  0, 8,  80, 1,  8},  // Mode  5 - 10KB
+    { 1, 320, 240,  40, 24,   0,  0, 8,  80, 2, 10},  // Mode  6 - 10KB
+    { 3, 320, 225,  40, 25,  15,  0, 4, 160, 2,TTH},  // Mode  7 - ~1KB - Teletext
+    { 1, 640, 480,  80, 30,   0,  0, 8,  80, 1, 16},  // Mode  8 - 37.5KB
+    { 2, 320, 480,  40, 30,   0,  0, 8,  80, 1, 16},  // Mode  9 - 37.5KB
+    { 4, 160, 480,  20, 30,   0,  0, 8,  80, 1, 16},  // Mode 10 - 37.5KB
+    { 1, 640, 480,  80, 24,   0,  0, 8,  80, 1, 20},  // Mode 11 - 37.5KB
+    { 1, 320, 480,  40, 30,   0,  0, 8,  80, 1, 16},  // Mode 12 - 18.75KB
+    { 2, 160, 480,  20, 30,   0,  0, 8,  80, 1, 16},  // Mode 13 - 18.75KB
+    { 1, 320, 480,  40, 24,   0,  0, 8,  80, 1, 20},  // Mode 14 - 18.75KB
+    { 4, 320, 240,  40, 24,   0,  0, 4, 160, 2, 10},  // Mode 15 - 37.5KB
     };
 #endif
 
@@ -640,7 +680,7 @@ static void flipcsr (void)
         return;
         }
     uint8_t *pfb = framebuf + (row * pmode->thgt + csrtop) * pmode->nbpl;
-    if ( pmode->nclr == 2 )
+    if ( pmode->ncbt == 1 )
         {
         pfb += col;
         for (int i = 0; i < csrhgt; ++i)
@@ -649,7 +689,7 @@ static void flipcsr (void)
             pfb += pmode->nbpl;
             }
         }
-    else if ( pmode->nclr == 4 )
+    else if ( pmode->ncbt == 2 )
         {
         pfb += 2 * col;
         for (int i = 0; i < csrhgt; ++i)
@@ -658,7 +698,7 @@ static void flipcsr (void)
             pfb += pmode->nbpl;
             }
         }
-    else if ( pmode->nclr == 16 )
+    else if ( pmode->ncbt == 4 )
         {
         pfb += 4 * col;
         for (int i = 0; i < csrhgt; ++i)
@@ -809,11 +849,11 @@ static void dispchr (int chr)
         const uint8_t *pch = font_10[chr];
         uint8_t *pfb = framebuf + row * pmode->thgt * pmode->nbpl;
         if ( fhgt == 8 ) ++pch;
-        if ( pmode->nclr == 2 )
+        if ( pmode->ncbt == 1 )
             {
             pfb += col;
-            uint8_t fpx = cpx02[fg];
-            uint8_t bpx = cpx02[bg];
+            uint8_t fpx = (uint8_t) cpx02[fg];
+            uint8_t bpx = (uint8_t) cpx02[bg];
             for (int i = 0; i < fhgt; ++i)
                 {
 #if DEBUG > 1
@@ -837,7 +877,7 @@ static void dispchr (int chr)
                 ++pch;
                 }
             }
-        else if ( pmode->nclr == 4 )
+        else if ( pmode->ncbt == 2 )
             {
             pfb += 2 * col;
             uint16_t fpx = cpx04[fg];
@@ -856,7 +896,7 @@ static void dispchr (int chr)
                 ++pch;
                 }
             }
-        else if ( pmode->nclr == 16 )
+        else if ( pmode->ncbt == 4 )
             {
             pfb += 4 * col;
             uint32_t fpx = cpx16[fg];
@@ -942,7 +982,7 @@ static void genrb (void)
     printf ("genrb\n");
 #endif
     uint16_t *prb = (uint16_t *)renderbuf;
-    if ( pmode->nclr == 2 )
+    if ( pmode->ncbt == 1 )
         {
         for (int i = 0; i < 256; ++i)
             {
@@ -955,7 +995,7 @@ static void genrb (void)
                 }
             }
         }
-    else if ( pmode->nclr == 4 )
+    else if ( pmode->ncbt == 2 )
         {
         for (int i = 0; i < 256; ++i)
             {
@@ -973,7 +1013,7 @@ static void genrb (void)
                 }
             }
         }
-    else if ( pmode->nclr == 16 )
+    else if ( pmode->ncbt == 4 )
         {
         for (int i = 0; i < 256; ++i)
             {
@@ -1001,7 +1041,7 @@ static void clrreset (void)
     bg = 0;
     bgfill = 0;
     gbg = 0;
-    if ( pmode->nclr == 2 )
+    if ( pmode->ncbt == 1 )
         {
 #if DEBUG > 0
         printf ("clrreset: nclr = 2\n");
@@ -1011,7 +1051,7 @@ static void clrreset (void)
         fg = 1;
         gfg = 1;
         }
-    else if ( pmode->nclr == 4 )
+    else if ( pmode->ncbt == 2 )
         {
 #if DEBUG > 0
         printf ("clrreset: nclr = 4\n");
@@ -1023,7 +1063,7 @@ static void clrreset (void)
         fg = 3;
         gfg = 3;
         }
-    else if ( pmode->nclr == 8 )
+    else if ( pmode->ncbt == 3 )
         {
 #if DEBUG > 0
         printf ("clrreset: nclr = 4\n");
@@ -1064,6 +1104,13 @@ static void modechg (int mode)
         row = 0;
         csrtop = pmode->thgt - 1;
         csrhgt = 1;
+        gxo = 0;
+        gyo = 0;
+        gvt = 0;
+        gvb = pmode->grow - 1;
+        gvl = 0;
+        gvr = pmode->gcol - 1;
+        memset (pltpt, 0, sizeof (pltpt));
         nCsrHide = 0;
         showcsr ();
 #if USE_INTERP
@@ -1079,9 +1126,682 @@ static void modechg (int mode)
 
 static inline int clrmsk (int clr)
     {
-    if ( pmode->nclr == 16 ) return ( clr & 0x0F );
-    else if ( pmode->nclr == 4 ) return ( clr & 0x03 );
-    return ( clr & 0x01 );
+    return ( clr & clrdef[pmode->ncbt].clrmsk );
+    }
+
+static inline void pixop (int op, uint32_t *fb, uint32_t msk, uint32_t cpx)
+    {
+    cpx &= msk;
+    switch (op)
+        {
+        case 1:
+            *fb |= cpx;
+            break;
+        case 2:
+            *fb &= cpx | ~msk;
+            break;
+        case 3:
+            *fb ^= cpx;
+            break;
+        case 4:
+            *fb ^= msk;
+            break;
+        default:
+            *fb &= ~msk;
+            *fb |= cpx;
+            break;
+        }
+    }
+
+static void point (int clrop, uint32_t xp, uint32_t yp)
+    {
+    CLRDEF *cdef = &clrdef[pmode->ncbt];
+    uint32_t *fb = (uint32_t *)(framebuf + yp * pmode->nbpl);
+    xp <<= cdef->bitsh;
+    fb += xp >> 5;
+    xp &= 0x1F;
+    uint32_t msk = cdef->clrmsk << xp;
+    uint32_t cpx = ( clrop & cdef->clrmsk ) << xp;
+    pixop (clrop >> 8, fb, msk, cpx);
+    }
+
+static void clippoint  (int clrop, int xp, int yp)
+    {
+    if (( xp >= gvl ) && ( xp <= gvr ) && ( yp >= gvt ) && ( yp <= gvb )) point (clrop, xp, yp);
+    }
+
+#define SKIP_NONE   0
+#define SKIP_FIRST  -1
+#define SKIP_LAST   1
+
+static void line (int clrop, uint32_t xp1, uint32_t yp1, uint32_t xp2, uint32_t yp2, uint32_t dots, int skip)
+    {
+#if DEBUG > 0
+    printf ("line (0x%02X, %d, %d, %d, %d, 0x%08X, %d)\n", clrop, xp1, yp1, xp2, yp2, dots, skip);
+#endif
+    int xd = xp2 - xp1;
+    int yd = yp2 - yp1;
+    bool bVert = false;
+    bool bSwap = false;
+    if ( xd >= 0 )
+        {
+        if ( yd > xd )
+            {
+            bVert = true;
+            }
+        else if ( yd < -xd )
+            {
+            bVert = true;
+            bSwap = true;
+            }
+        }
+    else
+        {
+        bSwap = true;
+        if ( yd > -xd )
+            {
+            bVert = true;
+            bSwap = false;
+            }
+        else if ( yd < xd )
+            {
+            bVert = true;
+            }
+        }
+    if ( bSwap )
+        {
+        uint32_t tmp = xp1;
+        xp1 = xp2;
+        xp2 = tmp;
+        tmp = yp1;
+        yp1 = yp2;
+        yp2 = tmp;
+        xd  = -xd;
+        yd  = -yd;
+        skip = -skip;
+        }
+    if ( bVert )
+        {
+#if DEBUG > 0
+    printf ("vertical: %d, %d, %d, %d\n", xp1, yp1, xp2, yp2);
+#endif
+        int xs = 1;
+        if ( xd < 0 )
+            {
+            xs = -1;
+            xd = -xd;
+            }
+        int xa = 0;
+        if ( skip == SKIP_FIRST )
+            {
+            if ( dots & 1 )
+                {
+                dots >>= 1;
+                dots |= 0x80000000;
+                }
+            else
+                {
+                dots >>= 1;
+                }
+            xa += xd;
+            if ( xa >= yd )
+                {
+                xp1 +=  xs;
+                xa -= yd;
+                }
+            ++yp1;
+            }
+        else if ( skip == SKIP_LAST )
+            {
+            --yp2;
+            }
+        while ( yp1 <= yp2 )
+            {
+            if ( dots & 1 )
+                {
+                point (clrop, xp1, yp1);
+                dots >>= 1;
+                dots |= 0x80000000;
+                }
+            else
+                {
+                dots >>= 1;
+                }
+            xa += xd;
+            if ( xa >= yd )
+                {
+                xp1 +=  xs;
+                xa -= yd;
+                }
+            ++yp1;
+            }
+        }
+    else
+        {
+#if DEBUG > 0
+    printf ("horizontal: %d, %d, %d, %d\n", xp1, yp1, xp2, yp2);
+#endif
+        int ys = 1;
+        if ( yd < 0 )
+            {
+            ys = -1;
+            yd = -yd;
+            }
+        int ya = 0;
+        if ( skip == SKIP_FIRST )
+            {
+            if ( dots & 1 )
+                {
+                dots >>= 1;
+                dots |= 0x80000000;
+                }
+            else
+                {
+                dots >>= 1;
+                }
+            ya += yd;
+            if ( ya >= yd )
+                {
+                yp1 += ys;
+                ya -= xd;
+                }
+            ++xp1;
+            }
+        else if ( skip == SKIP_LAST )
+            {
+            --xp2;
+            }
+        while ( xp1 <= xp2 )
+            {
+            if ( dots & 1 )
+                {
+                point (clrop, xp1, yp1);
+                dots >>= 1;
+                dots |= 0x80000000;
+                }
+            else
+                {
+                dots >>= 1;
+                }
+            ya += yd;
+            if ( ya >= yd )
+                {
+                yp1 += ys;
+                ya -= xd;
+                }
+            ++xp1;
+            }
+        }
+    }
+
+static void clipline (int clrop, int xp1, int yp1, int xp2, int yp2, uint32_t dots, int skip)
+    {
+#if DEBUG > 0
+    printf ("clipline (0x%02X, %d, %d, %d, %d, 0x%08X, %d)\n", clrop, xp1, yp1, xp2, yp2, dots, skip);
+#endif
+    if ( xp2 < xp1 )
+        {
+        int tmp = xp1;
+        xp1 = xp2;
+        xp2 = tmp;
+        tmp = yp1;
+        yp1 = yp2;
+        yp2 = tmp;
+        skip = -skip;
+        }
+    if (( xp2 < gvl ) || ( xp1 > gvr )) return;
+    if ( xp1 < gvl )
+        {
+        yp1 += ( yp2 - yp1 ) * ( gvl - xp1 ) / ( xp2 - xp1 );
+        xp1 = gvl;
+        if ( skip == SKIP_FIRST ) skip = SKIP_NONE;
+        }
+    if ( xp2 > gvr )
+        {
+        yp2 -= ( yp2 - yp1 ) * ( xp2 - gvr ) / ( xp2 - xp1 );
+        xp2 = gvr;
+        if ( skip == SKIP_LAST ) skip = SKIP_NONE;
+        }
+    if ( yp2 < yp1 )
+        {
+        int tmp = xp1;
+        xp1 = xp2;
+        xp2 = tmp;
+        tmp = yp1;
+        yp1 = yp2;
+        yp2 = tmp;
+        skip = -skip;
+        }
+    if (( yp2 < gvt ) || ( yp1 > gvb )) return;
+    if ( yp1 < gvt )
+        {
+        xp1 += ( xp2 - xp1 ) * ( gvt - yp1 ) / ( yp2 - yp1 );
+        yp1 = gvt;
+        if ( skip == SKIP_FIRST ) skip = SKIP_NONE;
+        }
+    if ( yp2 > gvb )
+        {
+        xp2 -= ( xp2 - xp1 ) * ( yp2 - gvb ) / ( yp2 - yp1 );
+        yp2 = gvb;
+        if ( skip == SKIP_LAST ) skip = SKIP_NONE;
+        }
+    line (clrop, xp1, yp1, xp2, yp2, dots, skip);
+    }
+
+static void hline (int clrop, int xp1, int xp2, int yp)
+    {
+    int op = clrop >> 8;
+    CLRDEF *cdef = &clrdef[pmode->ncbt];
+    if (( yp < gvt ) || ( yp > gvb )) return;
+    if ( xp1 > xp2 )
+        {
+        int tmp = xp1;
+        xp1 = xp2;
+        xp2 = tmp;
+        }
+    if (( xp2 < gvl ) || ( xp1 > gvr )) return;
+    if ( xp1 < gvl ) xp1 = gvl;
+    if ( xp2 > gvr ) xp2 = gvr;
+    xp1 <<= cdef->bitsh;
+    xp2 <<= cdef->bitsh;
+    uint32_t *fb1 = (uint32_t *)(framebuf + yp * pmode->nbpl);
+    uint32_t *fb2 = fb1 + ( xp2 >> 5 );
+    fb1 += ( xp1 >> 5 );
+    uint32_t msk1 = fwdmsk[xp1 & 0x1F];
+    uint32_t msk2 = bkwmsk[xp2 & 0x1F];
+    uint32_t cpx = cdef->cpx[clrop & cdef->clrmsk];
+    if ( fb2 == fb1 )
+        {
+        pixop (op, fb1, msk1 & msk2, cpx);
+        }
+    else
+        {
+        pixop (op, fb1, msk1, cpx);
+        ++fb1;
+        while ( fb1 < fb2 )
+            {
+            pixop (op, fb1, 0xFFFFFFFF, cpx);
+            ++fb1;
+            }
+        pixop (op, fb1, msk2, cpx);
+        }
+    }
+
+static void clrgraph (void)
+    {
+    int clr = clrmsk (gbg);
+    for (int yp = gvt; yp <= gvb; ++yp)
+        {
+        hline (clr, gvl, gvr, yp);
+        }
+    }
+
+static void triangle (int clrop, int xp1, int yp1, int xp2, int yp2, int xp3, int yp3)
+    {
+#if DEBUG > 0
+    printf ("triangle (0x%02X, (%d, %d), (%d, %d), (%d, %d))\n", clrop, xp1, yp1, xp2, yp2, xp3, yp3);
+#endif
+    if (( xp1 < gvl ) && ( xp2 < gvl ) && ( xp3 < gvl )) return;
+    if (( xp1 > gvr ) && ( xp2 > gvr ) && ( xp3 > gvr )) return;
+    if (( yp1 < gvt ) && ( yp2 < gvt ) && ( yp3 < gvt )) return;
+    if (( yp1 > gvb ) && ( yp2 > gvb ) && ( yp3 > gvb )) return;
+    if ( yp2 < yp1 )
+        {
+        int tmp = xp1;
+        xp1 = xp2;
+        xp2 = tmp;
+        tmp = yp1;
+        yp1 = yp2;
+        yp2 = tmp;
+        }
+    if ( yp3 < yp2 )
+        {
+        int tmp = xp2;
+        xp2 = xp3;
+        xp3 = tmp;
+        tmp = yp2;
+        yp2 = yp3;
+        yp3 = tmp;
+        }
+    if ( yp2 < yp1 )
+        {
+        int tmp = xp1;
+        xp1 = xp2;
+        xp2 = tmp;
+        tmp = yp1;
+        yp1 = yp2;
+        yp2 = tmp;
+        }
+    int aa = 0;
+    int xa = xp1;
+    int na = xp2 - xp1;
+    int da = yp2 - yp1;
+    int ab = 0;
+    int xb = xp1;
+    int nb = xp3 - xp1;
+    int db = yp3 - yp1;
+    while ( yp1 < yp2 )
+        {
+        hline (clrop, xa, xb, yp1);
+        aa += na;
+        xa += aa / da;
+        aa %= da;
+        ab += nb;
+        xb += ab / db;
+        ab %= db;
+        ++yp1;
+        }
+    aa = 0;
+    xa = xp2;
+    na = xp3 - xp2;
+    da = yp3 - yp2;
+    while ( yp1 < yp3 )
+        {
+        hline (clrop, xa, xb, yp1);
+        aa += na;
+        xa += aa / da;
+        aa %= da;
+        ab += nb;
+        xb += ab / db;
+        ab %= db;
+        ++yp1;
+        }
+    hline (clrop, xa, xb, yp1);
+    }
+
+static void rectangle (int clrop, int xp1, int yp1, int xp2, int yp2)
+    {
+#if DEBUG > 0
+    printf ("rectangle (0x%02X, (%d, %d), (%d, %d))\n", clrop, xp1, yp1, xp2, yp2);
+#endif
+    if ( xp2 < xp1 )
+        {
+        int tmp = xp1;
+        xp1 = xp2;
+        xp2 = tmp;
+        }
+    if ( yp2 < yp1 )
+        {
+        int tmp = yp1;
+        yp1 = yp2;
+        yp2 = tmp;
+        }
+    if (( xp2 < gvl ) || ( xp1 > gvr ) || ( yp2 < gvt ) || ( yp1 > gvb )) return;
+    while ( yp1 <= yp2 )
+        {
+        hline (clrop, xp1, xp2, yp1);
+        ++yp1;
+        }
+    }
+
+static void trapizoid (int clrop, int xp1, int yp1, int xp2, int yp2, int xp3, int yp3)
+    {
+#if DEBUG > 0
+    printf ("trapizoid (0x%02X, (%d, %d), (%d, %d), (%d, %d))\n", clrop, xp1, yp1, xp2, yp2, xp3, yp3);
+#endif
+    GPOINT pts[4] = {{xp1, yp1}, {xp2, yp2}, {xp3, yp3}, {xp1 - xp2 + xp3, yp1 - yp2 + yp3}};
+    int xmin = xp1;
+    int xmax = xp1;
+    int ymin = yp1;
+    int ymax = yp1;
+    int itop = 0;
+    for (int i = 1; i < 4; ++i )
+        {
+        if ( pts[i].x < xmin ) xmin = pts[i].x;
+        if ( pts[i].x > xmax ) xmax = pts[i].x;
+        if ( pts[i].y < ymin )
+            {
+            ymin = pts[i].y;
+            itop = i;
+            }
+        if ( pts[i].y > ymax ) ymax = pts[i].y;
+        }
+    if (( xmax < gvl ) || ( xmin > gvr ) || ( ymax < gvt ) || ( ymin > gvb )) return;
+    GPOINT *pp[4];
+    for (int i = 0; i < 4; ++i)
+        {
+        pp[i] = &pts[itop];
+        if ( ++itop > 3 ) itop = 0;
+        }
+    if ( pp[1]->y > pp[3]->y )
+        {
+        GPOINT *pt = pp[1];
+        pp[1] = pp[3];
+        pp[3] = pt;
+        }
+    int yy = pp[0]->y;
+    int aa = 0;
+    int xa = pp[0]->x;
+    int na = pp[1]->x - xa;
+    int da = pp[1]->y - yy;
+    int ab = 0;
+    int xb = xa;
+    int nb = pp[3]->x - xb;
+    int db = pp[3]->y - yy;
+    while ( yy < pp[1]->y )
+        {
+        hline (clrop, xa, xb, yy);
+        aa += na;
+        xa += aa / da;
+        aa %= da;
+        ab += nb;
+        xb += ab / db;
+        ab %= db;
+        ++yy;
+        }
+    aa = 0;
+    xa = pp[1]->x;
+    na = pp[2]->x - xa;
+    da = pp[2]->y - yy;
+    while ( yy < pp[3]->y )
+        {
+        hline (clrop, xa, xb, yy);
+        aa += na;
+        xa += aa / da;
+        aa %= da;
+        ab += nb;
+        xb += ab / db;
+        ab %= db;
+        ++yy;
+        }
+    ab = 0;
+    xb = pp[3]->x;
+    nb = pp[2]->x - xb;
+    db = pp[2]->y - yy;
+    while ( yy < pp[2]->y )
+        {
+        hline (clrop, xa, xb, yy);
+        aa += na;
+        xa += aa / da;
+        aa %= da;
+        ab += nb;
+        xb += ab / db;
+        ab %= db;
+        ++yy;
+        }
+    hline (clrop, xa, xb, yy);
+    }
+
+static inline int gxscale (int xp)
+    {
+    return ( xp + gxo ) >> 1;
+    }
+
+static inline int gyscale (int yp)
+    {
+    return pmode->grow - 1 - (( yp + gyo ) >> 1);
+    }
+
+static void gwind (int vl, int vb, int vr, int vt)
+    {
+    vl = gxscale (vl);
+    vr = gxscale (vr);
+    vt = gyscale (vt);
+    vb = gyscale (vb);
+    if (( vl < 0 ) || ( vr >= pmode->gcol ) || ( vt < 0 ) || ( vb >= pmode->grow )) return;
+    gvl = vl;
+    gvr = vr;
+    gvt = vt;
+    gvb = vb;
+    }
+
+static int8_t getpix (int xp, int yp)
+    {
+    CLRDEF *cdef = &clrdef[pmode->ncbt];
+    uint32_t *fb = (uint32_t *)(framebuf + yp * pmode->nbpl);
+    xp <<= cdef->bitsh;
+    fb += xp >> 5;
+    xp &= 0x1F;
+    uint8_t pix = (*fb) >> xp;
+    return ( pix & cdef->clrmsk );
+    }
+
+int vpoint (int xp, int yp)
+    {
+    xp = gxscale (xp);
+    yp = gyscale (yp);
+    if (( xp < gvl ) || ( xp > gvr ) || ( yp < gvt ) || ( yp > gvb )) return -1;
+    return getpix (xp, yp);
+    }
+
+int vtint (int xp, int yp)
+    {
+    int clr = vpoint (xp, yp);
+    if ( clr < 0 ) return -1;
+    clr = curpal[clr];
+    return ( PICO_SCANVIDEO_R5_FROM_PIXEL(clr) << 3 )
+        | ( PICO_SCANVIDEO_G5_FROM_PIXEL(clr) << 11 )
+        | ( PICO_SCANVIDEO_B5_FROM_PIXEL(clr) << 19 );
+    }
+
+#define FT_LEFT     0x01
+#define FT_RIGHT    0x02
+#define FT_EQUAL    0x04
+
+static void linefill (int clrop, int xp, int yp, int ft, uint8_t clr)
+    {
+#if DEBUG > 0
+    printf ("linefill (0x%02X, %d, %d, %d, 0x%02X)\n", clrop, xp,yp, ft, clr);
+#endif
+    if (( xp < gvl ) || ( xp > gvr ) || ( yp < gvt ) || ( yp > gvb )) return;
+    int xp1 = xp;
+    if ( ft & FT_LEFT )
+        {
+        while ( xp1 > gvl )
+            {
+            uint8_t pix = getpix (xp1 - 1, yp);
+            if ( pix == clr )
+                {
+                if ( ft & FT_EQUAL ) break;
+                }
+            else
+                if ( !( ft & FT_EQUAL ) ) break;
+            --xp1;
+            }
+        }
+    int xp2 = xp;
+    if ( ft & FT_RIGHT )
+        {
+        while ( xp2 < gvr )
+            {
+            uint8_t pix = getpix (xp2 + 1, yp);
+            if ( pix == clr )
+                {
+                if ( ft & FT_EQUAL ) break;
+                }
+            else
+                if ( !( ft & FT_EQUAL ) ) break;
+            ++xp2;
+            }
+        }
+    hline (clrop, xp1, xp2, yp);
+    }
+
+static void gmove (int xp, int yp)
+    {
+    memmove (&pltpt[1], &pltpt[0], (NPLT - 1) * sizeof (pltpt[0]));
+    pltpt[0].x = xp;
+    pltpt[0].y = yp;
+    }
+
+static void plot (uint8_t code, int xp, int yp)
+    {
+#if DEBUG > 0
+    printf ("plot (0x%02X, %d, %d)\n", code, xp, yp);
+#endif
+    gmove (xp, yp);
+    if ( code & 0x04 == 0 )
+        {
+        pltpt[0].x += pltpt[1].x;
+        pltpt[0].y += pltpt[1].y;
+        }
+#if DEBUG > 0
+    printf ("origin: (%d, %d)\n", gxo, gyo);
+    printf ("pltpt: (%d, %d) (%d, %d) (%d, %d)\n", pltpt[0].x, pltpt[0].y,
+        pltpt[1].x, pltpt[1].y, pltpt[2].x, pltpt[2].y);
+#endif
+    int clrop;
+    switch (code & 0x03)
+        {
+        case 0:
+            return;
+        case 1:
+            clrop = gfg;
+            break;
+        case 2:
+            clrop = 0x400;
+            break;
+        case 3:
+            clrop = gbg;
+            break;
+        }
+    if ( code < 0x40 )
+        {
+        static const uint32_t style[] = { 0xFFFFFFFF, 0x33333333, 0x1F1F1F1F, 0x1C7F1C7F };
+        int xp0 = gxscale (pltpt[0].x);
+        int yp0 = gyscale (pltpt[0].y);
+        int xp1 = gxscale (pltpt[1].x);
+        int yp1 = gyscale (pltpt[1].y);
+        clipline (clrop, xp1, yp1, xp0, yp0, style[(code >> 4) & 0x03],
+            ( code & 0x08 ) ? SKIP_LAST : SKIP_NONE);
+        return;
+        }
+    switch ( code & 0xF8 )
+        {
+        case 0x40:
+            clippoint (clrop, gxscale (pltpt[0].x), gyscale (pltpt[0].y));
+            break;
+        case 0x48:
+            linefill (clrop, gxscale (pltpt[0].x), gyscale (pltpt[0].y),
+                FT_LEFT | FT_RIGHT, clrmsk (gbg));
+            break;
+        case 0x50:
+            triangle (clrop, gxscale (pltpt[0].x), gyscale (pltpt[0].y),
+                gxscale (pltpt[1].x), gyscale (pltpt[1].y),
+                gxscale (pltpt[2].x), gyscale (pltpt[2].y));
+            break;
+        case 0x55:
+            linefill (clrop, gxscale (pltpt[0].x), gyscale (pltpt[0].y),
+                FT_RIGHT | FT_EQUAL, clrmsk (gbg));
+            break;
+        case 0x60:
+            rectangle (clrop, gxscale (pltpt[0].x), gyscale (pltpt[0].y),
+                gxscale (pltpt[1].x), gyscale (pltpt[1].y));
+            break;
+        case 0x68:
+            linefill (clrop, gxscale (pltpt[0].x), gyscale (pltpt[0].y),
+                FT_LEFT | FT_RIGHT | FT_EQUAL, clrmsk (gfg));
+            break;
+        case 0x70:
+            trapizoid (clrop, gxscale (pltpt[0].x), gyscale (pltpt[0].y),
+                gxscale (pltpt[1].x), gyscale (pltpt[1].y),
+                gxscale (pltpt[2].x), gyscale (pltpt[2].y));
+            break;
+        case 0x78:
+            linefill (clrop, gxscale (pltpt[0].x), gyscale (pltpt[0].y),
+                FT_RIGHT, clrmsk (gfg));
+            break;
+        }
     }
 
 /* Process character sequences:
@@ -1211,25 +1931,19 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 16: // 0x10 - CLEAR GRAPHICS SCREEN
-        {
-            uint8_t fill;
-            if ( pmode->nclr == 16 )        fill = (uint8_t) cpx16[bg];
-            else if ( pmode->nclr == 4 )    fill = (uint8_t) cpx04[bg];
-            else                            fill = cpx02[bg];
-            cls (fill);
-            if ( bPrint ) printf ("\033[H\033[J");
-            col = 0;
-            row = 0;
-            break;
-        }
+            if ( pmode != &modes[7] )
+                {
+                clrgraph ();
+                gmove (0, 0);
+                if ( bPrint ) printf ("\033[H\033[J");
+                break;
+                }
 
         case 17: // 0x11 - COLOUR n
             if ( code & 0x80 )
                 {
                 bg = clrmsk (code);
-                if ( pmode->nclr == 16 )        bgfill = (uint8_t) cpx16[bg];
-                else if ( pmode->nclr == 4 )    bgfill = (uint8_t) cpx04[bg];
-                else                            bgfill = cpx02[bg];
+                bgfill = (uint8_t) clrdef[pmode->ncbt].cpx[bg];
 #if DEBUG > 0
                 printf ("Background colour %d\n", code & 0x7F);
 #endif
@@ -1253,9 +1967,8 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 18: // 0x12 - GCOL m, n
-            gmd = ( data1 >> 24 ) & 0x07;
-            if ( code & 0x80 ) gbg = clrmsk (code);
-            else    gfg = clrmsk (code);
+            if ( code & 0x80 ) gbg = clrmsk (code) | (( data1 >> 16 ) & 0x0700);
+            else    gfg = clrmsk (code) | (( data1 >> 16 ) & 0x0700);
             if ( bPrint )
                 {
                 vdu = 30 + (data1 & 7);
@@ -1284,10 +1997,10 @@ void xeqvdu (int code, int data1, int data2)
 
         case 20: // 0x14 - RESET COLOURS
             clrreset ();
-            fg = clrmsk (7);
+            fg = clrmsk (15);
             bg = 0;
             bgfill = 0;
-            gfg = clrmsk (7);
+            gfg = clrmsk (15);
             gbg = 0;
             if ( bPrint ) printf ("\033[37m\033[40m");
             break;
@@ -1298,8 +2011,6 @@ void xeqvdu (int code, int data1, int data2)
 
         case 22: // 0x16 - MODE CHANGE
             modechg (code & 0x7F);
-            col = 0;
-            row = 0;
             break;
 
         case 23: // 0x17 - DEFINE CHARACTER ETC.
@@ -1319,18 +2030,33 @@ void xeqvdu (int code, int data1, int data2)
                 }
             else if ( vdu == 22 )
                 {
+                hidecsr ();
                 col = 0;
                 row = 0;
+                showcsr ();
                 }
             break;
 
-        case 24: // 0x18 - DEFINE GRAPHICS VIEWPORT - TODO
+        case 24: // 0x18 - DEFINE GRAPHICS VIEWPORT
+            gwind ((data2 >> 8) & 0xFFFF,
+                ((data2 >> 24) & 0xFF) | ((data1 & 0xFF) << 8),
+                (data1 >> 8) & 0xFFFF,
+                ((data1 >> 24) & 0xFF) | ((code & 0xFF) << 8)) ;
             break;
 
-        case 25: // 0x19 - PLOT - TODO
+        case 25: // 0x19 - PLOT
+            if ( pmode != &modes[7] )
+                plot (data1 & 0xFF, (data1 >> 8) & 0xFFFF,
+                  	((data1 >> 24) & 0xFF) | ((code & 0xFF) << 8)) ;
             break;
 
         case 26: // 0x1A - RESET VIEWPORTS
+            gxo = 0;
+            gyo = 0;
+            gvt = 0;
+            gvb = pmode->grow - 1;
+            gvl = 0;
+            gvr = pmode->gcol - 1;
             col = 0;
             row = 0;
             break;
@@ -1342,13 +2068,17 @@ void xeqvdu (int code, int data1, int data2)
         case 28: // 0x1C - SET TEXT VIEWPORT - TODO
             break;
 
-        case 29: // 0x1D - SET GRAPHICS ORIGIN - TODO
+        case 29: // 0x1D - SET GRAPHICS ORIGIN
+            gxo = (data1 >> 8) & 0xFFFF;
+            gyo = ((data1 >> 24) & 0xFF) | ((code & 0xFF) << 8);
             break;
 
         case 30: // 0x1E - CURSOR HOME
             if ( bPrint ) printf ("\033[H");
+            hidecsr ();
             col = 0;
             row = 0;
+            showcsr ();
             scroln &= 0x80;
             break;
 

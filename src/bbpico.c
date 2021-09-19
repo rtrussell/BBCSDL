@@ -512,6 +512,7 @@ void quiet (void)
 {
 }
 
+#ifndef PICO_VGA
 // Get pixel RGB colour:
 int vtint (int x, int y)
 {
@@ -525,6 +526,7 @@ int vpoint (int x, int y)
 	error (255, "Sorry, not implemented") ;
 	return -1 ;
 }
+#endif
 
 int vgetc (int x, int y)
 {
