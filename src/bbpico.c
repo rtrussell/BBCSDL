@@ -146,6 +146,14 @@ void crlf (void) ;		// Output a newline
 // Declared in bbeval.c:
 unsigned int rnd (void) ;	// Return a pseudo-random number
 
+#ifdef PICO_VGA
+// Declared in picovdu.c
+void setup_vdu (void);
+// Declared in picovdu.c
+void setup_keyboard (void);
+int testkey (int);
+#endif
+
 // Interpreter entry point:
 int basic (void *, void *, void *) ;
 
@@ -740,6 +748,10 @@ int oskey (int wait)
 			usleep (5000) ;
 		    }
 	    }
+#ifdef PICO_VGA
+    else if ( wait >= -128 )
+        return testkey (-wait);
+#endif
 
 	if (wait == -256)
 		return 's' ;

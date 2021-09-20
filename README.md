@@ -107,7 +107,9 @@ The following limitations are noted:
 * Enhance text processing (viewports) - DONE
 * Implement teletext mode - DONE
 * Implement graphics - DONE
-* Improved keyboard processing
+* Improved keyboard processing - DONE
+* High resolution text
+* Implement GET(X,Y)
 * 800x600 VGA output (currently only 640x480)?
 * Sound?
 * Testing - Lots of it
