@@ -23,6 +23,9 @@
 #include "bbccon.h"
 #include <stdio.h>
 
+// Declared in bbmain.c:
+void error (int, const char *);
+
 #if HIRES
 #define SWIDTH  800
 #define SHEIGHT 600
@@ -1985,19 +1988,156 @@ static void linefill (int clrop, int xp, int yp, int ft, uint8_t clr)
     hline (clrop, xp1, xp2, yp);
     }
 
+static inline bool doflood (bool bEq, uint8_t tclr, int xp, int yp)
+    {
+    if (( xp < gvl ) || ( xp > gvr ) || ( yp < gvt ) || ( yp > gvb )) return false;
+    uint8_t pclr = getpix (xp, yp);
+    if ( bEq ) return ( pclr == tclr );
+    else return ( pclr != tclr );
+    }
+
+static void flood (bool bEq, uint8_t tclr, int clrop, int xp, int yp)
+    {
+    if ( ! doflood (bEq, tclr, xp, yp) ) return;
+    int xl = xp;
+    int xr = xp;
+    while ( doflood (bEq, tclr, xl-1, yp) ) --xl;
+    while ( doflood (bEq, tclr, xr+1, yp) ) ++xr;
+    hline (clrop, xl, xr, yp);
+    int xc = ( xl + xr ) / 2;
+    int yt = yp;
+    while ( doflood (bEq, tclr, xc, yt-1) ) --yt;
+    if ( yt < yp - 1 ) flood (bEq, tclr, clrop, xc, (yp + yt) / 2);
+    int yb = yp;
+    while ( doflood (bEq, tclr, xc, yb+1) ) ++yb;
+    if ( yb > yp + 1 ) flood (bEq, tclr, clrop, xc, (yp + yb) / 2);
+    for (int xx = xl; xx <= xr; ++xx)
+        {
+        if ( doflood (bEq, tclr, xx, yp-1) ) flood (bEq, tclr, clrop, xx, yp-1);
+        if ( doflood (bEq, tclr, xx, yp+1) ) flood (bEq, tclr, clrop, xx, yp+1);
+        }
+    }
+
+static void points4 (bool bFill, int clrop, int xc, int yc, int xp, int yp)
+    {
+    if ( bFill )
+        {
+        hline (clrop, xc - xp, xc + xp, yc + yp);
+        hline (clrop, xc - xp, xc + xp, yc - yp);
+        }
+    else
+        {
+        clippoint (clrop, xc + xp, yc + yp);
+        clippoint (clrop, xc + xp, yc - yp);
+        clippoint (clrop, xc - xp, yc + yp);
+        clippoint (clrop, xc - xp, yc - yp);
+        }
+    }
+
+static void ellipse (bool bFill, int clrop, int xc, int yc, int xa, int yb)
+    {
+    int xa2 = xa * xa;
+    int yb2 = yb * yb;
+    int ab2 = xa2 * yb2;
+    int xp = xa;
+    int yp = 0;
+    if ( bFill )
+        {
+        hline (clrop, xc - xp, xc + xp, yc);
+        }
+    else
+        {
+        clippoint (clrop, xc + xp, yc);
+        clippoint (clrop, xc - xp, yc);
+        }
+    do
+        {
+        ++yp;
+        if ( yb2 * xp * xp + xa2 * yp * yp > ab2 ) --xp;
+        points4 (bFill, clrop, xc, yc, xp, yp);
+        }
+    while ( yb2 * xp < xa2 * xp );
+    while ( true )
+        {
+        --xp;
+        ++yp;
+        if ( yb2 * xp * xp + xa2 * yp * yp < ab2 ) --yp;
+        if (( xp == 0 ) || ( yp * yp == yb2 )) break;
+        points4 (bFill, clrop, xc, yc, xp, yp);
+        }
+    hline (clrop, xc - xp, xc + xp, yp);
+    }
+
+static int iroot (int s)
+    {
+#if DEBUG > 0
+    printf ("iroot (%d)\n", s);
+#endif
+    int r1 = 0;
+    int r2 = s;
+    while ( r2 > r1 + 1 )
+        {
+        int r3 = ( r1 + r2 ) / 2;
+        int st = r3 * r3;
+#if DEBUG > 0
+        printf ("r1 = %d, r2 = %d, r3 = %d, st = %d\n", r1, r2, r3, st);
+#endif
+        if ( st == s ) return r3;
+        else if ( st < s ) r1 = r3;
+        else r2 = r3;
+        }
+    return r1;
+    }
+
+static void plotcir (bool bFill, int clrop)
+    {
+    int xd = pltpt[0].x - pltpt[1].x;
+    int yd = pltpt[0].y - pltpt[1].y;
+    int r;
+    if ( yd == 0 ) r = ( xd >= 0 ) ? xd : -xd;
+    else if ( xd == 0 ) r = ( yd >= 0 ) ? yd : -yd;
+    else r = iroot (xd * xd + yd * yd);
+    r /= 2;
+#if DEBUG > 0
+    printf ("plotcir: (%d, %d) (%d, %d) r = %d\n", pltpt[1].x, pltpt[1].y, pltpt[0].x, pltpt[0].y, r);
+#endif
+    if ( r == 0 ) clippoint (clrop, pltpt[1].x / 2, pltpt[1].y / 2);
+    else ellipse (bFill, clrop, pltpt[1].x / 2, pltpt[1].y / 2, r, r);
+    }
+
+static void plotellipse (bool bFill, int clrop)
+    {
+    int xc = pltpt[2].x / 2;
+    int yc = pltpt[2].y / 2;
+    int xa = ( pltpt[1].x - pltpt[2].x ) / 2;
+    int yb = ( pltpt[0].y - pltpt[2].y ) / 2;
+    if ( xa < 0 ) xa = - xa;
+    if ( yb < 0 ) yb = - yb;
+    if (( xa == 0 ) && ( yb == 0 )) clippoint (clrop, xc, xc);
+    else if ( yb == 0 ) hline (clrop, xc - xa, xc + xa, yc);
+    else if ( xa == 0 ) clipline (clrop, xc, yc - yb, xc, yc + yb, 0xFFFFFFFF, SKIP_NONE);
+    else ellipse (bFill, clrop, xc, yc, xa, yb);
+    }
+
 static void plot (uint8_t code, int xp, int yp)
     {
 #if DEBUG > 0
     printf ("plot (0x%02X, %d, %d)\n", code, xp, yp);
 #endif
     pushpts ();
-    if ( code & 0x04 == 0 )
+    if ( ( code & 0x04 ) == 0 )
         {
+#if DEBUG > 0
+        printf ("Relative position\n");
+#endif
         pltpt[0].x = pltpt[1].x + xp;
         pltpt[0].y = pltpt[1].y - yp;
         }
     else
         {
+#if DEBUG > 0
+        printf ("Absolute position\n");
+#endif
         pltpt[0].x = xp + gxo;
         pltpt[0].y = 2 * pmode->grow - 1 - ( yp + gyo );
         }
@@ -2062,6 +2202,23 @@ static void plot (uint8_t code, int xp, int yp)
         case 0x78:
             linefill (clrop, pltpt[0].x / 2, pltpt[0].y / 2,
                 FT_RIGHT, clrmsk (gfg));
+            break;
+        case 0x80:
+            flood (true, clrmsk (gbg), clrop, pltpt[0].x / 2, pltpt[0].y / 2);
+            break;
+        case 0x88:
+            flood (false, clrmsk (gfg), clrop, pltpt[0].x / 2, pltpt[0].y / 2);
+            break;
+        case 0x90:
+        case 0x98:
+            plotcir (code >= 0x98, clrop);
+            break;
+        case 0xC0:
+        case 0xC8:
+            plotellipse (code >= 0xC8, clrop);
+            break;
+        default:
+            error (255, "Sorry, not implemented") ;
             break;
         }
     }
