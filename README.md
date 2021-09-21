@@ -109,7 +109,7 @@ The following limitations are noted:
 * Implement graphics - DONE
 * Improved keyboard processing - DONE
 * High resolution text - DONE?
-* Implement GET(X,Y)
+* Implement GET(X,Y) - DONE
 * Plotting: fill, ellipse, arc, ssegment, etc.
 * 800x600 VGA output (currently only 640x480)?
 * Sound?

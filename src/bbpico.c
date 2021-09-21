@@ -149,6 +149,7 @@ unsigned int rnd (void) ;	// Return a pseudo-random number
 #ifdef PICO_VGA
 // Declared in picovdu.c
 void setup_vdu (void);
+int vgetc (int x, int y);
 // Declared in picovdu.c
 void setup_keyboard (void);
 int testkey (int);
@@ -534,13 +535,13 @@ int vpoint (int x, int y)
 	error (255, "Sorry, not implemented") ;
 	return -1 ;
 }
-#endif
 
 int vgetc (int x, int y)
 {
 	error (255, "Sorry, not implemented") ;
 	return -1 ;
 }
+#endif
 
 int osbyte (int al, int xy)
 {

@@ -1887,6 +1887,61 @@ int vtint (int xp, int yp)
         | ( PICO_SCANVIDEO_B5_FROM_PIXEL(clr) << 19 );
     }
 
+int vgetc (int x, int y)
+    {
+    x += tvl;
+    y += tvt;
+    if (( x < tvl ) || ( x > tvr ) || ( y < tvt ) || ( y > tvb )) return -1;
+    if ( pmode == &modes[7] )
+        {
+        int chr = framebuf[y * pmode->trow + col];
+        if ( chr < 0x20 ) chr += 0x80;
+        return chr;
+        }
+    else
+        {
+        uint8_t chrow[10];
+        uint8_t *prow = chrow;
+        memset (chrow, 0, sizeof (chrow));
+        int bgclr = ( vflags & HRGFLG ) ? clrmsk (gbg) : bg;
+        int fhgt = pmode->thgt;
+        bool bDbl = false;
+        if ( fhgt > 10 )
+            {
+            fhgt /= 2;
+            bDbl = true;
+            }
+        if ( fhgt == 8 ) ++prow;
+        x *= 8;
+        y *= pmode->thgt;
+        for (int j = 0; j < fhgt; ++j)
+            {
+            for (int i = 0; i < 8; ++i)
+                {
+                *prow >>= 1;
+                if ( getpix (x+i, y) != bgclr ) *prow |= 0x80;
+                }
+            ++y;
+            if ( bDbl ) ++y;
+            ++prow;
+            }
+        for (int i = 0; i < 256; ++i)
+            {
+            bool bMatch = true;
+            for (int j = 0; j < 10; ++j)
+                {
+                if ( chrow[j] != font_10[i][j] )
+                    {
+                    bMatch = false;
+                    break;
+                    }
+                }
+            if ( bMatch ) return i;
+            }
+        }
+    return -1;
+    }
+
 #define FT_LEFT     0x01
 #define FT_RIGHT    0x02
 #define FT_EQUAL    0x04
