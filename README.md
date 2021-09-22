@@ -110,7 +110,9 @@ The following limitations are noted:
 * Improved keyboard processing - DONE
 * High resolution text - DONE?
 * Implement GET(X,Y) - DONE
-* Plotting: fill, ellipse, arc, ssegment, etc.
+* Plotting: fill, circle, ellipse - DONE
+* Plotting: arc - Maybe ?
+* Plotting: segment & sector - Probaby will not do, too many cases. Can sometimes be achieved with arc & fill.
 * 800x600 VGA output (currently only 640x480)?
 * Sound?
 * Testing - Lots of it

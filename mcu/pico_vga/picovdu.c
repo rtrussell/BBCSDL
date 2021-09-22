@@ -2018,56 +2018,6 @@ static void flood (bool bEq, uint8_t tclr, int clrop, int xp, int yp)
         }
     }
 
-static void points4 (bool bFill, int clrop, int xc, int yc, int xp, int yp)
-    {
-    if ( bFill )
-        {
-        hline (clrop, xc - xp, xc + xp, yc + yp);
-        hline (clrop, xc - xp, xc + xp, yc - yp);
-        }
-    else
-        {
-        clippoint (clrop, xc + xp, yc + yp);
-        clippoint (clrop, xc + xp, yc - yp);
-        clippoint (clrop, xc - xp, yc + yp);
-        clippoint (clrop, xc - xp, yc - yp);
-        }
-    }
-
-static void ellipse (bool bFill, int clrop, int xc, int yc, int xa, int yb)
-    {
-    int xa2 = xa * xa;
-    int yb2 = yb * yb;
-    int ab2 = xa2 * yb2;
-    int xp = xa;
-    int yp = 0;
-    if ( bFill )
-        {
-        hline (clrop, xc - xp, xc + xp, yc);
-        }
-    else
-        {
-        clippoint (clrop, xc + xp, yc);
-        clippoint (clrop, xc - xp, yc);
-        }
-    do
-        {
-        ++yp;
-        if ( yb2 * xp * xp + xa2 * yp * yp > ab2 ) --xp;
-        points4 (bFill, clrop, xc, yc, xp, yp);
-        }
-    while ( yb2 * xp < xa2 * xp );
-    while ( true )
-        {
-        --xp;
-        ++yp;
-        if ( yb2 * xp * xp + xa2 * yp * yp < ab2 ) --yp;
-        if (( xp == 0 ) || ( yp * yp == yb2 )) break;
-        points4 (bFill, clrop, xc, yc, xp, yp);
-        }
-    hline (clrop, xc - xp, xc + xp, yp);
-    }
-
 static int iroot (int s)
     {
 #if DEBUG > 0
@@ -2089,34 +2039,178 @@ static int iroot (int s)
     return r1;
     }
 
+static void ellipse (bool bFill, int clrop, bool bCircle, int xc, int yc, uint32_t xa, uint32_t yb)
+    {
+#if DEBUG > 0
+    printf ("ellipse (%d, 0x%02X, %d, (%d, %d), %d, %d)\n", bFill, clrop, bCircle, xc, yc, xa, yb);
+#endif
+    uint32_t bb;
+    uint32_t aa;
+    uint64_t dd;
+    uint32_t xp = xa;
+    uint32_t yp = 0;
+    if ( bCircle )
+        {
+        aa = 1;
+        bb = 1;
+        dd = yb;
+        }
+    else
+        {
+        aa = yb * yb;
+        bb = xa * xa;
+        dd = ((uint64_t) aa) * ((uint64_t) bb);
+        }
+    if ( yc & 1 )
+        {
+        --xp;
+        yp = 1;
+        }
+    uint32_t xl = xp;
+    int dx = 1;
+    if ( bFill )
+        {
+        hline (clrop, (xc - xp) / 2, (xc + xp) / 2, ( yc + yp ) / 2);
+        if ( yp > 0 ) hline (clrop, (xc - xp) / 2, (xc + xp) / 2, ( yc - yp ) / 2);
+        }
+    while ( true )
+        {
+        yp += 2;
+        uint32_t sq = yp * yp;
+        uint64_t pp = ((uint64_t) bb) * ((uint64_t) sq);
+        if ( pp > dd ) break;
+        uint64_t qq = dd - pp;
+        sq = xp * xp;
+        pp = ((uint64_t) aa) * ((uint64_t) sq);
+        if ( pp > qq )
+            {
+            int x1 = 0;
+            int x2 = xp;
+            while ( x2 - x1 > 1 )
+                {
+                if ( dx > 0 )
+                    {
+                    xp = x2 - dx;
+                    dx *= 2;
+                    if ( xp < x1 )
+                        {
+                        xp = ( x1 + x2 ) / 2;
+                        dx = 0;
+                        }
+                    }
+                else
+                    {
+                    xp = ( x1 + x2 ) / 2;
+                    }
+                sq = xp * xp;
+                pp = ((uint64_t) aa) * ((uint64_t) sq);
+                if ( pp > qq )
+                    {
+                    x2 = xp;
+                    }
+                else if ( pp == qq )
+                    {
+                    x1 = xp;
+                    break;
+                    }
+                else
+                    {
+                    x1 = xp;
+                    dx = 0;
+                    }
+                }
+            xp = x1;
+            }
+        if ( bFill )
+            {
+#if DEBUG > 0
+            printf ("yp = %d: fill %d\n", yp, xp);
+#endif
+            hline (clrop, (xc - xp) / 2, (xc + xp) / 2, (yc + yp) / 2);
+            hline (clrop, (xc - xp) / 2, (xc + xp) / 2, (yc - yp) / 2);
+            }
+        else if ( xp == xl )
+            {
+#if DEBUG > 0
+            printf ("yp = %d: dot %d\n", yp, xp);
+#endif
+            clippoint (clrop, (xc + xl) / 2, (yc + yp - 2) / 2);
+            clippoint (clrop, (xc - xl) / 2, (yc + yp - 2) / 2);
+            if ( yp > 2 )
+                {
+                clippoint (clrop, (xc + xl) / 2, (yc - yp + 2) / 2);
+                clippoint (clrop, (xc - xl) / 2, (yc - yp + 2) / 2);
+                }
+            }
+        else
+            {
+#if DEBUG > 0
+            printf ("yp = %d: dash %d - %d\n", yp, xp, xl);
+#endif
+            hline (clrop, (xc + xp + 1) / 2, (xc + xl) / 2, (yc + yp - 2) / 2);
+            hline (clrop, (xc - xl) / 2, (xc - xp - 1) / 2, (yc + yp - 2) / 2);
+            if ( yp > 2 )
+                {
+                hline (clrop, (xc + xp + 1) / 2, (xc + xl) / 2, (yc - yp + 2) / 2);
+                hline (clrop, (xc - xl) / 2, (xc - xp - 1) / 2, (yc - yp + 2) / 2);
+                }
+            }
+        dx = xl - xp;
+        if ( dx == 0 ) dx = 1;
+        xl = xp;
+        }
+    if ( ! bFill )
+        {
+#if DEBUG > 0
+        printf ("yp = %d: final dash 0 - %d\n", yp, xl);
+#endif
+        hline (clrop, (xc - xl) / 2, (xc + xl) / 2, (yc + yp - 2) / 2);
+        if ( yp > 2 )
+            hline (clrop, (xc - xl) / 2, (xc + xl) / 2, (yc - yp + 2) / 2);
+        }
+    }
+
 static void plotcir (bool bFill, int clrop)
     {
     int xd = pltpt[0].x - pltpt[1].x;
     int yd = pltpt[0].y - pltpt[1].y;
     int r;
-    if ( yd == 0 ) r = ( xd >= 0 ) ? xd : -xd;
-    else if ( xd == 0 ) r = ( yd >= 0 ) ? yd : -yd;
-    else r = iroot (xd * xd + yd * yd);
-    r /= 2;
+    int r2;
+    if ( yd == 0 )
+        {
+        r = ( xd >= 0 ) ? xd : -xd;
+        r2 = xd * xd;
+        }
+    else if ( xd == 0 )
+        {
+        r = ( yd >= 0 ) ? yd : -yd;
+        r2 = yd * yd;
+        }
+    else
+        {
+        r2 = xd * xd + yd * yd;
+        r = iroot (r2);
+        }
 #if DEBUG > 0
-    printf ("plotcir: (%d, %d) (%d, %d) r = %d\n", pltpt[1].x, pltpt[1].y, pltpt[0].x, pltpt[0].y, r);
+    printf ("plotcir: (%d, %d) (%d, %d), r = %d, r2 = %d\n", pltpt[1].x, pltpt[1].y, pltpt[0].x,
+        pltpt[0].y, r, r2);
 #endif
-    if ( r == 0 ) clippoint (clrop, pltpt[1].x / 2, pltpt[1].y / 2);
-    else ellipse (bFill, clrop, pltpt[1].x / 2, pltpt[1].y / 2, r, r);
+    if ( r < 2 ) clippoint (clrop, pltpt[1].x / 2, pltpt[1].y / 2);
+    else ellipse (bFill, clrop, true, pltpt[1].x, pltpt[1].y, r, r2);
     }
 
 static void plotellipse (bool bFill, int clrop)
     {
-    int xc = pltpt[2].x / 2;
-    int yc = pltpt[2].y / 2;
-    int xa = ( pltpt[1].x - pltpt[2].x ) / 2;
-    int yb = ( pltpt[0].y - pltpt[2].y ) / 2;
+    int xc = pltpt[2].x;
+    int yc = pltpt[2].y;
+    int xa = ( pltpt[1].x - pltpt[2].x );
+    int yb = ( pltpt[0].y - pltpt[2].y );
     if ( xa < 0 ) xa = - xa;
     if ( yb < 0 ) yb = - yb;
-    if (( xa == 0 ) && ( yb == 0 )) clippoint (clrop, xc, xc);
-    else if ( yb == 0 ) hline (clrop, xc - xa, xc + xa, yc);
-    else if ( xa == 0 ) clipline (clrop, xc, yc - yb, xc, yc + yb, 0xFFFFFFFF, SKIP_NONE);
-    else ellipse (bFill, clrop, xc, yc, xa, yb);
+    if (( xa < 2 ) && ( yb < 2 )) clippoint (clrop, xc, xc);
+    else if ( yb < 2 ) hline (clrop, xc - xa, xc + xa, yc);
+    else if ( xa < 2 ) clipline (clrop, xc, yc - yb, xc, yc + yb, 0xFFFFFFFF, SKIP_NONE);
+    else ellipse (bFill, clrop, false, xc, yc, xa, yb);
     }
 
 static void plot (uint8_t code, int xp, int yp)
