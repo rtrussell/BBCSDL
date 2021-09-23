@@ -2025,6 +2025,8 @@ static int iroot (int s)
 #endif
     int r1 = 0;
     int r2 = s;
+    // 46340 = sqrt (MAX_INT)
+    if ( r2 > 46340 ) r2 = 46340;
     while ( r2 > r1 + 1 )
         {
         int r3 = ( r1 + r2 ) / 2;
@@ -2032,10 +2034,13 @@ static int iroot (int s)
 #if DEBUG > 0
         printf ("r1 = %d, r2 = %d, r3 = %d, st = %d\n", r1, r2, r3, st);
 #endif
-        if ( st == s ) return r3;
+        if ( st == s ) { r1 = r3; break; }
         else if ( st < s ) r1 = r3;
         else r2 = r3;
         }
+#if DEBUG > 0
+    printf ("iroot (%d) = %d\n", s, r1);
+#endif
     return r1;
     }
 
@@ -2213,6 +2218,156 @@ static void plotellipse (bool bFill, int clrop)
     else ellipse (bFill, clrop, false, xc, yc, xa, yb);
     }
 
+static int octant (int xp, int yp)
+    {
+    int iOct;
+    if ( yp >= 0 )
+        {
+        if ( xp >= 0 )
+            {
+            if ( yp < xp ) iOct = 0;
+            else iOct = 1;
+            }
+        else
+            {
+            if ( yp > -xp ) iOct = 2;
+            else iOct = 3;
+            }
+        }
+    else
+        {
+        if ( xp < 0 )
+            {
+            if ( xp < yp ) iOct = 4;
+            else iOct = 5;
+            }
+        else
+            {
+            if ( xp < -yp ) iOct = 6;
+            else iOct = 7;
+            }
+        }
+    return iOct;
+    }
+
+static void arc (int clrop)
+    {
+#if DEBUG > 0
+    printf ("arc ((%d, %d), (%d, %d), (%d, %d))\n", pltpt[0].x, pltpt[0].y, pltpt[1].x, pltpt[1].y,
+        pltpt[2].x, pltpt[2].y);
+#endif
+    int xc = pltpt[2].x;
+    int yc = pltpt[2].y;
+    int xp = pltpt[1].x - xc;
+    int yp = yc - pltpt[1].y;
+    int xe = pltpt[0].x - xc;
+    int ye = yc - pltpt[0].y;
+    int r2 = xp * xp + yp * yp;
+    int s1 = iroot (r2 << 8);
+    int s2 = iroot ((xe * xe + ye * ye) << 8);
+    xe = xe * s1 / s2;
+    ye = ye * s1 / s2;
+    int iOct = octant (xp, yp);
+    int iEnd = octant (xe, ye);
+    if ( iEnd < iOct )
+        {
+        iEnd += 8;
+        }
+    else if ( iEnd == iOct )
+        {
+        switch (iOct)
+            {
+            case 0:
+                if ( ye < yp ) iEnd += 8;
+                break;
+            case 1:
+            case 2:
+                if ( xe > xp ) iEnd += 8;
+                break;
+            case 3:
+            case 4:
+                if ( ye > yp ) iEnd += 8;
+                break;
+            case 5:
+            case 6:
+                if ( xe < xp ) iEnd += 8;
+                break;
+            case 7:
+                if ( ye < yp ) iEnd += 8;
+                break;
+            }
+        }
+    printf ("%d: (%d, %d), %d: (%d, %d)\n", iOct, xp, yp, iEnd, xe, ye);
+    bool bDone = false;
+    while (! bDone)
+        {
+        clippoint (clrop, (xc + xp) / 2, (yc - yp) / 2);
+        switch (iOct & 0x07)
+            {
+            case 0:
+                yp += 2;
+                if ( xp * xp + yp * yp > r2 ) --xp;
+                if ( xp * xp + yp * yp > r2 ) --xp;
+                if ( yp >= xp ) ++iOct;
+                if (( iOct >= iEnd ) && ( yp > ye )) bDone = true;
+                break;
+            case 1:
+                xp -= 2;
+                yp += 2;
+                if ( xp * xp + yp * yp > r2 ) --yp;
+                if ( xp * xp + yp * yp > r2 ) --yp;
+                if ( xp <= 0 ) ++iOct;
+                if (( iOct >= iEnd ) && ( xp < xe )) bDone = true;
+                break;
+            case 2:
+                xp -= 2;
+                if ( xp * xp + yp * yp > r2 ) --yp;
+                if ( xp * xp + yp * yp > r2 ) --yp;
+                if ( yp <= - xp ) ++iOct;
+                if (( iOct >= iEnd ) && ( xp < xe )) bDone = true;
+                break;
+            case 3:
+                yp -= 2;
+                xp -= 2;
+                if ( xp * xp + yp * yp > r2 ) ++xp;
+                if ( xp * xp + yp * yp > r2 ) ++xp;
+                if ( yp <= 0 ) ++iOct;
+                if (( iOct >= iEnd ) && ( yp < ye )) bDone = true;
+                break;
+            case 4:
+                yp -= 2;
+                if ( xp * xp + yp * yp > r2 ) ++xp;
+                if ( xp * xp + yp * yp > r2 ) ++xp;
+                if ( yp <= xp ) ++iOct;
+                if (( iOct >= iEnd ) && ( yp < ye )) bDone = true;
+                break;
+            case 5:
+                xp += 2;
+                yp -= 2;
+                if ( xp * xp + yp * yp > r2 ) ++yp;
+                if ( xp * xp + yp * yp > r2 ) ++yp;
+                if ( xp >= 0 ) ++iOct;
+                if (( iOct >= iEnd ) && ( xp > xe )) bDone = true;
+                break;
+            case 6:
+                xp += 2;
+                if ( xp * xp + yp * yp > r2 ) ++yp;
+                if ( xp * xp + yp * yp > r2 ) ++yp;
+                if ( xp >= - yp ) ++iOct;
+                if (( iOct >= iEnd ) && ( xp > xe )) bDone = true;
+                break;
+            case 7:
+                yp += 2;
+                xp += 2;
+                if ( xp * xp + yp * yp > r2 ) --xp;
+                if ( xp * xp + yp * yp > r2 ) --xp;
+                if ( yp >= 0 ) ++iOct;
+                if (( iOct >= iEnd ) && ( yp > ye )) bDone = true;
+                break;
+            }
+        }
+    }
+
 static void plot (uint8_t code, int xp, int yp)
     {
 #if DEBUG > 0
@@ -2306,6 +2461,9 @@ static void plot (uint8_t code, int xp, int yp)
         case 0x90:
         case 0x98:
             plotcir (code >= 0x98, clrop);
+            break;
+        case 0xA0:
+            arc (clrop);
             break;
         case 0xC0:
         case 0xC8:

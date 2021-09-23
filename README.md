@@ -27,7 +27,8 @@ There are two somewhat divergent lines of development:
     [Hardware design with RP2040](https://datasheets.raspberrypi.org/rp2040/hardware-design-with-rp2040.pdf)
     or the commercial version
     [Pimoroni Pico VGA Demo Base](https://shop.pimoroni.com/products/pimoroni-pico-vga-demo-base).
-    This is still in an early phase, requiring much more work and may often be broken.
+    This is now also fairly advanced, although there are some issues to be resolved and
+    more testing required.
 
 This project includes source from various locations with difference licenses. See the
 various LICENSE.txt files.
@@ -111,7 +112,7 @@ The following limitations are noted:
 * High resolution text - DONE?
 * Implement GET(X,Y) - DONE
 * Plotting: fill, circle, ellipse - DONE
-* Plotting: arc - Maybe ?
+* Plotting: arc - DONE
 * Plotting: segment & sector - Probaby will not do, too many cases. Can sometimes be achieved with arc & fill.
 * 800x600 VGA output (currently only 640x480)?
 * Sound?
