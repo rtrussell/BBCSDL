@@ -6,6 +6,9 @@
  */
 
 #include "lfsmcu.h"
+#ifdef PICO_VGA
+#include "pico/multicore.h"
+#endif
 
 void lfs_bbc_init(void){
 }
@@ -80,10 +83,16 @@ int lfs_bbc_prog(const struct lfs_config *cfg, lfs_block_t block,
 
 	// program data
 #ifdef PICO
+#ifdef PICO_VGA
+    multicore_lockout_start_blocking ();
+#endif
 	uint32_t ints = save_and_disable_interrupts();
 	flash_range_program(&bd->buffer[block*cfg->block_size + off]
 		-(uint8_t *)XIP_BASE, buffer, size);
 	restore_interrupts(ints);
+#ifdef PICO_VGA
+    multicore_lockout_end_blocking ();
+#endif
 #else
 	memcpy(&bd->buffer[block*cfg->block_size + off], buffer, size);
 #endif
@@ -100,10 +109,16 @@ int lfs_bbc_erase(const struct lfs_config *cfg, lfs_block_t block) {
 	LFS_ASSERT(block < cfg->block_count);
 
 #ifdef PICO
+#ifdef PICO_VGA
+    multicore_lockout_start_blocking ();
+#endif
 	uint32_t ints = save_and_disable_interrupts();
 	flash_range_erase(&bd->buffer[block*cfg->block_size]
 		-(uint8_t *)XIP_BASE, cfg->block_size);
 	restore_interrupts(ints);
+#ifdef PICO_VGA
+    multicore_lockout_end_blocking ();
+#endif
 #else
 	memset(&bd->buffer[block*cfg->block_size],
 		0, cfg->block_size);

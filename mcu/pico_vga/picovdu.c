@@ -33,8 +33,8 @@ void error (int, const char *);
 #define SWIDTH  640
 #define SHEIGHT 480
 #endif
-#define VGA_FLAG    0x1234  // Used to syncronise cores
-#define NPLT        3       // Length of plot history
+#define VGA_FLAG    0x1234      // Used to syncronise cores
+#define NPLT        3           // Length of plot history
 
 static uint8_t  framebuf[SWIDTH * SHEIGHT / 8];
 static uint16_t renderbuf[256 * 8];
@@ -667,7 +667,9 @@ void setup_video (void)
 #else
     scanvideo_setup (&vga_mode_640x480_60);
 #endif
+    multicore_fifo_drain ();
     multicore_fifo_push_blocking (VGA_FLAG);
+    multicore_lockout_victim_init ();
     scanvideo_timing_enable (true);
 #if DEBUG > 0
     printf ("setup_video: System clock speed %d kHz\n", clock_get_hz (clk_sys) / 1000);
@@ -2949,6 +2951,7 @@ int setup_vdu (void)
     critical_section_init (&cs_csr);
     memset (framebuf, 0, sizeof (framebuf));
     modechg (8);
+    multicore_fifo_drain ();
     multicore_launch_core1 (setup_video);
 
     // Do not return until Core 1 has claimed DMA channels
