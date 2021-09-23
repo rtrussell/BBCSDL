@@ -33,7 +33,7 @@ There are two somewhat divergent lines of development:
 This project includes source from various locations with difference licenses. See the
 various LICENSE.txt files.
 
-## Instructions (thanks to Eric)
+## Build Instructions (thanks to Eric)
 
 To build this for the Pico, make sure you have the SDK installed and the
 tinyusb module installed.
@@ -101,6 +101,66 @@ The following limitations are noted:
 6.  There is are known buffer overflows in the wrappers appearing in
     lfswrap.c which are triggered when a filename path grows to be
     greater than 256 characters.  Please don't do that.
+
+## Usage Notes - Stand-Alone (USB keyboard and VGA Output)
+
+The code has been designed for yse with the VGA demonstration board.
+To use (once the Pico has been programmed):
+
+* Power should be applied to the micro-USB socket on the demo board.
+* The keyboard should be connected to the USB socket on the Pico itself.
+A USB to micro-USB adaptor will be required. The Pico is somewhat selective
+as to which keyboards work, cheap keyboards may be better.
+* The SD card is used in SPI mode, and Pico GPIOs 20 & 21 are used for
+serial input and output. On the Pimoroni board, cut the links between
+these GPIOs and SD_DAT1 & SD_DAT2. Optionally solder a 2x3 header in place
+for a serial connection. From BBC Basic printer output is sent to serial.
+It is currently also used for diagnostic output.
+* An SD or SDHC card may be used, It should be formatted as FAT.
+
+The implementation currently supports 16 video modes:
+
+Mode | Colours |   Text  | Graphics  | Letterbox
+-----|---------|---------|-----------|----------
+   0 |     2   | 80 x 32 | 640 x 256 |     Y
+   1 |     4   | 40 x 32 | 320 x 256 |     Y
+   2 |    16   | 20 x 32 | 160 x 256 |     Y
+   3 |     2   | 80 x 24 | 640 x 240 |
+   4 |     2   | 40 x 32 | 320 x 256 |     Y
+   5 |     4   | 20 x 32 | 160 x 256 |     Y
+   6 |     2   | 40 x 24 | 320 x 240 |
+   7 |     8   | 40 x 24 | Teletext  |
+   8 |     2   | 80 x 30 | 640 x 480 |
+   9 |     4   | 40 x 30 | 320 x 480 |
+  10 |    16   | 20 x 30 | 160 x 480 |
+  11 |     2   | 80 x 24 | 640 x 480 |
+  12 |     2   | 40 x 30 | 320 x 480 |
+  13 |     4   | 20 x 30 | 120 x 480 |
+  14 |     2   | 40 x 24 | 320 x 480 |
+  15 |    16   | 40 x 24 | 320 x 240 |
+
+Modes 0-2, 4 & 5 reproduce those from the BBC Micro. They only have 256 rows of pixels
+which are displayed in the centre of the monitor so may appear squashed.
+
+Modes 3 & 6 only have 24 lines of text compared to 25 on the BBC Micro (this may be changed),
+however they can also display graphics.
+
+Except for Mode 7, colours 8-15 are high intensity rather than flashing.
+
+### Missing features & Qwerks
+
+The Pico implementation is missing features compared to the BBCSDL implementation
+on full operating systems. The limitations include:
+
+* High resolution text (VDU 5) is implemented, but it does not scroll, instead wraps
+around back to the top of the screen. New text overlays any existing rather than
+replacing it.
+* VDU 23 can only be used to control the appearance of the cursor and to select
+page or scroll mode.
+* PLOT modes 0-167 & 192-207 are implemented.
+* There is no sound
+* VGA output is lost while writing programs or data to internal flash memory.
+This does not happen writing to SD card.
 
 ## TO DO - For the second development line
 
