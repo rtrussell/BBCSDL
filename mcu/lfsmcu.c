@@ -6,7 +6,7 @@
  */
 
 #include "lfsmcu.h"
-#ifdef PICO_VGA
+#ifdef PICO_MCLOCK
 #include "pico/multicore.h"
 #endif
 
@@ -83,15 +83,19 @@ int lfs_bbc_prog(const struct lfs_config *cfg, lfs_block_t block,
 
 	// program data
 #ifdef PICO
-#ifdef PICO_VGA
+#if defined (PICO_MCLOCK)
     multicore_lockout_start_blocking ();
+#elif defined (PICO_VGA)
+    printf ("Start saving to Flash at %p, size %d.\n", &bd->buffer[block*cfg->block_size + off], size);
 #endif
 	uint32_t ints = save_and_disable_interrupts();
 	flash_range_program(&bd->buffer[block*cfg->block_size + off]
 		-(uint8_t *)XIP_BASE, buffer, size);
 	restore_interrupts(ints);
-#ifdef PICO_VGA
+#if defined (PICO_MCLOCK)
     multicore_lockout_end_blocking ();
+#elif defined (PICO_VGA)
+    printf ("Complete saving to Flash.\n");
 #endif
 #else
 	memcpy(&bd->buffer[block*cfg->block_size + off], buffer, size);
@@ -109,15 +113,19 @@ int lfs_bbc_erase(const struct lfs_config *cfg, lfs_block_t block) {
 	LFS_ASSERT(block < cfg->block_count);
 
 #ifdef PICO
-#ifdef PICO_VGA
+#if defined (PICO_MCLOCK)
     multicore_lockout_start_blocking ();
+#elif defined (PICO_VGA)
+    printf ("Start erase Flash at %p, size %d.\n", &bd->buffer[block*cfg->block_size], cfg->block_size);
 #endif
 	uint32_t ints = save_and_disable_interrupts();
 	flash_range_erase(&bd->buffer[block*cfg->block_size]
 		-(uint8_t *)XIP_BASE, cfg->block_size);
 	restore_interrupts(ints);
-#ifdef PICO_VGA
+#if defined (PICO_MCLOCK)
     multicore_lockout_end_blocking ();
+#elif defined (PICO_VGA)
+    printf ("Completed erase Flash.\n");
 #endif
 #else
 	memset(&bd->buffer[block*cfg->block_size],

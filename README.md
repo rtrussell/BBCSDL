@@ -51,8 +51,15 @@ Note the stop (current folder) after the -B flag.
 The following options may be specified with the cmake command:
 
 * -DPICO_BOARD=vgaboard if using the VGA demo board, or other board as appropriate.
-* -DSTDIO=USB for the basic console on USB or -DSTDIO=UART for the basic console on UART.
-  Use -DSTDIO=PICO for input via USB keyboard and output via VGA monitor.
+* -DSTDIO=... to select the user interface
+  * -DSTDIO=USB for the basic console on USB
+  * -DSTDIO=UART for the basic console on UART.
+  * -DSTDIO=PICO for input via USB keyboard and output via VGA monitor. With this option
+    video generation is disabled while saving data to Flash. Video unaffected if saving
+    to SD card.
+  * -DSTDIO=PICO2 DO NOT USE! Input via USB keyboard and output via VGA monitor. This
+    is supposed to continue to generate video while saving to Flash. However to to an
+    unresolved issue saving to Flash while video is running results in random crashes.
 * -DLFS=Y to include storage on Pico flash or -DLFS=N to exclude it.
 * -DFAT=Y to include storage on SD card or -DFAT=N to exclude it.
 * Other cmake options if required.
@@ -104,7 +111,7 @@ The following limitations are noted:
 
 ## Usage Notes - Stand-Alone (USB keyboard and VGA Output)
 
-The code has been designed for yse with the VGA demonstration board.
+The code has been designed for use with the VGA demonstration board.
 To use (once the Pico has been programmed):
 
 * Power should be applied to the micro-USB socket on the demo board.

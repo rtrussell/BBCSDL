@@ -13,6 +13,8 @@ set(CMAKE_CXX_STANDARD 17)
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 if ( ${STDIO} STREQUAL "PICO" )
   include($ENV{PICO_EXTRAS_PATH}/external/pico_extras_import.cmake)
+elseif ( ${STDIO} STREQUAL "PICO2" )
+  include($ENV{PICO_EXTRAS_PATH}/external/pico_extras_import.cmake)
 endif()
 
 project(bbcbasic C CXX ASM)
@@ -80,6 +82,7 @@ if (TARGET tinyusb_device)
   endif()
   if ( ${STDIO} STREQUAL "PICO" )
     message(STATUS "BBC Basic console I/O will be on USB keyboard and VGA screen")
+    message(STATUS "Video will be disabled while updating Flash")
     pico_enable_stdio_usb(bbcbasic 0)
     pico_enable_stdio_uart(bbcbasic 1)
     target_sources(bbcbasic PRIVATE
@@ -92,7 +95,37 @@ if (TARGET tinyusb_device)
       PICO_CORE1_STACK_SIZE=0x800
       )
     target_compile_definitions(bbcbasic PRIVATE -DSTDIO_PICO)
-    # target_compile_definitions(bbcbasic PRIVATE -DSTDIO_UART)
+    target_compile_definitions(bbcbasic PRIVATE -DPICO_VGA)
+    target_compile_definitions(bbcbasic PRIVATE -DPICO_MCLOCK)
+    target_compile_definitions(bbcbasic PUBLIC
+      -DPICO_SCANVIDEO_MAX_SCANLINE_BUFFER_WORDS=402
+      -DPICO_SCANVIDEO_SCANLINE_BUFFER_COUNT=8
+      )
+    target_include_directories(bbcbasic PRIVATE
+      ../../mcu/pico_vga
+      )
+    target_link_libraries(bbcbasic
+      pico_scanvideo_dpi
+      pico_multicore
+      hardware_interp
+      tinyusb_host
+      tinyusb_board
+      )
+    pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/vga_pico.ld)
+  elseif ( ${STDIO} STREQUAL "PICO2" )
+    message(WARNING "This build is subject to random crashes when updating Flash")
+    pico_enable_stdio_usb(bbcbasic 0)
+    pico_enable_stdio_uart(bbcbasic 1)
+    target_sources(bbcbasic PRIVATE
+      ../../mcu/pico_vga/picokbd.c
+      ../../mcu/pico_vga/picovdu.c
+      ../../mcu/pico_vga/framebuffer.S
+      )
+    target_compile_definitions(bbcbasic PUBLIC
+      PICO_STACK_SIZE=0x2B800
+      PICO_CORE1_STACK_SIZE=0x800
+      )
+    target_compile_definitions(bbcbasic PRIVATE -DSTDIO_PICO)
     target_compile_definitions(bbcbasic PRIVATE -DPICO_VGA)
     target_compile_definitions(bbcbasic PUBLIC
       -DPICO_SCANVIDEO_MAX_SCANLINE_BUFFER_WORDS=402

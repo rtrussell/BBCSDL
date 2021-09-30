@@ -216,54 +216,54 @@ typedef struct
     uint32_t    hmgn;       // Number of black pixels to left (and to right)
     uint32_t    nppb;       // Number of pixels per byte
     uint32_t    nbpl;       // Number of bytes per line
-    uint32_t    yscl;       // Y scale (number of repeats of each line)
+    uint32_t    yshf;       // Y scale (number of repeats of each line) = 2 ^ yshf
     uint32_t    thgt;       // Text height
     } MODE;
 
 #if HIRES    // 800x600 VGA
 static const MODE modes[] = {
 // ncbt gcol grow tcol trw  vmg hmg pb nbpl ys thg
-    { 1, 640, 256,  80, 32,  44, 80, 8,  80, 2,  8},  // Mode  0 - 20KB
-    { 2, 320, 256,  40, 32,  44, 80, 8,  80, 2,  8},  // Mode  1 - 20KB
-    { 4, 160, 256,  20, 32,  44, 80, 8,  80, 2,  8},  // Mode  2 - 20KB
-    { 1, 640, 250,  80, 25,  47, 80, 8,  80, 2, 10},  // Mode  3 - 20KB
-    { 1, 320, 256,  40, 32,  44, 80, 8,  80, 2,  8},  // Mode  4 - 10KB
-    { 2, 160, 256,  20, 32,  44, 80, 8,  80, 2,  8},  // Mode  5 - 10KB
-    { 1, 320, 250,  40, 25,  44, 80, 8,  80, 2, 10},  // Mode  6 - 10KB
-    { 3, 320, 225,  40, 25,  75, 80, 8,  80, 2,TTH},  // Mode  7 - Teletext TODO
-    { 1, 640, 512,  80, 32,  44, 80, 8,  80, 1, 16},  // Mode  8 - 40KB
-    { 2, 320, 512,  40, 32,  44, 80, 8,  80, 1, 16},  // Mode  9 - 40KB
-    { 4, 160, 512,  20, 32,  44, 80, 8,  80, 1, 16},  // Mode 10 - 40KB
-    { 1, 640, 500,  80, 25,  47, 80, 8,  80, 1, 20},  // Mode 11 - 40KB
-    { 1, 320, 512,  40, 32,  44, 80, 8,  80, 1, 16},  // Mode 12 - 20KB
-    { 2, 160, 512,  20, 32,  44, 80, 8,  80, 1, 16},  // Mode 13 - 20KB
-    { 1, 320, 500,  40, 25,  44, 80, 8,  80, 1, 20},  // Mode 14 - 20KB
-    { 1, 640, 512,  40, 25,  44, 80, 8,  80, 1, 16},  // Mode 15 - Teletext ?
-    { 1, 800, 600, 100, 30,   0,  0, 8, 100, 1, 20},  // Mode 16 - 59KB
-    { 2, 400, 600,  50, 30,   0,  0, 8, 100, 1, 20},  // Mode 17 - 59KB
-    { 4, 200, 600,  25, 30,   0,  0, 8, 100, 1, 20},  // Mode 18 - 59KB
-    { 2, 800, 300, 100, 30,   0,  0, 4, 200, 2, 20},  // Mode 19 - 59KB
-    { 4, 400, 300,  50, 30,   0,  0, 4, 200, 2, 10}   // Mode 20 - 59KB
+    { 1, 640, 256,  80, 32,  44, 80, 8,  80, 1,  8},  // Mode  0 - 20KB
+    { 2, 320, 256,  40, 32,  44, 80, 8,  80, 1,  8},  // Mode  1 - 20KB
+    { 4, 160, 256,  20, 32,  44, 80, 8,  80, 1,  8},  // Mode  2 - 20KB
+    { 1, 640, 250,  80, 25,  47, 80, 8,  80, 1, 10},  // Mode  3 - 20KB
+    { 1, 320, 256,  40, 32,  44, 80, 8,  80, 1,  8},  // Mode  4 - 10KB
+    { 2, 160, 256,  20, 32,  44, 80, 8,  80, 1,  8},  // Mode  5 - 10KB
+    { 1, 320, 250,  40, 25,  44, 80, 8,  80, 1, 10},  // Mode  6 - 10KB
+    { 3, 320, 225,  40, 25,  75, 80, 8,  80, 1,TTH},  // Mode  7 - Teletext TODO
+    { 1, 640, 512,  80, 32,  44, 80, 8,  80, 0, 16},  // Mode  8 - 40KB
+    { 2, 320, 512,  40, 32,  44, 80, 8,  80, 0, 16},  // Mode  9 - 40KB
+    { 4, 160, 512,  20, 32,  44, 80, 8,  80, 0, 16},  // Mode 10 - 40KB
+    { 1, 640, 500,  80, 25,  47, 80, 8,  80, 0, 20},  // Mode 11 - 40KB
+    { 1, 320, 512,  40, 32,  44, 80, 8,  80, 0, 16},  // Mode 12 - 20KB
+    { 2, 160, 512,  20, 32,  44, 80, 8,  80, 0, 16},  // Mode 13 - 20KB
+    { 1, 320, 500,  40, 25,  44, 80, 8,  80, 0, 20},  // Mode 14 - 20KB
+    { 1, 640, 512,  40, 25,  44, 80, 8,  80, 0, 16},  // Mode 15 - Teletext ?
+    { 1, 800, 600, 100, 30,   0,  0, 8, 100, 0, 20},  // Mode 16 - 59KB
+    { 2, 400, 600,  50, 30,   0,  0, 8, 100, 0, 20},  // Mode 17 - 59KB
+    { 4, 200, 600,  25, 30,   0,  0, 8, 100, 0, 20},  // Mode 18 - 59KB
+    { 2, 800, 300, 100, 30,   0,  0, 4, 200, 1, 20},  // Mode 19 - 59KB
+    { 4, 400, 300,  50, 30,   0,  0, 4, 200, 1, 10}   // Mode 20 - 59KB
     };
 #else   // 640x480 VGA
 static const MODE modes[] = {
 // ncbt gcol grow tcol trw  vmg hmg pb nbpl ys thg
-    { 1, 640, 256,  80, 32, 112,  0, 8,  80, 1,  8},  // Mode  0 - 20KB
-    { 2, 320, 256,  40, 32, 112,  0, 8,  80, 1,  8},  // Mode  1 - 20KB
-    { 4, 160, 256,  20, 32, 112,  0, 8,  80, 1,  8},  // Mode  2 - 20KB
-    { 1, 640, 240,  80, 24,   0,  0, 8,  80, 2, 10},  // Mode  3 - 20KB
-    { 1, 320, 256,  40, 32, 112,  0, 8,  80, 1,  8},  // Mode  4 - 10KB
-    { 2, 160, 256,  20, 32, 112,  0, 8,  80, 1,  8},  // Mode  5 - 10KB
-    { 1, 320, 240,  40, 24,   0,  0, 8,  80, 2, 10},  // Mode  6 - 10KB
-    { 3, 320, 225,  40, 25,  15,  0, 4, 160, 2,TTH},  // Mode  7 - ~1KB - Teletext
-    { 1, 640, 480,  80, 30,   0,  0, 8,  80, 1, 16},  // Mode  8 - 37.5KB
-    { 2, 320, 480,  40, 30,   0,  0, 8,  80, 1, 16},  // Mode  9 - 37.5KB
-    { 4, 160, 480,  20, 30,   0,  0, 8,  80, 1, 16},  // Mode 10 - 37.5KB
-    { 1, 640, 480,  80, 24,   0,  0, 8,  80, 1, 20},  // Mode 11 - 37.5KB
-    { 1, 320, 480,  40, 30,   0,  0, 8,  80, 1, 16},  // Mode 12 - 18.75KB
-    { 2, 160, 480,  20, 30,   0,  0, 8,  80, 1, 16},  // Mode 13 - 18.75KB
-    { 1, 320, 480,  40, 24,   0,  0, 8,  80, 1, 20},  // Mode 14 - 18.75KB
-    { 4, 320, 240,  40, 24,   0,  0, 4, 160, 2, 10},  // Mode 15 - 37.5KB
+    { 1, 640, 256,  80, 32, 112,  0, 8,  80, 0,  8},  // Mode  0 - 20KB
+    { 2, 320, 256,  40, 32, 112,  0, 8,  80, 0,  8},  // Mode  1 - 20KB
+    { 4, 160, 256,  20, 32, 112,  0, 8,  80, 0,  8},  // Mode  2 - 20KB
+    { 1, 640, 240,  80, 24,   0,  0, 8,  80, 1, 10},  // Mode  3 - 20KB
+    { 1, 320, 256,  40, 32, 112,  0, 8,  80, 0,  8},  // Mode  4 - 10KB
+    { 2, 160, 256,  20, 32, 112,  0, 8,  80, 0,  8},  // Mode  5 - 10KB
+    { 1, 320, 240,  40, 24,   0,  0, 8,  80, 1, 10},  // Mode  6 - 10KB
+    { 3, 320, 225,  40, 25,  15,  0, 4, 160, 1,TTH},  // Mode  7 - ~1KB - Teletext
+    { 1, 640, 480,  80, 30,   0,  0, 8,  80, 0, 16},  // Mode  8 - 37.5KB
+    { 2, 320, 480,  40, 30,   0,  0, 8,  80, 0, 16},  // Mode  9 - 37.5KB
+    { 4, 160, 480,  20, 30,   0,  0, 8,  80, 0, 16},  // Mode 10 - 37.5KB
+    { 1, 640, 480,  80, 24,   0,  0, 8,  80, 0, 20},  // Mode 11 - 37.5KB
+    { 1, 320, 480,  40, 30,   0,  0, 8,  80, 0, 16},  // Mode 12 - 18.75KB
+    { 2, 160, 480,  20, 30,   0,  0, 8,  80, 0, 16},  // Mode 13 - 18.75KB
+    { 1, 320, 480,  40, 24,   0,  0, 8,  80, 0, 20},  // Mode 14 - 18.75KB
+    { 4, 320, 240,  40, 24,   0,  0, 4, 160, 1, 10},  // Mode 15 - 37.5KB
     };
 #endif
 
@@ -271,7 +271,13 @@ static const MODE *pmode;
 
 extern int getkey (unsigned char *pkey);
 
-/****** Routines executed on Core 1 **********************************************************/
+/****** Routines executed on Core 1 **********************************************************
+
+Video render routines must be entirely in RAM.
+Do not use integer divide or modulus as compiler may turn these into calls
+routines in Flash.
+
+*/
 
 #if USE_INTERP
 static bool bCfgInt = false;    // Configure interpolators
@@ -288,6 +294,9 @@ extern const scanvideo_timing_t vga_timing_800x600_60_default;
 void __time_critical_func(render_mode7) (void)
     {
     uint32_t nFrame = 0;
+    uint32_t iRow;
+    uint32_t iScanCnt;
+    uint32_t iScanLst;
     bool bDouble = false;
     bool bLower = false;
 #if DEBUG > 0
@@ -306,7 +315,7 @@ void __time_critical_func(render_mode7) (void)
         struct scanvideo_scanline_buffer *buffer = scanvideo_begin_scanline_generation (true);
         uint32_t *twopix = buffer->data;
         int iScan = scanvideo_scanline_number (buffer->scanline_id) - pmode->vmgn;
-        if (( bBlank ) || (iScan < 0) || (iScan >= pmode->grow * pmode->yscl))
+        if (( bBlank ) || (iScan < 0) || (iScan >= ( pmode->grow << pmode->yshf )))
             {
             twopix[0] = COMPOSABLE_COLOR_RUN;
             twopix[2] = SWIDTH - 2 | ( COMPOSABLE_EOL_ALIGN << 16 );
@@ -317,16 +326,23 @@ void __time_critical_func(render_mode7) (void)
             if ( iScan == 0 )
                 {
                 ++nFrame;
+                iRow = 0;
+                iScanCnt = 0;
+                iScanLst = 0;
                 bDouble = false;
                 }
-            else if ( iScan % ( pmode->thgt * pmode->yscl ) == 0 )
+            else
                 {
-                bLower = bDouble;
-                bDouble = false;
+                iScanCnt += iScan - iScanLst;
+                if ( iScanCnt >= ( pmode->thgt << pmode->yshf ) )
+                    {
+                    iScanCnt -= pmode->thgt << pmode->yshf;
+                    ++iRow;
+                    bLower = bDouble;
+                    bDouble = false;
+                    }
                 }
-            iScan /= pmode->yscl;
-            int iRow = iScan / pmode->thgt;
-            iScan -= iRow * pmode->thgt;
+            iScan = iScanCnt >> pmode->yshf;
             uint8_t *pch = &framebuf[iRow * pmode->tcol];
             uint32_t *pxline = twopix;
             const uint8_t *pfont = font_tt[0x00] - 0x20 * TTH;
@@ -423,8 +439,8 @@ void __time_critical_func(render_mode7) (void)
                         }
                     else if (ch == 0x0D)
                         {
-                        if ( bLower )   iScan2 = ( iScan + 9 ) / 2;
-                        else            iScan2 = iScan / 2;
+                        if ( bLower )   iScan2 = ( iScan + 9 ) >> 1;
+                        else            iScan2 = iScan >> 1;
                         bDouble = true;
                         }
                     else if ((ch >= 0x10) && (ch <= 0x17))
@@ -577,7 +593,7 @@ void __time_critical_func(render_loop) (void)
         struct scanvideo_scanline_buffer *buffer = scanvideo_begin_scanline_generation (true);
         uint32_t *twopix = buffer->data;
         int iScan = scanvideo_scanline_number (buffer->scanline_id) - pmode->vmgn;
-        if (( bBlank ) || (iScan < 0) || (iScan >= pmode->grow * pmode->yscl))
+        if (( bBlank ) || (iScan < 0) || (iScan >= ( pmode->grow << pmode->yshf )))
             {
             twopix[0] = COMPOSABLE_COLOR_RUN;
             twopix[2] = SWIDTH - 2 | ( COMPOSABLE_EOL_ALIGN << 16 );
@@ -585,7 +601,7 @@ void __time_critical_func(render_loop) (void)
             }
         else
             {
-            iScan /= pmode->yscl;
+            iScan >>= pmode->yshf;
             if ( pmode->hmgn > 0 )
                 {
                 *twopix = COMPOSABLE_COLOR_RUN;             // High word is zero, black pixel
@@ -653,6 +669,12 @@ void __time_critical_func(render_loop) (void)
         }
     }
 
+// Replacement for the routine in the SDK which is not RAM resident
+static uint __time_critical_func(scanline_repeat_count_fn)(uint32_t scanline_id)
+    {
+    return 1;
+    }
+
 void setup_video (void)
     {
 #if DEBUG > 0
@@ -667,9 +689,12 @@ void setup_video (void)
 #else
     scanvideo_setup (&vga_mode_640x480_60);
 #endif
+    scanvideo_set_scanline_repeat_fn (scanline_repeat_count_fn);
     multicore_fifo_drain ();
     multicore_fifo_push_blocking (VGA_FLAG);
+#ifdef PICO_MCLOCK
     multicore_lockout_victim_init ();
+#endif
     scanvideo_timing_enable (true);
 #if DEBUG > 0
     printf ("setup_video: System clock speed %d kHz\n", clock_get_hz (clk_sys) / 1000);
