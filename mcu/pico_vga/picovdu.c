@@ -299,6 +299,7 @@ void __time_critical_func(render_mode7) (void)
     uint32_t iScanLst;
     bool bDouble = false;
     bool bLower = false;
+    uint8_t *pttfont = &framebuf[pmode->trow * pmode->tcol] - 0x20 * TTH;
 #if DEBUG > 0
     printf ("Entered mode 7 rendering\n");
 #endif
@@ -341,11 +342,12 @@ void __time_critical_func(render_mode7) (void)
                     bLower = bDouble;
                     bDouble = false;
                     }
+                iScanLst = iScan;
                 }
             iScan = iScanCnt >> pmode->yshf;
             uint8_t *pch = &framebuf[iRow * pmode->tcol];
             uint32_t *pxline = twopix;
-            const uint8_t *pfont = font_tt[0x00] - 0x20 * TTH;
+            const uint8_t *pfont = pttfont;
             int nfg = 7;
             uint32_t bgnd = ((uint32_t *)curpal)[0];
             uint32_t fgnd = ((uint32_t *)curpal)[nfg];
@@ -412,7 +414,7 @@ void __time_critical_func(render_mode7) (void)
                     twopix += 8;
                     if ((ch >= 0x00) && (ch <= 0x07))
                         {
-                        pfont = font_tt[0x00] - 0x20 * TTH;
+                        pfont = pttfont;
                         bGraph = false;
                         nfg = ch & 0x07;
                         if (( bFlash ) && ( nFrame & FLASH_BIT ))
@@ -439,14 +441,14 @@ void __time_critical_func(render_mode7) (void)
                         }
                     else if (ch == 0x0D)
                         {
-                        if ( bLower )   iScan2 = ( iScan + 9 ) >> 1;
+                        if ( bLower )   iScan2 = ( iScan + TTH ) >> 1;
                         else            iScan2 = iScan >> 1;
                         bDouble = true;
                         }
                     else if ((ch >= 0x10) && (ch <= 0x17))
                         {
-                        if ( bCont )    pfont = font_tt[0x60] - 0x20 * TTH;
-                        else            pfont = font_tt[0xC0] - 0x20 * TTH;
+                        if ( bCont )    pfont = pttfont + 0x60 * TTH;
+                        else            pfont = pttfont + 0xC0 * TTH;
                         bGraph = true;
                         nfg = ch & 0x07;
                         if (( bFlash ) && ( nFrame & FLASH_BIT ))
@@ -457,12 +459,12 @@ void __time_critical_func(render_mode7) (void)
                     else if (ch == 0x19)
                         {
                         bCont = true;
-                        if ( bGraph ) pfont = font_tt[0x60] - 0x20 * TTH;
+                        if ( bGraph ) pfont = pttfont + 0x60 * TTH;
                         }
                     else if (ch == 0x1A)
                         {
                         bCont = false;
-                        if ( bGraph ) pfont = font_tt[0xC0] - 0x20 * TTH;
+                        if ( bGraph ) pfont = pttfont + 0xC0 * TTH;
                         }
                     else if (ch == 0x1C)
                         {
@@ -1351,6 +1353,7 @@ static void modechg (int mode)
         clrreset ();
         rstview ();
         cls ();
+        if ( mode == 7 ) memcpy (&framebuf[pmode->trow * pmode->tcol], font_tt, sizeof (font_tt));
         csrtop = pmode->thgt - 1;
         csrhgt = 1;
         nCsrHide = 0;
