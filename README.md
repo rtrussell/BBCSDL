@@ -54,12 +54,7 @@ The following options may be specified with the cmake command:
 * -DSTDIO=... to select the user interface
   * -DSTDIO=USB for the basic console on USB
   * -DSTDIO=UART for the basic console on UART.
-  * -DSTDIO=PICO for input via USB keyboard and output via VGA monitor. With this option
-    video generation is disabled while saving data to Flash. Video unaffected if saving
-    to SD card.
-  * -DSTDIO=PICO2 DO NOT USE! Input via USB keyboard and output via VGA monitor. This
-    is supposed to continue to generate video while saving to Flash. However to to an
-    unresolved issue saving to Flash while video is running results in random crashes.
+  * -DSTDIO=PICO for input via USB keyboard and output via VGA monitor.
 * -DLFS=Y to include storage on Pico flash or -DLFS=N to exclude it.
 * -DFAT=Y to include storage on SD card or -DFAT=N to exclude it.
 * Other cmake options if required.

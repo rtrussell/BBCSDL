@@ -267,7 +267,7 @@ static const MODE modes[] = {
     };
 #endif
 
-static const MODE *pmode;
+static MODE curmode;
 
 extern int getkey (unsigned char *pkey);
 
@@ -299,11 +299,11 @@ void __time_critical_func(render_mode7) (void)
     uint32_t iScanLst;
     bool bDouble = false;
     bool bLower = false;
-    uint8_t *pttfont = &framebuf[pmode->trow * pmode->tcol] - 0x20 * TTH;
+    uint8_t *pttfont = &framebuf[curmode.trow * curmode.tcol] - 0x20 * TTH;
 #if DEBUG > 0
     printf ("Entered mode 7 rendering\n");
 #endif
-    while (pmode == &modes[7])
+    while (curmode.ncbt == 3)
         {
         if ( bCfgInt )
             {
@@ -315,8 +315,8 @@ void __time_critical_func(render_mode7) (void)
             }
         struct scanvideo_scanline_buffer *buffer = scanvideo_begin_scanline_generation (true);
         uint32_t *twopix = buffer->data;
-        int iScan = scanvideo_scanline_number (buffer->scanline_id) - pmode->vmgn;
-        if (( bBlank ) || (iScan < 0) || (iScan >= ( pmode->grow << pmode->yshf )))
+        int iScan = scanvideo_scanline_number (buffer->scanline_id) - curmode.vmgn;
+        if (( bBlank ) || (iScan < 0) || (iScan >= ( curmode.grow << curmode.yshf )))
             {
             twopix[0] = COMPOSABLE_COLOR_RUN;
             twopix[2] = SWIDTH - 2 | ( COMPOSABLE_EOL_ALIGN << 16 );
@@ -335,17 +335,17 @@ void __time_critical_func(render_mode7) (void)
             else
                 {
                 iScanCnt += iScan - iScanLst;
-                if ( iScanCnt >= ( pmode->thgt << pmode->yshf ) )
+                if ( iScanCnt >= ( curmode.thgt << curmode.yshf ) )
                     {
-                    iScanCnt -= pmode->thgt << pmode->yshf;
+                    iScanCnt -= curmode.thgt << curmode.yshf;
                     ++iRow;
                     bLower = bDouble;
                     bDouble = false;
                     }
                 iScanLst = iScan;
                 }
-            iScan = iScanCnt >> pmode->yshf;
-            uint8_t *pch = &framebuf[iRow * pmode->tcol];
+            iScan = iScanCnt >> curmode.yshf;
+            uint8_t *pch = &framebuf[iRow * curmode.tcol];
             uint32_t *pxline = twopix;
             const uint8_t *pfont = pttfont;
             int nfg = 7;
@@ -356,7 +356,7 @@ void __time_critical_func(render_mode7) (void)
             bool bCont = true;
             bool bHold = false;
             int iScan2 = iScan;
-            for (int iCol = 0; iCol < pmode->tcol; ++iCol)
+            for (int iCol = 0; iCol < curmode.tcol; ++iCol)
                 {
                 uint8_t ch = *pch;
                 if ( ch >= 0x20 )
@@ -503,7 +503,7 @@ void __time_critical_func(render_mode7) (void)
                 twopix[7] ^= ttcsr;
                 }
             pxline[0] = ( pxline[1] << 16 ) | COMPOSABLE_RAW_RUN;
-            pxline[1] = ( pxline[1] & 0xFFFF0000 ) | ( pmode->nbpl * pmode->nppb - 2 );
+            pxline[1] = ( pxline[1] & 0xFFFF0000 ) | ( curmode.nbpl * curmode.nppb - 2 );
             }
         scanvideo_end_scanline_generation (buffer);
         }
@@ -517,70 +517,67 @@ void __time_critical_func(render_mode7) (void)
 #if USE_INTERP
 static void setup_interp (void)
     {
-    if ( pmode != NULL )
+    interp_config c = interp_default_config();
+    if ( curmode.nppb == 8 )
         {
-        interp_config c = interp_default_config();
-        if ( pmode->nppb == 8 )
-            {
-            interp_config_set_shift (&c, 20);
-            interp_config_set_mask (&c, 4, 11);
-            interp_set_config (interp0, 0, &c);
-            interp_config_set_shift (&c, 12);
-            }
-        else if ( pmode->nppb == 4 )
-            {
-            interp_config_set_shift (&c, 21);
-            interp_config_set_mask (&c, 3, 10);
-            interp_set_config (interp0, 0, &c);
-            interp_config_set_shift (&c, 13);
-            }
-        else
-            {
-            interp_config_set_shift (&c, 22);
-            interp_config_set_mask (&c, 2, 9);
-            interp_set_config (interp0, 0, &c);
-            interp_config_set_shift (&c, 14);
-            }
-        interp_config_set_cross_input (&c, true);
-        interp_set_config (interp0, 1, &c);
-        interp_set_base (interp0, 0, (uintptr_t)renderbuf);
-        interp_set_base (interp0, 1, (uintptr_t)renderbuf);
-#if DEBUG > 1
-        printf ("Interpolator test:\n");
-        for (uint32_t i = 0; i < 256; ++i )
-            {
-#if 1
-            static uint16_t buf[32];
-            static uint8_t dfb[4];
-            dfb[0] = i;
-            dfb[1] = i;
-            dfb[2] = i;
-            dfb[3] = i;
-            convert_from_pal16_8 ((uint32_t *) buf, dfb, 4);
-            printf ("interp (%3d) = I", i);
-            for (int j = 0; j < 32; ++j)
-                {
-                if ( buf[j] ) printf ("*");
-                else printf (" ");
-                }
-            printf ("I\n");
-#else
-            interp_set_accumulator (interp0, 0, i << 24);
-            uint16_t *prb = (uint16_t *) interp_peek_lane_result (interp0, 0);
-            printf ("interp (%3d) = 0x%08X:", i, prb);
-            for (int j = 0; j < 8; ++j)
-                {
-                if ( *prb ) printf (" %04X", *prb);
-                else printf (" ----");
-                ++prb;
-                }
-            printf ("\n");
-#endif
-            }
-#endif
-        bCfgInt = false;
-        bBlank = false;
+        interp_config_set_shift (&c, 20);
+        interp_config_set_mask (&c, 4, 11);
+        interp_set_config (interp0, 0, &c);
+        interp_config_set_shift (&c, 12);
         }
+    else if ( curmode.nppb == 4 )
+        {
+        interp_config_set_shift (&c, 21);
+        interp_config_set_mask (&c, 3, 10);
+        interp_set_config (interp0, 0, &c);
+        interp_config_set_shift (&c, 13);
+        }
+    else
+        {
+        interp_config_set_shift (&c, 22);
+        interp_config_set_mask (&c, 2, 9);
+        interp_set_config (interp0, 0, &c);
+        interp_config_set_shift (&c, 14);
+        }
+    interp_config_set_cross_input (&c, true);
+    interp_set_config (interp0, 1, &c);
+    interp_set_base (interp0, 0, (uintptr_t)renderbuf);
+    interp_set_base (interp0, 1, (uintptr_t)renderbuf);
+#if DEBUG > 1
+    printf ("Interpolator test:\n");
+    for (uint32_t i = 0; i < 256; ++i )
+        {
+#if 1
+        static uint16_t buf[32];
+        static uint8_t dfb[4];
+        dfb[0] = i;
+        dfb[1] = i;
+        dfb[2] = i;
+        dfb[3] = i;
+        convert_from_pal16_8 ((uint32_t *) buf, dfb, 4);
+        printf ("interp (%3d) = I", i);
+        for (int j = 0; j < 32; ++j)
+            {
+            if ( buf[j] ) printf ("*");
+            else printf (" ");
+            }
+        printf ("I\n");
+#else
+        interp_set_accumulator (interp0, 0, i << 24);
+        uint16_t *prb = (uint16_t *) interp_peek_lane_result (interp0, 0);
+        printf ("interp (%3d) = 0x%08X:", i, prb);
+        for (int j = 0; j < 8; ++j)
+            {
+            if ( *prb ) printf (" %04X", *prb);
+            else printf (" ----");
+            ++prb;
+            }
+        printf ("\n");
+#endif
+        }
+#endif
+    bCfgInt = false;
+    bBlank = false;
     }
 #endif
 
@@ -588,14 +585,14 @@ void __time_critical_func(render_loop) (void)
     {
     while (true)
         {
-        if ( pmode == &modes[7] ) render_mode7 ();
+        if ( curmode.ncbt == 3 ) render_mode7 ();
 #if USE_INTERP
         if ( bCfgInt ) setup_interp ();
 #endif
         struct scanvideo_scanline_buffer *buffer = scanvideo_begin_scanline_generation (true);
         uint32_t *twopix = buffer->data;
-        int iScan = scanvideo_scanline_number (buffer->scanline_id) - pmode->vmgn;
-        if (( bBlank ) || (iScan < 0) || (iScan >= ( pmode->grow << pmode->yshf )))
+        int iScan = scanvideo_scanline_number (buffer->scanline_id) - curmode.vmgn;
+        if (( bBlank ) || (iScan < 0) || (iScan >= ( curmode.grow << curmode.yshf )))
             {
             twopix[0] = COMPOSABLE_COLOR_RUN;
             twopix[2] = SWIDTH - 2 | ( COMPOSABLE_EOL_ALIGN << 16 );
@@ -603,25 +600,25 @@ void __time_critical_func(render_loop) (void)
             }
         else
             {
-            iScan >>= pmode->yshf;
-            if ( pmode->hmgn > 0 )
+            iScan >>= curmode.yshf;
+            if ( curmode.hmgn > 0 )
                 {
                 *twopix = COMPOSABLE_COLOR_RUN;             // High word is zero, black pixel
                 ++twopix;
-                *twopix = (pmode->hmgn - 5) | COMPOSABLE_RAW_2P;    // To use an even number of 16-bit words
+                *twopix = (curmode.hmgn - 5) | COMPOSABLE_RAW_2P;    // To use an even number of 16-bit words
                 ++twopix;
                 *twopix = 0;                                // 2 black pixels
                 }
             uint32_t *pxline = twopix;
             ++twopix;
-            uint8_t *pfb = framebuf + iScan * pmode->nbpl;
-            if ( pmode->nppb == 8 )
+            uint8_t *pfb = framebuf + iScan * curmode.nbpl;
+            if ( curmode.nppb == 8 )
                 {
 #if USE_INTERP
-                convert_from_pal16_8 (twopix, pfb, pmode->nbpl);
-                twopix += 4 * pmode->nbpl;
+                convert_from_pal16_8 (twopix, pfb, curmode.nbpl);
+                twopix += 4 * curmode.nbpl;
 #else
-                for (int i = 0; i < pmode->nbpl; ++i)
+                for (int i = 0; i < curmode.nbpl; ++i)
                     {
                     uint32_t *twoclr = (uint32_t *) &renderbuf[8 * (*pfb)];
                     *(++twopix) = *twoclr;
@@ -632,13 +629,13 @@ void __time_critical_func(render_loop) (void)
                     }
 #endif
                 }
-            else if ( pmode->nppb == 4 )
+            else if ( curmode.nppb == 4 )
                 {
 #if USE_INTERP
-                convert_from_pal16_4 (twopix, pfb, pmode->nbpl);
-                twopix += 2 * pmode->nbpl;
+                convert_from_pal16_4 (twopix, pfb, curmode.nbpl);
+                twopix += 2 * curmode.nbpl;
 #else
-                for (int i = 0; i < pmode->nbpl; ++i)
+                for (int i = 0; i < curmode.nbpl; ++i)
                     {
                     uint32_t *twoclr = (uint32_t *) &renderbuf[4 * (*pfb)];
                     *(++twopix) = *twoclr;
@@ -647,13 +644,13 @@ void __time_critical_func(render_loop) (void)
                     }
 #endif
                 }
-            else if ( pmode->nppb == 2 )
+            else if ( curmode.nppb == 2 )
                 {
 #if USE_INTERP
-                convert_from_pal16 (twopix, pfb, pmode->nbpl);
-                twopix += pmode->nbpl;
+                convert_from_pal16 (twopix, pfb, curmode.nbpl);
+                twopix += curmode.nbpl;
 #else
-                for (int i = 0; i < pmode->nbpl; ++i)
+                for (int i = 0; i < curmode.nbpl; ++i)
                     {
                     uint32_t *twoclr = (uint32_t *) &renderbuf[2*(*pfb)];
                     *(++twopix) = *twoclr;
@@ -664,7 +661,7 @@ void __time_critical_func(render_loop) (void)
             *twopix = COMPOSABLE_EOL_ALIGN << 16;   // Implicit zero (black) in low word
             ++twopix;
             pxline[0] = ( pxline[1] << 16 ) | COMPOSABLE_RAW_RUN;
-            pxline[1] = ( pxline[1] & 0xFFFF0000 ) | ( pmode->nbpl * pmode->nppb - 2 );
+            pxline[1] = ( pxline[1] & 0xFFFF0000 ) | ( curmode.nbpl * curmode.nppb - 2 );
             buffer->data_used = twopix - buffer->data;
             }
         scanvideo_end_scanline_generation (buffer);
@@ -717,7 +714,7 @@ static void flipcsr (void)
         {
         xp = pltpt[0].x / 2;
         yp = pltpt[0].y / 2;
-        if (( xp < gvl ) || ( xp + 7 > gvr ) || ( yp < gvt ) || ( yp + pmode->thgt - 1 > gvb ))
+        if (( xp < gvl ) || ( xp + 7 > gvr ) || ( yp < gvt ) || ( yp + curmode.thgt - 1 > gvb ))
             {
             nCsrHide |= CSR_INV;
             bCsrVis = false;
@@ -726,18 +723,18 @@ static void flipcsr (void)
         }
     else
         {
-        if (( row < 0 ) || ( row >= pmode->trow ) || ( col < 0 ) || ( col >= pmode->tcol ))
+        if (( row < 0 ) || ( row >= curmode.trow ) || ( col < 0 ) || ( col >= curmode.tcol ))
             {
             nCsrHide |= CSR_INV;
             bCsrVis = false;
             return;
             }
         xp = 8 * col;
-        yp = row * pmode->thgt;
+        yp = row * curmode.thgt;
         }
     yp += csrtop;
-    CLRDEF *cdef = &clrdef[pmode->ncbt];
-    uint32_t *fb = (uint32_t *)(framebuf + yp * pmode->nbpl);
+    CLRDEF *cdef = &clrdef[curmode.ncbt];
+    uint32_t *fb = (uint32_t *)(framebuf + yp * curmode.nbpl);
     xp <<= cdef->bitsh;
     fb += xp >> 5;
     xp &= 0x1F;
@@ -747,45 +744,45 @@ static void flipcsr (void)
         {
         *fb ^= msk1;
         *(fb + 1) ^= msk2;
-        fb += pmode->nbpl / 4;
+        fb += curmode.nbpl / 4;
         ++yp;
         }
 #if 0
         }
     else
         {
-        if (( row < 0 ) || ( row >= pmode->trow ) || ( col < 0 ) || ( col >= pmode->tcol ))
+        if (( row < 0 ) || ( row >= curmode.trow ) || ( col < 0 ) || ( col >= curmode.tcol ))
             {
             nCsrHide |= CSR_INV;
             bCsrVis = false;
             return;
             }
-        uint8_t *pfb = framebuf + (row * pmode->thgt + csrtop) * pmode->nbpl;
-        if ( pmode->ncbt == 1 )
+        uint8_t *pfb = framebuf + (row * curmode.thgt + csrtop) * curmode.nbpl;
+        if ( curmode.ncbt == 1 )
             {
             pfb += col;
             for (int i = 0; i < csrhgt; ++i)
                 {
                 *pfb ^= 0xFF;
-                pfb += pmode->nbpl;
+                pfb += curmode.nbpl;
                 }
             }
-        else if ( pmode->ncbt == 2 )
+        else if ( curmode.ncbt == 2 )
             {
             pfb += 2 * col;
             for (int i = 0; i < csrhgt; ++i)
                 {
                 *((uint16_t *)pfb) ^= 0xFFFF;
-                pfb += pmode->nbpl;
+                pfb += curmode.nbpl;
                 }
             }
-        else if ( pmode->ncbt == 4 )
+        else if ( curmode.ncbt == 4 )
             {
             pfb += 4 * col;
             for (int i = 0; i < csrhgt; ++i)
                 {
                 *((uint32_t *)pfb) ^= 0xFFFFFFFF;
-                pfb += pmode->nbpl;
+                pfb += curmode.nbpl;
                 }
             }
         }
@@ -796,7 +793,7 @@ static void flipcsr (void)
 static void hidecsr (void)
     {
     ++nCsrHide;
-    if ( pmode != &modes[7] )
+    if ( curmode.ncbt != 3 )
         {
         critical_section_enter_blocking (&cs_csr);
         if ( bCsrVis ) flipcsr ();
@@ -811,7 +808,7 @@ static void showcsr (void)
         {
         int xp = pltpt[0].x / 2;
         int yp = pltpt[0].y / 2;
-        if (( xp >= gvl ) && ( xp + 7 <= gvr ) && ( yp >= gvt ) && ( yp + pmode->thgt - 1 <= gvb ))
+        if (( xp >= gvl ) && ( xp + 7 <= gvr ) && ( yp >= gvt ) && ( yp + curmode.thgt - 1 <= gvb ))
             nCsrHide &= ~CSR_INV;
         else
             nCsrHide |= CSR_INV;
@@ -823,7 +820,7 @@ static void showcsr (void)
         else
             nCsrHide |= CSR_INV;
         }
-    if (( pmode != &modes[7] ) && ( nCsrHide == 0 ))
+    if (( curmode.ncbt != 3 ) && ( nCsrHide == 0 ))
         {
         critical_section_enter_blocking (&cs_csr);
         if ( ! bCsrVis ) flipcsr ();
@@ -833,7 +830,7 @@ static void showcsr (void)
 
 static void flashcsr (void)
     {
-    if (( pmode != &modes[7] ) && ( nCsrHide == 0 ))
+    if (( curmode.ncbt != 3 ) && ( nCsrHide == 0 ))
         {
         critical_section_enter_blocking (&cs_csr);
         flipcsr ();
@@ -855,11 +852,11 @@ static void csrdef (int data2)
         {
         if ( p2 == 10 )
             {
-            if ( p3 < pmode->thgt ) csrtop = p3;
+            if ( p3 < curmode.thgt ) csrtop = p3;
             }
         else if ( p2 == 11 )
             {
-            if ( p3 < pmode->thgt ) csrhgt = p3 - csrtop + 1;
+            if ( p3 < curmode.thgt ) csrhgt = p3 - csrtop + 1;
             }
         }
     }
@@ -877,7 +874,7 @@ static void home (void)
         pushpts ();
         pltpt[0].x = 2 * gvl;
         pltpt[0].y = 2 * gvt;
-        if ( scroln & 0x80 ) scroln = 0x80 + ( gvb - gvt + 1 ) / pmode->thgt;
+        if ( scroln & 0x80 ) scroln = 0x80 + ( gvb - gvt + 1 ) / curmode.thgt;
         }
     else
         {
@@ -891,53 +888,53 @@ static void home (void)
 static void scrldn (void)
     {
     hidecsr ();
-    if ( pmode == &modes[7] )
+    if ( curmode.ncbt == 3 )
         {
-        if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
+        if (( tvl == 0 ) && ( tvr == curmode.tcol - 1 ))
             {
-            memmove (framebuf + ( tvt + 1 ) * pmode->tcol,
-                framebuf + tvt * pmode->tcol,
-                ( tvb - tvt ) * pmode->tcol);
-            memset (framebuf + tvt * pmode->tcol, ' ', pmode->tcol);
+            memmove (framebuf + ( tvt + 1 ) * curmode.tcol,
+                framebuf + tvt * curmode.tcol,
+                ( tvb - tvt ) * curmode.tcol);
+            memset (framebuf + tvt * curmode.tcol, ' ', curmode.tcol);
             }
         else
             {
-            uint8_t *fb1 = framebuf + tvb * pmode->tcol + tvl;
-            uint8_t *fb2 = fb1 + pmode->tcol;
+            uint8_t *fb1 = framebuf + tvb * curmode.tcol + tvl;
+            uint8_t *fb2 = fb1 + curmode.tcol;
             int nr = tvb - tvt;
             int nb = tvr - tvl + 1;
             for (int ir = 0; ir < nr; ++ir)
                 {
-                fb1 -= pmode->tcol;
-                fb2 -= pmode->tcol;
+                fb1 -= curmode.tcol;
+                fb2 -= curmode.tcol;
                 memcpy (fb2, fb1, nb);
                 }
             memset (fb1, ' ', nb);
             }
         }
-    else if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
+    else if (( tvl == 0 ) && ( tvr == curmode.tcol - 1 ))
         {
-        memmove (framebuf + ( tvt + 1 ) * pmode->thgt * pmode->nbpl,
-            framebuf + tvt * pmode->thgt * pmode->nbpl,
-            ( tvb - tvt ) * pmode->thgt * pmode->nbpl);
-        memset (framebuf + tvt * pmode->thgt * pmode->nbpl, bgfill, pmode->thgt * pmode->nbpl);
+        memmove (framebuf + ( tvt + 1 ) * curmode.thgt * curmode.nbpl,
+            framebuf + tvt * curmode.thgt * curmode.nbpl,
+            ( tvb - tvt ) * curmode.thgt * curmode.nbpl);
+        memset (framebuf + tvt * curmode.thgt * curmode.nbpl, bgfill, curmode.thgt * curmode.nbpl);
         }
     else
         {
-        uint8_t *fb1 = framebuf + tvb * pmode->thgt * pmode->nbpl
-            + ( tvl << clrdef[pmode->ncbt].bitsh );
-        uint8_t *fb2 = fb1 + pmode->thgt * pmode->nbpl;
-        int nr = ( tvb - tvt ) * pmode->thgt;
-        int nb = ( tvr - tvl + 1 ) << clrdef[pmode->ncbt].bitsh;
+        uint8_t *fb1 = framebuf + tvb * curmode.thgt * curmode.nbpl
+            + ( tvl << clrdef[curmode.ncbt].bitsh );
+        uint8_t *fb2 = fb1 + curmode.thgt * curmode.nbpl;
+        int nr = ( tvb - tvt ) * curmode.thgt;
+        int nb = ( tvr - tvl + 1 ) << clrdef[curmode.ncbt].bitsh;
         for (int ir = 0; ir < nr; ++ir)
             {
-            fb1 -= pmode->nbpl;
-            fb2 -= pmode->nbpl;
+            fb1 -= curmode.nbpl;
+            fb2 -= curmode.nbpl;
             memcpy (fb2, fb1, nb);
             }
-        for (int ir = 0; ir < pmode->thgt; ++ir)
+        for (int ir = 0; ir < curmode.thgt; ++ir)
             {
-            fb2 -= pmode->nbpl;
+            fb2 -= curmode.nbpl;
             memset (fb2, bgfill, nb);
             }
         }
@@ -947,52 +944,52 @@ static void scrldn (void)
 static void scrlup (void)
     {
     hidecsr ();
-    if ( pmode == &modes[7] )
+    if ( curmode.ncbt == 3 )
         {
-        if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
+        if (( tvl == 0 ) && ( tvr == curmode.tcol - 1 ))
             {
-            memmove (framebuf, framebuf + pmode->tcol, ( pmode->trow - 1 ) * pmode->tcol);
-            memset (framebuf + ( pmode->trow - 1 ) * pmode->tcol, ' ', pmode->tcol);
+            memmove (framebuf, framebuf + curmode.tcol, ( curmode.trow - 1 ) * curmode.tcol);
+            memset (framebuf + ( curmode.trow - 1 ) * curmode.tcol, ' ', curmode.tcol);
             }
         else
             {
-            uint8_t *fb1 = framebuf + tvt * pmode->tcol + tvl;
-            uint8_t *fb2 = fb1 + pmode->tcol;
+            uint8_t *fb1 = framebuf + tvt * curmode.tcol + tvl;
+            uint8_t *fb2 = fb1 + curmode.tcol;
             int nr = tvb - tvt;
             int nb = tvr - tvl + 1;
             for (int ir = 0; ir < nr; ++ir)
                 {
                 memcpy (fb1, fb2, nb);
-                fb1 += pmode->tcol;
-                fb2 += pmode->tcol;
+                fb1 += curmode.tcol;
+                fb2 += curmode.tcol;
                 }
             memset (fb2, ' ', nb);
             }
         }
-    else if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
+    else if (( tvl == 0 ) && ( tvr == curmode.tcol - 1 ))
         {
-        memmove (framebuf + tvt * pmode->thgt * pmode->nbpl,
-            framebuf + ( tvt + 1 ) * pmode->thgt * pmode->nbpl,
-            ( tvb - tvt ) * pmode->thgt * pmode->nbpl);
-        memset (framebuf + tvb * pmode->thgt * pmode->nbpl, bgfill, pmode->thgt * pmode->nbpl);
+        memmove (framebuf + tvt * curmode.thgt * curmode.nbpl,
+            framebuf + ( tvt + 1 ) * curmode.thgt * curmode.nbpl,
+            ( tvb - tvt ) * curmode.thgt * curmode.nbpl);
+        memset (framebuf + tvb * curmode.thgt * curmode.nbpl, bgfill, curmode.thgt * curmode.nbpl);
         }
     else
         {
-        uint8_t *fb1 = framebuf + tvt * pmode->thgt * pmode->nbpl
-            + ( tvl << clrdef[pmode->ncbt].bitsh );
-        uint8_t *fb2 = fb1 + pmode->thgt * pmode->nbpl;
-        int nr = ( tvb - tvt ) * pmode->thgt;
-        int nb = ( tvr - tvl + 1 ) << clrdef[pmode->ncbt].bitsh;
+        uint8_t *fb1 = framebuf + tvt * curmode.thgt * curmode.nbpl
+            + ( tvl << clrdef[curmode.ncbt].bitsh );
+        uint8_t *fb2 = fb1 + curmode.thgt * curmode.nbpl;
+        int nr = ( tvb - tvt ) * curmode.thgt;
+        int nb = ( tvr - tvl + 1 ) << clrdef[curmode.ncbt].bitsh;
         for (int ir = 0; ir < nr; ++ir)
             {
             memcpy (fb1, fb2, nb);
-            fb1 += pmode->nbpl;
-            fb2 += pmode->nbpl;
+            fb1 += curmode.nbpl;
+            fb2 += curmode.nbpl;
             }
-        for (int ir = 0; ir < pmode->thgt; ++ir)
+        for (int ir = 0; ir < curmode.thgt; ++ir)
             {
             memset (fb1, bgfill, nb);
-            fb1 += pmode->nbpl;
+            fb1 += curmode.nbpl;
             }
         }
     showcsr ();
@@ -1004,39 +1001,39 @@ static void cls ()
     printf ("cls: bgfill = 0x%02\n", bgfill);
 #endif
     hidecsr ();
-    if ( pmode == &modes[7] )
+    if ( curmode.ncbt == 3 )
         {
-        if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
+        if (( tvl == 0 ) && ( tvr == curmode.tcol - 1 ))
             {
-            memset (framebuf + tvt * pmode->tcol, ' ', ( tvb - tvt + 1 ) * pmode->tcol);
+            memset (framebuf + tvt * curmode.tcol, ' ', ( tvb - tvt + 1 ) * curmode.tcol);
             }
         else
             {
-            uint8_t *fb1 = framebuf + tvt * pmode->tcol + tvl;
+            uint8_t *fb1 = framebuf + tvt * curmode.tcol + tvl;
             int nr = tvb - tvt + 1;
             int nb = tvr - tvl + 1;
             for (int ir = 0; ir < nr; ++ir)
                 {
                 memset (fb1, ' ', nb);
-                fb1 += pmode->tcol;
+                fb1 += curmode.tcol;
                 }
             }
         }
-    else if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
+    else if (( tvl == 0 ) && ( tvr == curmode.tcol - 1 ))
         {
-        memset (framebuf + tvt * pmode->thgt * pmode->nbpl, bgfill,
-            ( tvb - tvt + 1 ) * pmode->thgt * pmode->nbpl);
+        memset (framebuf + tvt * curmode.thgt * curmode.nbpl, bgfill,
+            ( tvb - tvt + 1 ) * curmode.thgt * curmode.nbpl);
         }
     else
         {
-        uint8_t *fb1 = framebuf + tvt * pmode->thgt * pmode->nbpl
-            + ( tvl << clrdef[pmode->ncbt].bitsh );
-        int nr = ( tvb - tvt + 1 ) * pmode->thgt;
-        int nb = ( tvr - tvl + 1 ) << clrdef[pmode->ncbt].bitsh;
+        uint8_t *fb1 = framebuf + tvt * curmode.thgt * curmode.nbpl
+            + ( tvl << clrdef[curmode.ncbt].bitsh );
+        int nr = ( tvb - tvt + 1 ) * curmode.thgt;
+        int nb = ( tvr - tvl + 1 ) << clrdef[curmode.ncbt].bitsh;
         for (int ir = 0; ir < nr; ++ir)
             {
             memset (fb1, bgfill, nb);
-            fb1 += pmode->nbpl;
+            fb1 += curmode.nbpl;
             }
         }
     home ();
@@ -1045,11 +1042,11 @@ static void cls ()
 
 static void dispchr (int chr)
     {
-    if (( row < 0 ) || ( row >= pmode->trow ) || ( col < 0 ) || ( col >= pmode->tcol ))
+    if (( row < 0 ) || ( row >= curmode.trow ) || ( col < 0 ) || ( col >= curmode.tcol ))
         {
 #if DEBUG > 0
         printf ("Cursor out of range: row = %d, col = %d, screen = %dx%d\n",
-            row, col, pmode->trow, pmode->tcol);
+            row, col, curmode.trow, curmode.tcol);
 #endif
         return;
         }
@@ -1057,14 +1054,14 @@ static void dispchr (int chr)
     if ((chr >= 0x20) && (chr <= 0x7F)) printf ("dispchr ('%c')\n", chr);
     else printf ("dispchr (0x%02X)\n", chr);
 #endif
-    if ( pmode == &modes[7] )
+    if ( curmode.ncbt == 3 )
         {
-        framebuf[row * pmode->tcol + col] = chr & 0x7F;
+        framebuf[row * curmode.tcol + col] = chr & 0x7F;
         }
     else
         {
         hidecsr ();
-        uint32_t fhgt = pmode->thgt;
+        uint32_t fhgt = curmode.thgt;
         bool bDbl = false;
         if ( fhgt > 10 )
             {
@@ -1072,9 +1069,9 @@ static void dispchr (int chr)
             bDbl = true;
             }
         const uint8_t *pch = font_10[chr];
-        uint8_t *pfb = framebuf + row * pmode->thgt * pmode->nbpl;
+        uint8_t *pfb = framebuf + row * curmode.thgt * curmode.nbpl;
         if ( fhgt == 8 ) ++pch;
-        if ( pmode->ncbt == 1 )
+        if ( curmode.ncbt == 1 )
             {
             pfb += col;
             uint8_t fpx = (uint8_t) cpx02[fg];
@@ -1093,16 +1090,16 @@ static void dispchr (int chr)
 #endif
                 uint8_t pix = ( (*pch) & fpx ) | ( (~ (*pch)) & bpx );
                 *pfb = pix;
-                pfb += pmode->nbpl;
+                pfb += curmode.nbpl;
                 if ( bDbl )
                     {
                     *pfb = pix;
-                    pfb += pmode->nbpl;
+                    pfb += curmode.nbpl;
                     }
                 ++pch;
                 }
             }
-        else if ( pmode->ncbt == 2 )
+        else if ( curmode.ncbt == 2 )
             {
             pfb += 2 * col;
             uint16_t fpx = cpx04[fg];
@@ -1112,16 +1109,16 @@ static void dispchr (int chr)
                 uint16_t mask = pmsk04[*pch];
                 uint16_t pix = ( mask & fpx ) | ( (~ mask) & bpx );
                 *((uint16_t *)pfb) = pix;
-                pfb += pmode->nbpl;
+                pfb += curmode.nbpl;
                 if ( bDbl )
                     {
                     *((uint16_t *)pfb) = pix;
-                    pfb += pmode->nbpl;
+                    pfb += curmode.nbpl;
                     }
                 ++pch;
                 }
             }
-        else if ( pmode->ncbt == 4 )
+        else if ( curmode.ncbt == 4 )
             {
             pfb += 4 * col;
             uint32_t fpx = cpx16[fg];
@@ -1131,11 +1128,11 @@ static void dispchr (int chr)
                 uint32_t mask = pmsk16[*pch];
                 uint32_t pix = ( mask & fpx ) | ( (~ mask) & bpx );
                 *((uint32_t *)pfb) = pix;
-                pfb += pmode->nbpl;
+                pfb += curmode.nbpl;
                 if ( bDbl )
                     {
                     *((uint32_t *)pfb) = pix;
-                    pfb += pmode->nbpl;
+                    pfb += curmode.nbpl;
                     }
                 ++pch;
                 }
@@ -1197,8 +1194,8 @@ static void tabxy (int x, int y)
 
 static void twind (int vl, int vb, int vr, int vt)
     {
-    if (( vl < 0 ) || ( vl > vr ) || ( vr >= pmode->tcol )
-        || ( vt < 0 ) || ( vt > vb ) || ( vb >= pmode->trow )) return;
+    if (( vl < 0 ) || ( vl > vr ) || ( vr >= curmode.tcol )
+        || ( vt < 0 ) || ( vt > vb ) || ( vb >= curmode.trow )) return;
     tvl = vl;
     tvr = vr;
     tvt = vt;
@@ -1213,7 +1210,7 @@ static void genrb (void)
     printf ("genrb\n");
 #endif
     uint16_t *prb = (uint16_t *)renderbuf;
-    if ( pmode->ncbt == 1 )
+    if ( curmode.ncbt == 1 )
         {
         for (int i = 0; i < 256; ++i)
             {
@@ -1226,7 +1223,7 @@ static void genrb (void)
                 }
             }
         }
-    else if ( pmode->ncbt == 2 )
+    else if ( curmode.ncbt == 2 )
         {
         for (int i = 0; i < 256; ++i)
             {
@@ -1235,7 +1232,7 @@ static void genrb (void)
                 {
                 *prb = curpal[pix & 0x03];
                 ++prb;
-                if ( pmode->nppb == 8 )
+                if ( curmode.nppb == 8 )
                     {
                     *prb = curpal[pix & 0x03];
                     ++prb;
@@ -1244,18 +1241,18 @@ static void genrb (void)
                 }
             }
         }
-    else if ( pmode->ncbt == 4 )
+    else if ( curmode.ncbt == 4 )
         {
         for (int i = 0; i < 256; ++i)
             {
             uint16_t clr = curpal[i & 0x0F];
-            for (int j = 0; j < pmode->nppb / 2; ++j)
+            for (int j = 0; j < curmode.nppb / 2; ++j)
                 {
                 *prb = clr;
                 ++prb;
                 }
             clr = curpal[i >> 4];
-            for (int j = 0; j < pmode->nppb / 2; ++j)
+            for (int j = 0; j < curmode.nppb / 2; ++j)
                 {
                 *prb = clr;
                 ++prb;
@@ -1272,7 +1269,7 @@ static void clrreset (void)
     bg = 0;
     bgfill = 0;
     gbg = 0;
-    if ( pmode->ncbt == 1 )
+    if ( curmode.ncbt == 1 )
         {
 #if DEBUG > 0
         printf ("clrreset: nclr = 2\n");
@@ -1282,7 +1279,7 @@ static void clrreset (void)
         fg = 1;
         gfg = 1;
         }
-    else if ( pmode->ncbt == 2 )
+    else if ( curmode.ncbt == 2 )
         {
 #if DEBUG > 0
         printf ("clrreset: nclr = 4\n");
@@ -1294,7 +1291,7 @@ static void clrreset (void)
         fg = 3;
         gfg = 3;
         }
-    else if ( pmode->ncbt == 3 )
+    else if ( curmode.ncbt == 3 )
         {
 #if DEBUG > 0
         printf ("clrreset: nclr = 4\n");
@@ -1323,20 +1320,20 @@ static void rstview (void)
     {
     hidecsr ();
     tvt = 0;
-    tvb = pmode->trow - 1;
+    tvb = curmode.trow - 1;
     tvl = 0;
-    tvr = pmode->tcol - 1;
+    tvr = curmode.tcol - 1;
     col = 0;
     row = 0;
     gxo = 0;
     gyo = 0;
     gvt = 0;
-    gvb = pmode->grow - 1;
+    gvb = curmode.grow - 1;
     gvl = 0;
-    gvr = pmode->gcol - 1;
+    gvr = curmode.gcol - 1;
     pushpts ();
     pltpt[0].x = 0;
-    pltpt[0].y = 2 * pmode->grow - 1;
+    pltpt[0].y = 2 * curmode.grow - 1;
     showcsr ();
     }
 
@@ -1348,13 +1345,13 @@ static void modechg (int mode)
     if (( mode >= 0 ) && ( mode < sizeof (modes) / sizeof (modes[0]) ))
         {
         bBlank = true;
-        pmode = &modes[mode];
+        memcpy (&curmode, &modes[mode], sizeof (MODE));
         nCsrHide |= CSR_OFF;
         clrreset ();
         rstview ();
         cls ();
-        if ( mode == 7 ) memcpy (&framebuf[pmode->trow * pmode->tcol], font_tt, sizeof (font_tt));
-        csrtop = pmode->thgt - 1;
+        if ( mode == 7 ) memcpy (&framebuf[curmode.trow * curmode.tcol], font_tt, sizeof (font_tt));
+        csrtop = curmode.thgt - 1;
         csrhgt = 1;
         nCsrHide = 0;
         showcsr ();
@@ -1371,7 +1368,7 @@ static void modechg (int mode)
 
 static inline int clrmsk (int clr)
     {
-    return ( clr & clrdef[pmode->ncbt].clrmsk );
+    return ( clr & clrdef[curmode.ncbt].clrmsk );
     }
 
 static inline void pixop (int op, uint32_t *fb, uint32_t msk, uint32_t cpx)
@@ -1401,7 +1398,7 @@ static inline void pixop (int op, uint32_t *fb, uint32_t msk, uint32_t cpx)
 static void hline (int clrop, int xp1, int xp2, int yp)
     {
     int op = clrop >> 8;
-    CLRDEF *cdef = &clrdef[pmode->ncbt];
+    CLRDEF *cdef = &clrdef[curmode.ncbt];
     if (( yp < gvt ) || ( yp > gvb )) return;
     if ( xp1 > xp2 )
         {
@@ -1414,7 +1411,7 @@ static void hline (int clrop, int xp1, int xp2, int yp)
     if ( xp2 > gvr ) xp2 = gvr;
     xp1 <<= cdef->bitsh;
     xp2 <<= cdef->bitsh;
-    uint32_t *fb1 = (uint32_t *)(framebuf + yp * pmode->nbpl);
+    uint32_t *fb1 = (uint32_t *)(framebuf + yp * curmode.nbpl);
     uint32_t *fb2 = fb1 + ( xp2 >> 5 );
     fb1 += ( xp1 >> 5 );
     uint32_t msk1 = fwdmsk[xp1 & 0x1F];
@@ -1439,8 +1436,8 @@ static void hline (int clrop, int xp1, int xp2, int yp)
 
 static void point (int clrop, uint32_t xp, uint32_t yp)
     {
-    CLRDEF *cdef = &clrdef[pmode->ncbt];
-    uint32_t *fb = (uint32_t *)(framebuf + yp * pmode->nbpl);
+    CLRDEF *cdef = &clrdef[curmode.ncbt];
+    uint32_t *fb = (uint32_t *)(framebuf + yp * curmode.nbpl);
     xp <<= cdef->bitsh;
     fb += xp >> 5;
     xp &= 0x1F;
@@ -1874,7 +1871,7 @@ static inline int gxscale (int xp)
 
 static inline int gyscale (int yp)
     {
-    return pmode->grow - 1 - yp / 2;
+    return curmode.grow - 1 - yp / 2;
     }
 
 static void gwind (int vl, int vb, int vr, int vt)
@@ -1883,8 +1880,8 @@ static void gwind (int vl, int vb, int vr, int vt)
     vr = gxscale (vr);
     vt = gyscale (vt);
     vb = gyscale (vb);
-    if (( vl < 0 ) || ( vl > vr ) || ( vr >= pmode->gcol )
-        || ( vt < 0 ) || ( vt > vb ) || ( vb >= pmode->grow )) return;
+    if (( vl < 0 ) || ( vl > vr ) || ( vr >= curmode.gcol )
+        || ( vt < 0 ) || ( vt > vb ) || ( vb >= curmode.grow )) return;
     gvl = vl;
     gvr = vr;
     gvt = vt;
@@ -1893,8 +1890,8 @@ static void gwind (int vl, int vb, int vr, int vt)
 
 static int8_t getpix (int xp, int yp)
     {
-    CLRDEF *cdef = &clrdef[pmode->ncbt];
-    uint32_t *fb = (uint32_t *)(framebuf + yp * pmode->nbpl);
+    CLRDEF *cdef = &clrdef[curmode.ncbt];
+    uint32_t *fb = (uint32_t *)(framebuf + yp * curmode.nbpl);
     xp <<= cdef->bitsh;
     fb += xp >> 5;
     xp &= 0x1F;
@@ -1925,9 +1922,9 @@ int vgetc (int x, int y)
     x += tvl;
     y += tvt;
     if (( x < tvl ) || ( x > tvr ) || ( y < tvt ) || ( y > tvb )) return -1;
-    if ( pmode == &modes[7] )
+    if ( curmode.ncbt == 3 )
         {
-        int chr = framebuf[y * pmode->trow + col];
+        int chr = framebuf[y * curmode.trow + col];
         if ( chr < 0x20 ) chr += 0x80;
         return chr;
         }
@@ -1937,7 +1934,7 @@ int vgetc (int x, int y)
         uint8_t *prow = chrow;
         memset (chrow, 0, sizeof (chrow));
         int bgclr = ( vflags & HRGFLG ) ? clrmsk (gbg) : bg;
-        int fhgt = pmode->thgt;
+        int fhgt = curmode.thgt;
         bool bDbl = false;
         if ( fhgt > 10 )
             {
@@ -1946,7 +1943,7 @@ int vgetc (int x, int y)
             }
         if ( fhgt == 8 ) ++prow;
         x *= 8;
-        y *= pmode->thgt;
+        y *= curmode.thgt;
         for (int j = 0; j < fhgt; ++j)
             {
             for (int i = 0; i < 8; ++i)
@@ -2418,7 +2415,7 @@ static void plot (uint8_t code, int xp, int yp)
         printf ("Absolute position\n");
 #endif
         pltpt[0].x = xp + gxo;
-        pltpt[0].y = 2 * pmode->grow - 1 - ( yp + gyo );
+        pltpt[0].y = 2 * curmode.grow - 1 - ( yp + gyo );
         }
 #if DEBUG > 0
     printf ("origin: (%d, %d)\n", gxo, gyo);
@@ -2508,7 +2505,7 @@ static void plot (uint8_t code, int xp, int yp)
 static void plotchr (int clrop, int xp, int yp, int chr)
     {
     hidecsr ();
-    uint32_t fhgt = pmode->thgt;
+    uint32_t fhgt = curmode.thgt;
     bool bDbl = false;
     if ( fhgt > 10 )
         {
@@ -2554,10 +2551,10 @@ void hrwrap (int *pxp, int *pyp)
         {
         xp = gvl;
         pltpt[0].x = 2 * gvl;
-        pltpt[0].y += 2 * pmode->thgt;
+        pltpt[0].y += 2 * curmode.thgt;
         }
     yp = pltpt[0].y / 2;
-    if ( yp + pmode->thgt - 1 > gvb )
+    if ( yp + curmode.thgt - 1 > gvb )
         {
         yp = gvt;
         pltpt[0].y = 2 * gvt;
@@ -2572,12 +2569,12 @@ void hrback (void)
         {
         int wth = ( gvr - gvl ) / 8;
         pltpt[0].x = 2 * ( gvl + 8 * ( wth - 1 ));
-        pltpt[0].y -= 2 * pmode->thgt;
+        pltpt[0].y -= 2 * curmode.thgt;
         }
     if ( pltpt[0].y / 2 < gvt )
         {
-        int hgt = ( gvb - gvt ) / pmode->thgt;
-        pltpt[0].y = 2 * ( gvt + ( hgt - 1 ) * pmode->thgt );
+        int hgt = ( gvb - gvt ) / curmode.thgt;
+        pltpt[0].y = 2 * ( gvt + ( hgt - 1 ) * curmode.thgt );
         }
     }
 
@@ -2622,7 +2619,6 @@ void showchr (int chr)
 */
 void xeqvdu (int code, int data1, int data2)
     {
-    if ( pmode == NULL ) return;
     int vdu = code >> 8;
 
     // WJB
@@ -2722,7 +2718,7 @@ void xeqvdu (int code, int data1, int data2)
             if ( vflags & HRGFLG )
                 {
                 pushpts ();
-                pltpt[0].y += 2 * pmode->thgt;
+                pltpt[0].y += 2 * curmode.thgt;
                 hrwrap (NULL, NULL);
                 }
             else
@@ -2735,7 +2731,7 @@ void xeqvdu (int code, int data1, int data2)
             if ( vflags & HRGFLG )
                 {
                 pushpts ();
-                pltpt[0].y -= 2 * pmode->thgt;
+                pltpt[0].y -= 2 * curmode.thgt;
                 hrback ();
                 }
             else
@@ -2773,7 +2769,7 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 16: // 0x10 - CLEAR GRAPHICS SCREEN
-            if ( pmode != &modes[7] )
+            if ( curmode.ncbt != 3 )
                 {
                 clrgraph ();
                 if ( bPrint ) printf ("\033[H\033[J");
@@ -2784,7 +2780,7 @@ void xeqvdu (int code, int data1, int data2)
             if ( code & 0x80 )
                 {
                 bg = clrmsk (code);
-                bgfill = (uint8_t) clrdef[pmode->ncbt].cpx[bg];
+                bgfill = (uint8_t) clrdef[curmode.ncbt].cpx[bg];
 #if DEBUG > 0
                 printf ("Background colour %d, bgfill = 0x%02X\n", bg, bgfill);
 #endif
@@ -2828,11 +2824,11 @@ void xeqvdu (int code, int data1, int data2)
             int r = ( data1 >> 16 ) & 0xFF;
             int g = data1 >> 24;
             int b = code & 0xFF;
-            if ( pmode == &modes[7] ) pal *= 2;
+            if ( curmode.ncbt == 3 ) pal *= 2;
             if ( phy < 16 ) curpal[pal] = defpal[phy];
             else if ( phy == 16 ) curpal[pal] = PICO_SCANVIDEO_PIXEL_FROM_RGB8(r, g, b);
             else if ( phy == 255 ) curpal[pal] = PICO_SCANVIDEO_PIXEL_FROM_RGB5(r, g, b);
-            if ( pmode == &modes[7] ) curpal[pal+1] = curpal[pal];
+            if ( curmode.ncbt == 3 ) curpal[pal+1] = curpal[pal];
             else genrb ();
         }
 
@@ -2885,7 +2881,7 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 25: // 0x19 - PLOT
-            if ( pmode != &modes[7] )
+            if ( curmode.ncbt != 3 )
                 plot (data1 & 0xFF, (data1 >> 8) & 0xFFFF,
                   	((data1 >> 24) & 0xFF) | ((code & 0xFF) << 8)) ;
             break;
@@ -2923,7 +2919,7 @@ void xeqvdu (int code, int data1, int data2)
             if ( vflags & HRGFLG )
                 {
                 rectangle (clrmsk (gbg), pltpt[0].x / 2, pltpt[0].y / 2,
-                    pltpt[0].x / 2 + 7, pltpt[0].y / 2 + pmode->thgt - 1);
+                    pltpt[0].x / 2 + 7, pltpt[0].y / 2 + curmode.thgt - 1);
                 }
             else
                 {
