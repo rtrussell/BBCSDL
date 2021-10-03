@@ -496,6 +496,26 @@ int stdin_handler (int *px, int *py)
 	return 0 ;
 }
 
+#ifndef PICO_SOUND
+// SOUND Channel,Amplitude,Pitch,Duration
+void sound (short chan, signed char ampl, unsigned char pitch, unsigned char duration)
+{
+	error (255, "Sorry, not implemented") ;
+}
+
+// ENVELOPE N,T,PI1,PI2,PI3,PN1,PN2,PN3,AA,AD,AS,AR,ALA,ALD
+void envel (signed char *env)
+{
+	error (255, "Sorry, not implemented") ;
+}
+
+// Disable sound generation:
+void quiet (void)
+{
+}
+#endif
+
+#ifndef PICO_VGA
 // Get text cursor (caret) coordinates:
 void getcsr(int *px, int *py)
 {
@@ -506,22 +526,6 @@ void getcsr(int *px, int *py)
 	    }
 }
 
-// SOUND Channel,Amplitude,Pitch,Duration
-void sound (short chan, signed char ampl, unsigned char pitch, unsigned char duration)
-{
-}
-
-// ENVELOPE N,T,PI1,PI2,PI3,PN1,PN2,PN3,AA,AD,AS,AR,ALA,ALD
-void envel (signed char *env)
-{
-}
-
-// Disable sound generation:
-void quiet (void)
-{
-}
-
-#ifndef PICO_VGA
 // Get pixel RGB colour:
 int vtint (int x, int y)
 {

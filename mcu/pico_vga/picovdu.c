@@ -1888,6 +1888,13 @@ static void gwind (int vl, int vb, int vr, int vt)
     gvb = vb;
     }
 
+// Get text cursor (caret) coordinates:
+void getcsr(int *px, int *py)
+    {
+    if ( px ) *px = col - tvl;
+    if ( py ) *py = row - tvt;
+    }
+
 static int8_t getpix (int xp, int yp)
     {
     CLRDEF *cdef = &clrdef[curmode.ncbt];
