@@ -1,0 +1,19 @@
+;   sound.pio - Use interrupts to output I2S sound
+;   64 clocks per stereo pair
+;
+.program    sound_out
+.side_set   2                       ; BCK & LRCK
+;
+.wrap_target
+    set     x, 14       side 0x01   ; Loop 15 times (decrement is after test)
+left:
+    out     pins, 1     side 0x00   ; Output left channel bits
+    jmp     x--, left   side 0x01   ; Loop
+    out     pins, 1     side 0x02   ; Final bit with LRCK high
+;
+    set     x, 14       side 0x03   ; Loop 15 times (decrement is after test)
+right:
+    out     pins, 1     side 0x02   ; Output right channel bits
+    jmp     x--, right  side 0x03   ; Loop
+    out     pins, 1     side 0x00   ; Final bit with LRCK low
+.wrap

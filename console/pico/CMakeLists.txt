@@ -48,6 +48,13 @@ if (TARGET tinyusb_device)
     ../../mcu/m0FaultDispatch
     )
 
+  if ( ${SOUND} )
+    message(STATUS "Generate sound using I2S output")
+    target_compile_definitions(bbcbasic PUBLIC -DPICO_SOUND)
+    pico_generate_pio_header(bbcbasic ${CMAKE_CURRENT_LIST_DIR}/../../mcu/pico/sound.pio)
+    target_sources(bbcbasic PRIVATE ../../mcu/pico/pico_snd.c)
+  endif()
+
   if ( ${LFS} )
     message(STATUS "Including LFS filesystem for flash storage")
     target_compile_definitions(bbcbasic PUBLIC -DHAVE_LFS)

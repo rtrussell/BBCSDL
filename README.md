@@ -57,6 +57,7 @@ The following options may be specified with the cmake command:
   * -DSTDIO=PICO for input via USB keyboard and output via VGA monitor.
 * -DLFS=Y to include storage on Pico flash or -DLFS=N to exclude it.
 * -DFAT=Y to include storage on SD card or -DFAT=N to exclude it.
+* -DSOUND=Y to include sound support or -DSOUND=N to exclude it.
 * Other cmake options if required.
 
 At this point the file bbcbasic.uf2 should be in the build directory.
@@ -119,6 +120,9 @@ these GPIOs and SD_DAT1 & SD_DAT2. Optionally solder a 2x3 header in place
 for a serial connection. From BBC Basic printer output is sent to serial.
 It is currently also used for diagnostic output.
 * An SD or SDHC card may be used, It should be formatted as FAT.
+* Sound output (if implemented) uses the I2S DAC on the VGA demo card.
+If required an amplified speaker or amplified headphones should be connected
+to the DAC socket on the VGA demo board, not to the PWM socket.
 
 The implementation currently supports 16 video modes:
 
