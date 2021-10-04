@@ -7,7 +7,7 @@ Now 250KHz / 44.1KHz = 5.669
 This suggests one sample every 6 chip clocks
 The PIO requires 64 clocks per audio sample, requiring a PIO clock of 2.8224Mhz
 The Pico is clocked at 150MHz for generating 640x480 video, giving a PIO clock ratio of 53.14.
-Taking the nearest integer value of 53, the PIO clock becomes 2..830Mhz
+Taking the nearest integer value of 53, the PIO clock becomes 2.830Mhz
 This gives an audio sample rate of 44.222KHz and an effective chip clock frequency of 265.33KHz
  */
 
@@ -368,7 +368,10 @@ static void snd_freq (double fchip)
         tonediv[i] = (uint16_t) (fchip / ftone[iTone] / scale + 0.5);
         ++iTone;
         }
-    nFillMax = (int)(fchip / 100.0 + 0.5);
+    nFillMax = (int)(fchip / ( 100.0 * CLKSTP ) + 0.5);
+#if DEBUG > 0
+    printf ("fchip = %3.1f Hz, nFillMax = %d\n", fchip, nFillMax);
+#endif
     }
 
 #define LEN_SNDQUE  5
@@ -376,42 +379,53 @@ static void snd_freq (double fchip)
 
 typedef struct
     {
-    uint8_t ntick;
-    int8_t  ip[3];
-    uint8_t np[3];
-    int8_t  ia[4];
-    uint8_t la;
-    uint8_t ld;
+    uint8_t ntick;      // Time between envelope updates (multiples of 10ms)
+    int8_t  ip[3];      // Pitch increments for each stage
+    uint8_t np[3];      // Number of steps in each pitch stage
+    int8_t  ia[4];      // Amplitude increments for each stage
+    uint8_t la[4];      // Limit values for each amplitude stage
     }
     ENVEL;
 
+static ENVEL    senv[NENVL];
+static ENVEL   *penv[NCHAN];
+static uint32_t durn[NCHAN];
+
 typedef struct
     {
-    uint8_t sync;
-    uint8_t durn;
-    uint8_t pitch;
-    int8_t  amp;
+    uint8_t durn;       // Sound duration
+    uint8_t pitch;      // Sound pitch
+    int8_t  amp;        // Sound amplitude
+    uint8_t sync;       // Channel syncronisation
     }
     SNDDEF;
 
+#define AS_ATTACK   0
+#define AS_DECAY    1
+#define AS_SUSTAIN  2
+#define AS_RELEASE  3
+
+// The following structure overlays the global variables of the same names
+// Hopefully it gives the optimiser a few hints to optimise data access
+// The entries must exactly match those in bbdata_arm_32.s in size and order
+
 typedef struct
     {
-    ENVEL   *envel;
-    enum {evmAttack, evmDecay, evmSustain, evmRelease} evmode;
-    uint8_t durn;
-    uint8_t pitch;
-    int8_t  amp;
-    uint8_t itick;
-    uint8_t nstep;
-    uint8_t nstage;
-    uint8_t nrd;
-    uint8_t nwr;
-    SNDDEF  sd[LEN_SNDQUE];
+    uint8_t sndqw[NCHAN];   /* Sound queue write pointers */
+    uint8_t sndqr[NCHAN];   /* Sound queue read pointers */
+    uint8_t eenvel[NCHAN];  /* Envelope number */
+    uint8_t escale[NCHAN];  /* Envelope scaler */
+    uint8_t epsect[NCHAN];  /* Envelope pitch section */
+    uint8_t easect[NCHAN];  /* Envelope amplitude section */
+    uint8_t epitch[NCHAN];  /* Envelope pitch (frequency) */
+    uint8_t ecount[NCHAN];  /* Envelope count */
+    SNDDEF  soundq[NCHAN][SOUNDQL / SOUNDQE];   /* Sound queue (four channels) */
     }
-    SNDQUE;
+    SOUND_DATA;
 
-static SNDQUE sndque[NCHAN];
-static ENVEL senv[NENVL];
+// A constant pointer to variable data
+static SOUND_DATA * const psd = (SOUND_DATA *) sndqw;
+
 static int nsync[NCHAN];
 
 void snd_init (void)
@@ -421,8 +435,9 @@ void snd_init (void)
 #endif
     if ( bInitSnd ) return;
     memset (snd_tone, 0, sizeof (snd_tone));
-    memset (sndque, 0, sizeof (sndque));
-    memset (senv, 0, sizeof (senv));
+    memset (psd, 0, sizeof (SOUND_DATA));
+    memset (penv, 0, sizeof (penv));
+    memset (durn, 0, sizeof (durn));
     memset (nsync, 0, sizeof (nsync));
     noise_dcount = 0;
     noise_mode = 0;
@@ -450,10 +465,10 @@ void snd_init (void)
     sm_config_set_sideset_pins (&c_out, PICO_AUDIO_I2S_CLOCK_PIN_BASE);
     int fsys = clock_get_hz (clk_sys);
     int div = fsys / ( 64 * 44100 );
-    snd_freq (((double) CLKSTP) * fsys / ( 64 * div ));
 #if DEBUG > 1
     printf ("div = %f\n", div);
 #endif
+    snd_freq (((double) CLKSTP) * fsys / ( 64 * div ));
     sm_config_set_clkdiv (&c_out, div);
     sm_config_set_out_shift (&c_out, false, true, 32);
     pio_sm_init (pio_snd, sm_snd_out, offset_out, &c_out);
@@ -465,11 +480,11 @@ void snd_init (void)
     bInitSnd = true;
     }
 
-static void snd_pop (SNDQUE *pque)
+static void snd_pop (int ch)
     {
-    if ( pque->nrd != pque->nwr )
+    if ( psd->sndqr[ch] != psd->sndqw[ch] )
         {
-        SNDDEF *pdef = &pque->sd[pque->nrd];
+        SNDDEF *pdef = &psd->soundq[ch][psd->sndqr[ch]];
         if ( pdef->sync > 0 )
             {
             nsync[0] = 1;
@@ -481,25 +496,26 @@ static void snd_pop (SNDQUE *pque)
             printf ("Pop queue: durn = %d, amp = %d, pitch = %d\n",
                 pdef->durn, pdef->amp, pdef->pitch);
 #endif
-            pque->durn = ( tempo & 0x3F ) * pdef->durn;
-            if ( pdef->amp <= -16 )
+            if ( pdef->durn == 0xFF ) durn[ch] = -1;
+            else durn[ch] = ( tempo & 0x3F ) * pdef->durn;
+            if ( pdef->amp == 0x80 )
                 {
-                if ( pque->envel ) pque->evmode = evmRelease;
+                if ( penv[ch] ) psd->easect[ch] = AS_RELEASE;
                 }
             else if ( pdef->amp <= 0 )
                 {
-                pque->envel = NULL;
-                pque->amp = -8 * pdef->amp;
-                pque->pitch = pdef->pitch;
+                penv[ch] = NULL;
+                psd->eenvel[ch] = -8 * pdef->amp;
+                psd->epitch[ch] = pdef->pitch;
                 }
             else
                 {
-                pque->envel = &senv[pque->amp];
-                pque->evmode = evmAttack;
-                pque->amp = 0;
-                pque->pitch = pdef->pitch;
+                penv[ch] = &senv[(psd->eenvel[ch] - 1) & 0x0F];
+                psd->easect[ch] = AS_ATTACK;
+                psd->eenvel[ch] = 0;
+                psd->epitch[ch] = pdef->pitch;
                 }
-            if ( ++pque->nrd >= LEN_SNDQUE ) pque->nrd = 0;
+            if ( ++psd->sndqr[ch] >= LEN_SNDQUE ) psd->sndqr[ch] = 0;
             }
         }
     }
@@ -514,8 +530,7 @@ static void snd_sync (void)
                 {
                 for (int ch = 0; ch < NCHAN; ++ch)
                     {
-                    SNDQUE *pque = &sndque[ch];
-                    SNDDEF *pdef = &pque->sd[pque->nrd];
+                    SNDDEF *pdef = &psd->soundq[ch][psd->sndqr[ch]];
                     if ( pdef->sync == isync ) pdef->sync = 0;
                     }
                 }
@@ -529,18 +544,17 @@ static void snd_process (void)
     {
     for (int ch = 0; ch < NCHAN; ++ch)
         {
-        SNDQUE *pque = &sndque[ch];
-        if ( pque->durn == 0 )
+        if ( durn[ch] == 0 )
             {
-            if ( ! pque->envel ) pque->amp = 0;
-            else pque->evmode = evmRelease;
-            snd_pop (pque);
+            if ( ! penv[ch] ) psd->eenvel[ch] = 0;
+            else psd->easect[ch] = AS_RELEASE;
+            snd_pop (ch);
             }
-        else if ( pque->durn != 0xFF )
+        else if ( durn[ch] > 0 )
             {
-            --pque->durn;
+            --durn[ch];
 #if DEBUG > 0
-            if ( pque->durn == 0 )
+            if ( durn[ch] == 0 )
                 {
                 printf ("End of sound on channel %d: cnt = %d, min = %d, max = %d\n",
                     ch, snd_cnt, snd_min, snd_max);
@@ -550,52 +564,60 @@ static void snd_process (void)
                 }
 #endif
             }
-        if ( pque->envel )
+        if ( penv[ch] )
             {
-            if ( pque->itick == 0 )
+            if ( --psd->escale[ch] == 0 )
                 {
-                pque->itick = pque->envel->ntick & 0x7F;
-                if ( pque->nstage < 3 )
+                psd->escale[ch] = penv[ch]->ntick & 0x7F;
+                int stage = psd->epsect[ch];
+                if (( stage == 3 ) && ( (penv[ch]->ntick & 0x80) == 0 ))
                     {
-                    pque->pitch += pque->envel->ip[pque->nstage];
-                    if ( --pque->nstep == 0 )
+                    if ( tempo & 0x40 )
                         {
-                        ++pque->nstage;
-                        if ( pque->nstage < 3 )
-                            {
-                            if ( tempo & 0x40 )
-                                {
-                                pque->pitch -= pque->envel->np[0] * pque->envel->ip[0]
-                                    + pque->envel->np[1] * pque->envel->ip[1]
-                                    + pque->envel->np[2] * pque->envel->ip[2];
-                                }
-                            pque->nstep = pque->envel->np[pque->nstage];
-                            }
-                        else if ( (pque->envel->ntick & 0x80) == 0 )
-                            {
-                            pque->nstage = 0;
-                            pque->nstep = pque->envel->np[0];
-                            }
+                        psd->epitch[ch] -= penv[ch]->np[0] * penv[ch]->ip[0]
+                            + penv[ch]->np[1] * penv[ch]->ip[1]
+                            + penv[ch]->np[2] * penv[ch]->ip[2];
+                        }
+                    stage = 0;
+                    psd->epsect[ch] = 0;
+                    psd->ecount[ch] = 0;
+                    }
+                if ( stage < 3 )
+                    {
+                    psd->epitch[ch] += penv[ch]->ip[stage];
+                    if ( ++psd->ecount[ch] >= penv[ch]->np[stage] )
+                        {
+                        ++psd->epsect[ch];
+                        psd->ecount[ch] = 0;
                         }
                     }
-                pque->amp += pque->envel->ia[pque->evmode];
-                if ( pque->evmode == evmAttack)
+                stage = psd->easect[ch];
+                int amp = psd->eenvel[ch];
+                int step = penv[ch]->ia[stage];
+                int target = penv[ch]->la[stage];
+                amp += step;
+                if ( amp < 0 )
                     {
-                    if ( pque->amp >= pque->envel->la ) pque->evmode = evmDecay;
+                    if ( step > 0 ) amp = 127;
+                    else amp = 0;
                     }
-                else if ( pque->evmode == evmDecay)
+                if ( stage < 3 )
                     {
-                    if ( pque->amp <= pque->envel->ld ) pque->evmode = evmSustain;
+                    if ((( step > 0 ) && ( amp >= target ))
+                        || (( step < 0 ) && ( amp <= target )))
+                        {
+                        ++psd->easect[ch];
+                        amp = target;
+                        }
                     }
-                if ( pque->amp <= 0 )
+                else if ( amp <= 0 )
                     {
-                    pque->amp = 0;
-                    pque->envel = NULL;
+                    penv[ch] = NULL;
                     }
+                psd->eenvel[ch] = amp;
                 }
-            --pque->itick;
             }
-        snd_cfg (ch, pque->pitch, pque->amp);
+        snd_cfg (ch, psd->epitch[ch], psd->eenvel[ch]);
         }
     snd_sync ();
     }
@@ -603,8 +625,11 @@ static void snd_process (void)
 // ENVELOPE N,T,PI1,PI2,PI3,PN1,PN2,PN3,AA,AD,AS,AR,ALA,ALD
 void envel (signed char *env)
     {
-	int n = (*env) & 0x15;
-    memcpy (&senv[n], ++env, sizeof (ENVEL));
+	ENVEL *penv = &senv[(*env - 1) & 0x15];
+    memcpy (penv, ++env, 13);
+    penv->la[2] = 0;
+    penv->la[3] = 0;
+    if ( (penv->ntick & 0x7F) == 0 ) ++penv->ntick;
     }
 
 void sound (short chan, signed char ampl, unsigned char pitch, unsigned char duration)
@@ -614,35 +639,34 @@ void sound (short chan, signed char ampl, unsigned char pitch, unsigned char dur
 #endif
     if ( ! bInitSnd ) snd_init ();
     int ch = chan & 0x0F;
-    SNDQUE  *pque = &sndque[ch];
     uint8_t sync = ( chan >> 8 ) & 0x03;
     if (( chan & 0x10 ) > 0)
         {
 #if DEBUG > 0
         printf ("Flush queue\n");
 #endif
-        pque->nwr = pque->nrd;
-        pque->durn = 0;
+        psd->sndqw[ch] = psd->sndqr[ch];
+        durn[ch] = 0;
         }
-    uint8_t nxwr = pque->nwr + 1;
+    uint8_t nxwr = psd->sndqw[ch] + 1;
     if ( nxwr >= LEN_SNDQUE ) nxwr = 0;
 #if DEBUG > 0
-    printf ("nrd = %d, nwr = %d, nxwr = %d\n", pque->nrd, pque->nwr, nxwr);
+    printf ("nrd = %d, nwr = %d, nxwr = %d\n", psd->sndqr[ch], psd->sndqw[ch], nxwr);
 #endif
-    while ( pque->nrd == nxwr ) sleep_ms (100);
-    SNDDEF *pdef = &(pque->sd[pque->nwr]);
+    while ( psd->sndqr[ch] == nxwr ) sleep_ms (100);
+    SNDDEF *pdef = &(psd->soundq[ch][psd->sndqw[ch]]);
+    if ( ampl < 0 ) ampl |= 0xF0;
     pdef->sync = sync;
     pdef->pitch = pitch;
     pdef->amp = ampl;
     pdef->durn = duration;
-    if ( chan & 0x1000 ) pdef->amp = -16;
-    pque->nwr = nxwr;
+    if ( chan & 0x1000 ) pdef->amp = 0x80;
+    psd->sndqw[ch] = nxwr;
     }
 
 int snd_free (int ch)
     {
-    SNDQUE *pque = &sndque[ch];
-    int nfree = pque->nrd - pque->nwr - 1;
+    int nfree = psd->sndqr[ch] - psd->sndqw[ch] - 1;
     if ( nfree < 0 ) nfree += LEN_SNDQUE;
     return nfree;
     }
