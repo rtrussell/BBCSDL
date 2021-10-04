@@ -23,6 +23,16 @@
 #include "bbccon.h"
 #include <stdio.h>
 
+// VDU variables declared in bbcdata_*.s:
+extern int origx ; 	// Graphics x-origin (BASIC units)
+extern int origy ; 	// Graphics y-origin (BASIC units)
+extern int textwl ; 	// Text window left (characters)
+extern int textwr ; 	// Text window right (characters)
+extern int textwt ; 	// Text window top (characters)
+extern int textwb ; 	// Text window bottom (characters)
+extern int textx ; 	// Text caret x-position (pixels)
+extern int texty ; 	// Text caret y-position (pixels)
+
 // Declared in bbmain.c:
 void error (int, const char *);
 
@@ -40,8 +50,6 @@ static uint8_t  framebuf[SWIDTH * SHEIGHT / 8];
 static uint16_t renderbuf[256 * 8];
 
 static bool bBlank = true;              // Blank video screen
-static int col = 0;                     // Cursor column position
-static int row = 0;                     // Cursor row position
 static int fg;                          // Text foreground colour
 static int bg;                          // Text backgound colour
 static uint8_t bgfill;                  // Pixel fill for background colour
@@ -54,12 +62,6 @@ static bool bCsrVis = false;            // Cursor currently rendered
 static uint8_t nCsrHide = 0;            // Cursor hide count (Bit 7 = Cursor off, Bit 6 = Outside screen)
 static uint32_t nFlash = 0;             // Time counter for cursor flash
 static critical_section_t cs_csr;       // Critical section controlling cursor flash
-static int tvt;                         // Top of text viewport
-static int tvb;                         // Bottom of text viewport
-static int tvl;                         // Left edge of graphics viewport
-static int tvr;                         // Right edge of graphics viewport
-static int gxo;                         // X coordinate of graphics origin
-static int gyo;                         // Y coordinate of graphics origin
 static int gvt;                         // Top of graphics viewport
 static int gvb;                         // Bottom of graphics viewport
 static int gvl;                         // Left edge of graphics viewport
@@ -489,10 +491,10 @@ void __time_critical_func(render_mode7) (void)
             *twopix = COMPOSABLE_EOL_ALIGN << 16;   // Implicit zero (black) in low word
             ++twopix;
             buffer->data_used = twopix - buffer->data;
-            if (( iRow == row ) && ( nCsrHide == 0 ) && ( nFrame & FLASH_BIT )
+            if (( iRow == texty ) && ( nCsrHide == 0 ) && ( nFrame & FLASH_BIT )
                 && ( iScan >= csrtop ) && ( iScan < csrtop + csrhgt ))
                 {
-                twopix = pxline + 8 * col + 1;
+                twopix = pxline + 8 * textx + 1;
                 twopix[0] ^= ttcsr;
                 twopix[1] ^= ttcsr;
                 twopix[2] ^= ttcsr;
@@ -723,14 +725,14 @@ static void flipcsr (void)
         }
     else
         {
-        if (( row < 0 ) || ( row >= curmode.trow ) || ( col < 0 ) || ( col >= curmode.tcol ))
+        if (( texty < 0 ) || ( texty >= curmode.trow ) || ( textx < 0 ) || ( textx >= curmode.tcol ))
             {
             nCsrHide |= CSR_INV;
             bCsrVis = false;
             return;
             }
-        xp = 8 * col;
-        yp = row * curmode.thgt;
+        xp = 8 * textx;
+        yp = texty * curmode.thgt;
         }
     yp += csrtop;
     CLRDEF *cdef = &clrdef[curmode.ncbt];
@@ -751,16 +753,16 @@ static void flipcsr (void)
         }
     else
         {
-        if (( row < 0 ) || ( row >= curmode.trow ) || ( col < 0 ) || ( col >= curmode.tcol ))
+        if (( texty < 0 ) || ( texty >= curmode.trow ) || ( textx < 0 ) || ( textx >= curmode.tcol ))
             {
             nCsrHide |= CSR_INV;
             bCsrVis = false;
             return;
             }
-        uint8_t *pfb = framebuf + (row * curmode.thgt + csrtop) * curmode.nbpl;
+        uint8_t *pfb = framebuf + (texty * curmode.thgt + csrtop) * curmode.nbpl;
         if ( curmode.ncbt == 1 )
             {
-            pfb += col;
+            pfb += textx;
             for (int i = 0; i < csrhgt; ++i)
                 {
                 *pfb ^= 0xFF;
@@ -769,7 +771,7 @@ static void flipcsr (void)
             }
         else if ( curmode.ncbt == 2 )
             {
-            pfb += 2 * col;
+            pfb += 2 * textx;
             for (int i = 0; i < csrhgt; ++i)
                 {
                 *((uint16_t *)pfb) ^= 0xFFFF;
@@ -778,7 +780,7 @@ static void flipcsr (void)
             }
         else if ( curmode.ncbt == 4 )
             {
-            pfb += 4 * col;
+            pfb += 4 * textx;
             for (int i = 0; i < csrhgt; ++i)
                 {
                 *((uint32_t *)pfb) ^= 0xFFFFFFFF;
@@ -815,7 +817,7 @@ static void showcsr (void)
         }
     else
         {
-        if ( ( row >= tvt ) && ( row <= tvb ) && ( col >= tvl ) && ( col <= tvr ))
+        if ( ( texty >= textwt ) && ( texty <= textwb ) && ( textx >= textwl ) && ( textx <= textwr ))
             nCsrHide &= ~CSR_INV;
         else
             nCsrHide |= CSR_INV;
@@ -878,9 +880,9 @@ static void home (void)
         }
     else
         {
-        row = tvt;
-        col = tvl;
-        if ( scroln & 0x80 ) scroln = 0x80 + tvb - tvt + 1;
+        texty = textwt;
+        textx = textwl;
+        if ( scroln & 0x80 ) scroln = 0x80 + textwb - textwt + 1;
         }
     showcsr ();
     }
@@ -890,19 +892,19 @@ static void scrldn (void)
     hidecsr ();
     if ( curmode.ncbt == 3 )
         {
-        if (( tvl == 0 ) && ( tvr == curmode.tcol - 1 ))
+        if (( textwl == 0 ) && ( textwr == curmode.tcol - 1 ))
             {
-            memmove (framebuf + ( tvt + 1 ) * curmode.tcol,
-                framebuf + tvt * curmode.tcol,
-                ( tvb - tvt ) * curmode.tcol);
-            memset (framebuf + tvt * curmode.tcol, ' ', curmode.tcol);
+            memmove (framebuf + ( textwt + 1 ) * curmode.tcol,
+                framebuf + textwt * curmode.tcol,
+                ( textwb - textwt ) * curmode.tcol);
+            memset (framebuf + textwt * curmode.tcol, ' ', curmode.tcol);
             }
         else
             {
-            uint8_t *fb1 = framebuf + tvb * curmode.tcol + tvl;
+            uint8_t *fb1 = framebuf + textwb * curmode.tcol + textwl;
             uint8_t *fb2 = fb1 + curmode.tcol;
-            int nr = tvb - tvt;
-            int nb = tvr - tvl + 1;
+            int nr = textwb - textwt;
+            int nb = textwr - textwl + 1;
             for (int ir = 0; ir < nr; ++ir)
                 {
                 fb1 -= curmode.tcol;
@@ -912,20 +914,20 @@ static void scrldn (void)
             memset (fb1, ' ', nb);
             }
         }
-    else if (( tvl == 0 ) && ( tvr == curmode.tcol - 1 ))
+    else if (( textwl == 0 ) && ( textwr == curmode.tcol - 1 ))
         {
-        memmove (framebuf + ( tvt + 1 ) * curmode.thgt * curmode.nbpl,
-            framebuf + tvt * curmode.thgt * curmode.nbpl,
-            ( tvb - tvt ) * curmode.thgt * curmode.nbpl);
-        memset (framebuf + tvt * curmode.thgt * curmode.nbpl, bgfill, curmode.thgt * curmode.nbpl);
+        memmove (framebuf + ( textwt + 1 ) * curmode.thgt * curmode.nbpl,
+            framebuf + textwt * curmode.thgt * curmode.nbpl,
+            ( textwb - textwt ) * curmode.thgt * curmode.nbpl);
+        memset (framebuf + textwt * curmode.thgt * curmode.nbpl, bgfill, curmode.thgt * curmode.nbpl);
         }
     else
         {
-        uint8_t *fb1 = framebuf + tvb * curmode.thgt * curmode.nbpl
-            + ( tvl << clrdef[curmode.ncbt].bitsh );
+        uint8_t *fb1 = framebuf + textwb * curmode.thgt * curmode.nbpl
+            + ( textwl << clrdef[curmode.ncbt].bitsh );
         uint8_t *fb2 = fb1 + curmode.thgt * curmode.nbpl;
-        int nr = ( tvb - tvt ) * curmode.thgt;
-        int nb = ( tvr - tvl + 1 ) << clrdef[curmode.ncbt].bitsh;
+        int nr = ( textwb - textwt ) * curmode.thgt;
+        int nb = ( textwr - textwl + 1 ) << clrdef[curmode.ncbt].bitsh;
         for (int ir = 0; ir < nr; ++ir)
             {
             fb1 -= curmode.nbpl;
@@ -946,17 +948,17 @@ static void scrlup (void)
     hidecsr ();
     if ( curmode.ncbt == 3 )
         {
-        if (( tvl == 0 ) && ( tvr == curmode.tcol - 1 ))
+        if (( textwl == 0 ) && ( textwr == curmode.tcol - 1 ))
             {
             memmove (framebuf, framebuf + curmode.tcol, ( curmode.trow - 1 ) * curmode.tcol);
             memset (framebuf + ( curmode.trow - 1 ) * curmode.tcol, ' ', curmode.tcol);
             }
         else
             {
-            uint8_t *fb1 = framebuf + tvt * curmode.tcol + tvl;
+            uint8_t *fb1 = framebuf + textwt * curmode.tcol + textwl;
             uint8_t *fb2 = fb1 + curmode.tcol;
-            int nr = tvb - tvt;
-            int nb = tvr - tvl + 1;
+            int nr = textwb - textwt;
+            int nb = textwr - textwl + 1;
             for (int ir = 0; ir < nr; ++ir)
                 {
                 memcpy (fb1, fb2, nb);
@@ -966,20 +968,20 @@ static void scrlup (void)
             memset (fb2, ' ', nb);
             }
         }
-    else if (( tvl == 0 ) && ( tvr == curmode.tcol - 1 ))
+    else if (( textwl == 0 ) && ( textwr == curmode.tcol - 1 ))
         {
-        memmove (framebuf + tvt * curmode.thgt * curmode.nbpl,
-            framebuf + ( tvt + 1 ) * curmode.thgt * curmode.nbpl,
-            ( tvb - tvt ) * curmode.thgt * curmode.nbpl);
-        memset (framebuf + tvb * curmode.thgt * curmode.nbpl, bgfill, curmode.thgt * curmode.nbpl);
+        memmove (framebuf + textwt * curmode.thgt * curmode.nbpl,
+            framebuf + ( textwt + 1 ) * curmode.thgt * curmode.nbpl,
+            ( textwb - textwt ) * curmode.thgt * curmode.nbpl);
+        memset (framebuf + textwb * curmode.thgt * curmode.nbpl, bgfill, curmode.thgt * curmode.nbpl);
         }
     else
         {
-        uint8_t *fb1 = framebuf + tvt * curmode.thgt * curmode.nbpl
-            + ( tvl << clrdef[curmode.ncbt].bitsh );
+        uint8_t *fb1 = framebuf + textwt * curmode.thgt * curmode.nbpl
+            + ( textwl << clrdef[curmode.ncbt].bitsh );
         uint8_t *fb2 = fb1 + curmode.thgt * curmode.nbpl;
-        int nr = ( tvb - tvt ) * curmode.thgt;
-        int nb = ( tvr - tvl + 1 ) << clrdef[curmode.ncbt].bitsh;
+        int nr = ( textwb - textwt ) * curmode.thgt;
+        int nb = ( textwr - textwl + 1 ) << clrdef[curmode.ncbt].bitsh;
         for (int ir = 0; ir < nr; ++ir)
             {
             memcpy (fb1, fb2, nb);
@@ -1003,15 +1005,15 @@ static void cls ()
     hidecsr ();
     if ( curmode.ncbt == 3 )
         {
-        if (( tvl == 0 ) && ( tvr == curmode.tcol - 1 ))
+        if (( textwl == 0 ) && ( textwr == curmode.tcol - 1 ))
             {
-            memset (framebuf + tvt * curmode.tcol, ' ', ( tvb - tvt + 1 ) * curmode.tcol);
+            memset (framebuf + textwt * curmode.tcol, ' ', ( textwb - textwt + 1 ) * curmode.tcol);
             }
         else
             {
-            uint8_t *fb1 = framebuf + tvt * curmode.tcol + tvl;
-            int nr = tvb - tvt + 1;
-            int nb = tvr - tvl + 1;
+            uint8_t *fb1 = framebuf + textwt * curmode.tcol + textwl;
+            int nr = textwb - textwt + 1;
+            int nb = textwr - textwl + 1;
             for (int ir = 0; ir < nr; ++ir)
                 {
                 memset (fb1, ' ', nb);
@@ -1019,17 +1021,17 @@ static void cls ()
                 }
             }
         }
-    else if (( tvl == 0 ) && ( tvr == curmode.tcol - 1 ))
+    else if (( textwl == 0 ) && ( textwr == curmode.tcol - 1 ))
         {
-        memset (framebuf + tvt * curmode.thgt * curmode.nbpl, bgfill,
-            ( tvb - tvt + 1 ) * curmode.thgt * curmode.nbpl);
+        memset (framebuf + textwt * curmode.thgt * curmode.nbpl, bgfill,
+            ( textwb - textwt + 1 ) * curmode.thgt * curmode.nbpl);
         }
     else
         {
-        uint8_t *fb1 = framebuf + tvt * curmode.thgt * curmode.nbpl
-            + ( tvl << clrdef[curmode.ncbt].bitsh );
-        int nr = ( tvb - tvt + 1 ) * curmode.thgt;
-        int nb = ( tvr - tvl + 1 ) << clrdef[curmode.ncbt].bitsh;
+        uint8_t *fb1 = framebuf + textwt * curmode.thgt * curmode.nbpl
+            + ( textwl << clrdef[curmode.ncbt].bitsh );
+        int nr = ( textwb - textwt + 1 ) * curmode.thgt;
+        int nb = ( textwr - textwl + 1 ) << clrdef[curmode.ncbt].bitsh;
         for (int ir = 0; ir < nr; ++ir)
             {
             memset (fb1, bgfill, nb);
@@ -1042,11 +1044,11 @@ static void cls ()
 
 static void dispchr (int chr)
     {
-    if (( row < 0 ) || ( row >= curmode.trow ) || ( col < 0 ) || ( col >= curmode.tcol ))
+    if (( texty < 0 ) || ( texty >= curmode.trow ) || ( textx < 0 ) || ( textx >= curmode.tcol ))
         {
 #if DEBUG > 0
-        printf ("Cursor out of range: row = %d, col = %d, screen = %dx%d\n",
-            row, col, curmode.trow, curmode.tcol);
+        printf ("Cursor out of range: texty = %d, textx = %d, screen = %dx%d\n",
+            texty, textx, curmode.trow, curmode.tcol);
 #endif
         return;
         }
@@ -1056,7 +1058,7 @@ static void dispchr (int chr)
 #endif
     if ( curmode.ncbt == 3 )
         {
-        framebuf[row * curmode.tcol + col] = chr & 0x7F;
+        framebuf[texty * curmode.tcol + textx] = chr & 0x7F;
         }
     else
         {
@@ -1069,11 +1071,11 @@ static void dispchr (int chr)
             bDbl = true;
             }
         const uint8_t *pch = font_10[chr];
-        uint8_t *pfb = framebuf + row * curmode.thgt * curmode.nbpl;
+        uint8_t *pfb = framebuf + texty * curmode.thgt * curmode.nbpl;
         if ( fhgt == 8 ) ++pch;
         if ( curmode.ncbt == 1 )
             {
-            pfb += col;
+            pfb += textx;
             uint8_t fpx = (uint8_t) cpx02[fg];
             uint8_t bpx = (uint8_t) cpx02[bg];
             for (int i = 0; i < fhgt; ++i)
@@ -1101,7 +1103,7 @@ static void dispchr (int chr)
             }
         else if ( curmode.ncbt == 2 )
             {
-            pfb += 2 * col;
+            pfb += 2 * textx;
             uint16_t fpx = cpx04[fg];
             uint16_t bpx = cpx04[bg];
             for (int i = 0; i < fhgt; ++i)
@@ -1120,7 +1122,7 @@ static void dispchr (int chr)
             }
         else if ( curmode.ncbt == 4 )
             {
-            pfb += 4 * col;
+            pfb += 4 * textx;
             uint32_t fpx = cpx16[fg];
             uint32_t bpx = cpx16[bg];
             for (int i = 0; i < fhgt; ++i)
@@ -1144,12 +1146,12 @@ static void dispchr (int chr)
 static void newline (int *px, int *py)
     {
     hidecsr ();
-    if (++(*py) > tvb)
+    if (++(*py) > textwb)
         {
         if ((scroln & 0x80) && (--scroln == 0x7F))
             {
             unsigned char ch;
-            scroln = 0x80 + tvb - tvt + 1;
+            scroln = 0x80 + textwb - textwt + 1;
             do
                 {
                 sleep_us (5000);
@@ -1157,7 +1159,7 @@ static void newline (int *px, int *py)
             while ((getkey (&ch) == 0) && ((flags & (ESCFLG | KILL)) == 0));
             }
         scrlup ();
-        *py = tvb;
+        *py = textwb;
         }
 	if ( bPrint )
         {
@@ -1171,23 +1173,23 @@ static void wrap (void)
     {
     if ( bPrint ) printf ("\r");
     hidecsr ();
-    col = tvl;
-    newline (&col, &row);
+    textx = textwl;
+    newline (&textx, &texty);
     showcsr ();
     }
 
 static void tabxy (int x, int y)
     {
 #if DEBUG > 0
-    printf ("tab: row = %d, col = %d\n", y, x);
+    printf ("tab: texty = %d, textx = %d\n", y, x);
 #endif
-    x += tvl;
-    y += tvt;
-    if (( x >= tvl ) && ( x <= tvr ) && ( y >= tvt ) && ( y <= tvb ))
+    x += textwl;
+    y += textwt;
+    if (( x >= textwl ) && ( x <= textwr ) && ( y >= textwt ) && ( y <= textwb ))
         {
         hidecsr ();
-        row = y;
-        col = x;
+        texty = y;
+        textx = x;
         showcsr ();
         }
     }
@@ -1196,11 +1198,11 @@ static void twind (int vl, int vb, int vr, int vt)
     {
     if (( vl < 0 ) || ( vl > vr ) || ( vr >= curmode.tcol )
         || ( vt < 0 ) || ( vt > vb ) || ( vb >= curmode.trow )) return;
-    tvl = vl;
-    tvr = vr;
-    tvt = vt;
-    tvb = vb;
-    if (( col < tvl ) || ( col > tvr ) || ( row < tvt ) || ( row > tvb ))
+    textwl = vl;
+    textwr = vr;
+    textwt = vt;
+    textwb = vb;
+    if (( textx < textwl ) || ( textx > textwr ) || ( texty < textwt ) || ( texty > textwb ))
         home ();
     }
 
@@ -1319,14 +1321,14 @@ static void clrreset (void)
 static void rstview (void)
     {
     hidecsr ();
-    tvt = 0;
-    tvb = curmode.trow - 1;
-    tvl = 0;
-    tvr = curmode.tcol - 1;
-    col = 0;
-    row = 0;
-    gxo = 0;
-    gyo = 0;
+    textwt = 0;
+    textwb = curmode.trow - 1;
+    textwl = 0;
+    textwr = curmode.tcol - 1;
+    textx = 0;
+    texty = 0;
+    origx = 0;
+    origy = 0;
     gvt = 0;
     gvb = curmode.grow - 1;
     gvl = 0;
@@ -1891,8 +1893,8 @@ static void gwind (int vl, int vb, int vr, int vt)
 // Get text cursor (caret) coordinates:
 void getcsr(int *px, int *py)
     {
-    if ( px ) *px = col - tvl;
-    if ( py ) *py = row - tvt;
+    if ( px ) *px = textx - textwl;
+    if ( py ) *py = texty - textwt;
     }
 
 static int8_t getpix (int xp, int yp)
@@ -1926,12 +1928,12 @@ int vtint (int xp, int yp)
 
 int vgetc (int x, int y)
     {
-    x += tvl;
-    y += tvt;
-    if (( x < tvl ) || ( x > tvr ) || ( y < tvt ) || ( y > tvb )) return -1;
+    x += textwl;
+    y += textwt;
+    if (( x < textwl ) || ( x > textwr ) || ( y < textwt ) || ( y > textwb )) return -1;
     if ( curmode.ncbt == 3 )
         {
-        int chr = framebuf[y * curmode.trow + col];
+        int chr = framebuf[y * curmode.trow + textx];
         if ( chr < 0x20 ) chr += 0x80;
         return chr;
         }
@@ -2421,11 +2423,11 @@ static void plot (uint8_t code, int xp, int yp)
 #if DEBUG > 0
         printf ("Absolute position\n");
 #endif
-        pltpt[0].x = xp + gxo;
-        pltpt[0].y = 2 * curmode.grow - 1 - ( yp + gyo );
+        pltpt[0].x = xp + origx;
+        pltpt[0].y = 2 * curmode.grow - 1 - ( yp + origy );
         }
 #if DEBUG > 0
-    printf ("origin: (%d, %d)\n", gxo, gyo);
+    printf ("origin: (%d, %d)\n", origx, origy);
     printf ("pltpt: (%d, %d) (%d, %d) (%d, %d)\n", pltpt[0].x, pltpt[0].y,
         pltpt[1].x, pltpt[1].y, pltpt[2].x, pltpt[2].y);
 #endif
@@ -2600,9 +2602,9 @@ void showchr (int chr)
         }
     else
         {
-        if (col > tvr) wrap ();
+        if (textx > textwr) wrap ();
         dispchr (chr);
-        if ((++col > tvr) && ((cmcflg & 1) == 0)) wrap ();
+        if ((++textx > textwr) && ((cmcflg & 1) == 0)) wrap ();
         }
     if ( bPrint ) putchar (chr);
     showcsr ();
@@ -2679,23 +2681,23 @@ void xeqvdu (int code, int data1, int data2)
                 }
             else
                 {
-                if (col == tvl)
+                if (textx == textwl)
                     {
-                    col = tvr;
-                    if (row == tvt)
+                    textx = textwr;
+                    if (texty == textwt)
                         {
                         scrldn ();
                         if ( bPrint ) printf ("\033M");
                         }
                     else
                         {
-                        row--;
-                        if ( bPrint ) printf ("\033[%i;%iH", row + 1, col + 1);
+                        texty--;
+                        if ( bPrint ) printf ("\033[%i;%iH", texty + 1, textx + 1);
                         }
                     }
                 else
                     {
-                    col--;
+                    textx--;
                     if ( bPrint ) putchar (vdu);
                     }
                 }
@@ -2709,13 +2711,13 @@ void xeqvdu (int code, int data1, int data2)
                 }
             else
                 {
-                if (col > tvr)
+                if (textx > textwr)
                     {
                     wrap ();
                     }
                 else
                     {
-                    col++;
+                    textx++;
                     }
                 }
             if ( bPrint ) printf ("\033[C");
@@ -2730,7 +2732,7 @@ void xeqvdu (int code, int data1, int data2)
                 }
             else
                 {
-                newline (&col, &row);
+                newline (&textx, &texty);
                 }
             break;
 
@@ -2743,8 +2745,8 @@ void xeqvdu (int code, int data1, int data2)
                 }
             else
                 {
-                if ( row == tvt ) scrldn ();
-                else --row;
+                if ( texty == textwt ) scrldn ();
+                else --texty;
                 }
             if ( bPrint ) printf ("\033M");
             break;
@@ -2763,12 +2765,12 @@ void xeqvdu (int code, int data1, int data2)
             else
                 {
                 if ( bPrint ) putchar (vdu);
-                col = tvl;
+                textx = textwl;
                 }
             break;
 
         case 14: // 0x0E - PAGING ON
-            scroln = 0x80 + tvb - row + 1;
+            scroln = 0x80 + textwb - texty + 1;
             break;
 
         case 15: // 0x0F - PAGING OFF
@@ -2907,8 +2909,8 @@ void xeqvdu (int code, int data1, int data2)
             break ;
 
         case 29: // 0x1D - SET GRAPHICS ORIGIN
-            gxo = (data1 >> 8) & 0xFFFF;
-            gyo = ((data1 >> 24) & 0xFF) | ((code & 0xFF) << 8);
+            origx = (data1 >> 8) & 0xFFFF;
+            origy = ((data1 >> 24) & 0xFF) | ((code & 0xFF) << 8);
             break;
 
         case 30: // 0x1E - CURSOR HOME
@@ -2918,7 +2920,7 @@ void xeqvdu (int code, int data1, int data2)
 
         case 31: // 0x1F - TAB(X,Y)
             tabxy (data1 >> 24, code & 0xFF);
-            if ( bPrint ) printf ("\033[%i;%iH", row + 1, col + 1);
+            if ( bPrint ) printf ("\033[%i;%iH", texty + 1, textx + 1);
             break;
 
         case 127: // DEL
