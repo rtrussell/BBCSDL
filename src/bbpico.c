@@ -155,6 +155,11 @@ void setup_keyboard (void);
 int testkey (int);
 #endif
 
+#ifdef PICO_SOUND
+// Declared in pico_snd.c
+int snd_free (int ch);
+#endif
+
 // Interpreter entry point:
 int basic (void *, void *, void *) ;
 
@@ -571,6 +576,9 @@ int adval (int n)
 {
 	if (n == -1)
 	    	return (kbdqr - kbdqw - 1) & 0xFF ;
+#ifdef PICO_SOUND
+    if ((n >= -8) && (n <= -5)) return snd_free (-5 - n);
+#endif
 	error (255, "Sorry, not implemented") ;
 	return -1 ;
 }

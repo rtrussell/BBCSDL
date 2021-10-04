@@ -20,6 +20,7 @@ This gives an audio sample rate of 44.222KHz and an effective chip clock frequen
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include "bbccon.h"
 
 #define DEBUG   1
 
@@ -32,7 +33,7 @@ static struct st_tone
     int     dcount;
     int     amp;
     int     val;
-    } snd_tone[NCHAN - 1];
+    } snd_tone[NCHAN];
 
 static int  noise_dcount = 0;
 static uint8_t noise_mode = 0;
@@ -52,9 +53,10 @@ static uint offset_out = 0;
 
 static bool bInitSnd = false;
 static int  nFill = 0;
+static int  nFillMax;
 
 #define NOCTAVE 48  // Number of tones per octave
-static double ftone[NOCTAVE] =
+static const double ftone[NOCTAVE] =
     {
     61.73541266,        // 0
     62.63337491,        // 1
@@ -106,22 +108,154 @@ static double ftone[NOCTAVE] =
     121.70064862        // 47
     };
 
+static const int logamp[128] =
+    {
+    0x00000000,	// 0
+    0x00D9F772,	// 1
+    0x00E054D2,	// 2
+    0x00E6E1C6,	// 3
+    0x00ED9FB1,	// 4
+    0x00F49002,	// 5
+    0x00FBB432,	// 6
+    0x01030DC4,	// 7
+    0x010A9E48,	// 8
+    0x01126758,	// 9
+    0x011A6A9A,	// 10
+    0x0122A9C2,	// 11
+    0x012B2690,	// 12
+    0x0133E2D0,	// 13
+    0x013CE05E,	// 14
+    0x0146211F,	// 15
+    0x014FA70D,	// 16
+    0x0159742A,	// 17
+    0x01638A8C,	// 18
+    0x016DEC56,	// 19
+    0x01789BBC,	// 20
+    0x01839B02,	// 21
+    0x018EEC7D,	// 22
+    0x019A9294,	// 23
+    0x01A68FBF,	// 24
+    0x01B2E689,	// 25
+    0x01BF9990,	// 26
+    0x01CCAB85,	// 27
+    0x01DA1F2F,	// 28
+    0x01E7F767,	// 29
+    0x01F6371E,	// 30
+    0x0204E158,	// 31
+    0x0213F932,	// 32
+    0x022381E0,	// 33
+    0x02337EAD,	// 34
+    0x0243F2FD,	// 35
+    0x0254E24E,	// 36
+    0x02665036,	// 37
+    0x02784069,	// 38
+    0x028AB6B4,	// 39
+    0x029DB701,	// 40
+    0x02B14559,	// 41
+    0x02C565E1,	// 42
+    0x02DA1CDE,	// 43
+    0x02EF6EB4,	// 44
+    0x03055FEA,	// 45
+    0x031BF526,	// 46
+    0x03333333,	// 47
+    0x034B1EFE,	// 48
+    0x0363BD9B,	// 49
+    0x037D1442,	// 50
+    0x03972852,	// 51
+    0x03B1FF55,	// 52
+    0x03CD9EFB,	// 53
+    0x03EA0D20,	// 54
+    0x04074FCB,	// 55
+    0x04256D31,	// 56
+    0x04446BB6,	// 57
+    0x046451EC,	// 58
+    0x04852697,	// 59
+    0x04A6F0AE,	// 60
+    0x04C9B75B,	// 61
+    0x04ED81FF,	// 62
+    0x05125831,	// 63
+    0x053841C0,	// 64
+    0x055F46B8,	// 65
+    0x05876F5E,	// 66
+    0x05B0C438,	// 67
+    0x05DB4E09,	// 68
+    0x060715D8,	// 69
+    0x063424EC,	// 70
+    0x066284D5,	// 71
+    0x06923F69,	// 72
+    0x06C35EC6,	// 73
+    0x06F5ED59,	// 74
+    0x0729F5D9,	// 75
+    0x075F8351,	// 76
+    0x0796A11C,	// 77
+    0x07CF5AEA,	// 78
+    0x0809BCC3,	// 79
+    0x0845D30A,	// 80
+    0x0883AA7C,	// 81
+    0x08C35038,	// 82
+    0x0904D1BD,	// 83
+    0x09483CEF,	// 84
+    0x098DA01C,	// 85
+    0x09D509FB,	// 86
+    0x0A1E89B0,	// 87
+    0x0A6A2ED4,	// 88
+    0x0AB80970,	// 89
+    0x0B082A08,	// 90
+    0x0B5AA19B,	// 91
+    0x0BAF81A6,	// 92
+    0x0C06DC29,	// 93
+    0x0C60C3AC,	// 94
+    0x0CBD4B3F,	// 95
+    0x0D1C8683,	// 96
+    0x0D7E89A9,	// 97
+    0x0DE3697D,	// 98
+    0x0E4B3B63,	// 99
+    0x0EB6155F,	// 100
+    0x0F240E1B,	// 101
+    0x0F953CEA,	// 102
+    0x1009B9CE,	// 103
+    0x10819D7B,	// 104
+    0x10FD015F,	// 105
+    0x117BFFA4,	// 106
+    0x11FEB33B,	// 107
+    0x128537DB,	// 108
+    0x130FAA0D,	// 109
+    0x139E272D,	// 110
+    0x1430CD74,	// 111
+    0x14C7BBFC,	// 112
+    0x156312C7,	// 113
+    0x1602F2C9,	// 114
+    0x16A77DEA,	// 115
+    0x1750D70F,	// 116
+    0x17FF2223,	// 117
+    0x18B2841E,	// 118
+    0x196B230B,	// 119
+    0x1A292612,	// 120
+    0x1AECB580,	// 121
+    0x1BB5FACF,	// 122
+    0x1C8520AF,	// 123
+    0x1D5A530F,	// 124
+    0x1E35BF26,	// 125
+    0x1F17937F,	// 126
+    0x1FFFFFFF	// 127
+    };
+
 static uint16_t tonediv[256];
 
 static void snd_cfg (int iChan, int iTone, int iAmp)
     {
-    if ( iChan == 0 )
+    if (( iChan == 0 ) && ( (tempo & 0x80) == 0 ))
         {
         noise_mode = iTone & 0x07;
-        noise_amp = ( iAmp & 0x7F ) << 22;
+        noise_amp = logamp[iAmp & 0x7F];
 #if DEBUG > 1
         printf ("noise_mode = 0x%02X, noise_amp = 0x%08X\n", noise_mode, noise_amp);
 #endif
         }
     else
         {
-        snd_tone[iChan - 1].reload = tonediv[iTone];
-        snd_tone[iChan - 1].amp = ( iAmp & 0x7F ) << 22;
+        snd_tone[iChan].reload = tonediv[iTone];
+        snd_tone[iChan].amp = logamp[iAmp & 0x7F];
 #if DEBUG > 1
         printf ("amp = 0x%08X, reload = 0x%03X\n", snd_tone[iChan - 1].amp, snd_tone[iChan - 1].reload);
 #endif
@@ -171,11 +305,20 @@ static void __time_critical_func(noise_step) (bool bOut3)
 static int16_t __time_critical_func(snd_step) (void)
     {
     bool bOut3;
-    tone_step (&snd_tone[0]);
     tone_step (&snd_tone[1]);
-    bOut3 = tone_step (&snd_tone[2]);
-    noise_step (bOut3);
-    int val = snd_tone[0].val + snd_tone[1].val + snd_tone[2].val + noise_val;
+    tone_step (&snd_tone[2]);
+    bOut3 = tone_step (&snd_tone[3]);
+    int val = snd_tone[1].val + snd_tone[2].val + snd_tone[3].val;
+    if ( tempo & 0x80 )
+        {
+        tone_step (&snd_tone[0]);
+        val += snd_tone[0].val;
+        }
+    else
+        {
+        noise_step (bOut3);
+        val += noise_val;
+        }
     snd_val += ( val - snd_val ) >> 3;
 #if DEBUG > 0
     ++snd_cnt;
@@ -195,10 +338,10 @@ static void __time_critical_func(snd_fill) (void)
         *txfifo = snd_step ();
         ++nFill;
         }
-    if ( nFill >= 441 )
+    if ( nFill >= nFillMax )
         {
         snd_process ();
-        nFill -= 441;
+        nFill -= nFillMax;
         }
     }
 
@@ -225,6 +368,7 @@ static void snd_freq (double fchip)
         tonediv[i] = (uint16_t) (fchip / ftone[iTone] / scale + 0.5);
         ++iTone;
         }
+    nFillMax = (int)(fchip / 100.0 + 0.5);
     }
 
 #define LEN_SNDQUE  5
@@ -287,7 +431,8 @@ void snd_init (void)
     noise_val = 0;
     snd_val = 0;
     nFill = 0;
-
+    tempo = 0x45;
+    
     pio_gpio_init (pio_snd, PICO_AUDIO_I2S_DATA_PIN);
     pio_gpio_init (pio_snd, PICO_AUDIO_I2S_CLOCK_PIN_BASE);
     pio_gpio_init (pio_snd, PICO_AUDIO_I2S_CLOCK_PIN_BASE + 1);
@@ -336,7 +481,7 @@ static void snd_pop (SNDQUE *pque)
             printf ("Pop queue: durn = %d, amp = %d, pitch = %d\n",
                 pdef->durn, pdef->amp, pdef->pitch);
 #endif
-            pque->durn = 5 * pdef->durn;
+            pque->durn = ( tempo & 0x3F ) * pdef->durn;
             if ( pdef->amp <= -16 )
                 {
                 if ( pque->envel ) pque->evmode = evmRelease;
@@ -418,6 +563,12 @@ static void snd_process (void)
                         ++pque->nstage;
                         if ( pque->nstage < 3 )
                             {
+                            if ( tempo & 0x40 )
+                                {
+                                pque->pitch -= pque->envel->np[0] * pque->envel->ip[0]
+                                    + pque->envel->np[1] * pque->envel->ip[1]
+                                    + pque->envel->np[2] * pque->envel->ip[2];
+                                }
                             pque->nstep = pque->envel->np[pque->nstage];
                             }
                         else if ( (pque->envel->ntick & 0x80) == 0 )
@@ -486,6 +637,14 @@ void sound (short chan, signed char ampl, unsigned char pitch, unsigned char dur
     pdef->durn = duration;
     if ( chan & 0x1000 ) pdef->amp = -16;
     pque->nwr = nxwr;
+    }
+
+int snd_free (int ch)
+    {
+    SNDQUE *pque = &sndque[ch];
+    int nfree = pque->nrd - pque->nwr - 1;
+    if ( nfree < 0 ) nfree += LEN_SNDQUE;
+    return nfree;
     }
 
 void snd_term (void)
