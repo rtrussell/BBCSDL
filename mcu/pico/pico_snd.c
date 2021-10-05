@@ -22,7 +22,7 @@ This gives an audio sample rate of 44.222KHz and an effective chip clock frequen
 #include <stdint.h>
 #include "bbccon.h"
 
-#define DEBUG   1
+#define DEBUG   0x00
 
 #define NCHAN   4
 #define CLKSTP  6
@@ -41,7 +41,7 @@ static uint16_t noise_sr = 0x8000;
 static int  noise_amp = 0;
 static int  noise_val = 0;
 static int  snd_val = 0;
-#if DEBUG > 0
+#if DEBUG & 0x01
 static int  snd_cnt = 0;
 static int  snd_min = 0;
 static int  snd_max = 0;
@@ -248,7 +248,7 @@ static void snd_cfg (int iChan, int iTone, int iAmp)
         {
         noise_mode = iTone & 0x07;
         noise_amp = logamp[iAmp & 0x7F];
-#if DEBUG > 1
+#if DEBUG & 0x04
         printf ("noise_mode = 0x%02X, noise_amp = 0x%08X\n", noise_mode, noise_amp);
 #endif
         }
@@ -256,7 +256,7 @@ static void snd_cfg (int iChan, int iTone, int iAmp)
         {
         snd_tone[iChan].reload = tonediv[iTone];
         snd_tone[iChan].amp = logamp[iAmp & 0x7F];
-#if DEBUG > 1
+#if DEBUG & 0x04
         printf ("amp = 0x%08X, reload = 0x%03X\n", snd_tone[iChan - 1].amp, snd_tone[iChan - 1].reload);
 #endif
         }
@@ -320,7 +320,7 @@ static int16_t __time_critical_func(snd_step) (void)
         val += noise_val;
         }
     snd_val += ( val - snd_val ) >> 3;
-#if DEBUG > 0
+#if DEBUG & 0x01
     ++snd_cnt;
     if ( snd_val > snd_max ) snd_max = snd_val;
     else if ( snd_val < snd_min ) snd_min = snd_val;
@@ -369,7 +369,7 @@ static void snd_freq (double fchip)
         ++iTone;
         }
     nFillMax = (int)(fchip / ( 100.0 * CLKSTP ) + 0.5);
-#if DEBUG > 0
+#if DEBUG & 0x01
     printf ("fchip = %3.1f Hz, nFillMax = %d\n", fchip, nFillMax);
 #endif
     }
@@ -430,7 +430,7 @@ static int nsync[NCHAN];
 
 void snd_init (void)
     {
-#if DEBUG > 0
+#if DEBUG & 0x01
     printf ("snd_init (%d, %f)\n");
 #endif
     if ( bInitSnd ) return;
@@ -457,7 +457,7 @@ void snd_init (void)
         ( 1u << PICO_AUDIO_I2S_DATA_PIN ) | ( 3u << PICO_AUDIO_I2S_CLOCK_PIN_BASE ),
         ( 1u << PICO_AUDIO_I2S_DATA_PIN ) | ( 3u << PICO_AUDIO_I2S_CLOCK_PIN_BASE ));
     offset_out = pio_add_program (pio_snd, &sound_out_program);
-#if DEBUG > 1
+#if DEBUG & 0x04
     printf ("sm_snd_out = %d, offset_out = %d\n", sm_snd_out, offset_out);
 #endif
     pio_sm_config c_out = sound_out_program_get_default_config (offset_out);
@@ -465,7 +465,7 @@ void snd_init (void)
     sm_config_set_sideset_pins (&c_out, PICO_AUDIO_I2S_CLOCK_PIN_BASE);
     int fsys = clock_get_hz (clk_sys);
     int div = fsys / ( 64 * 44100 );
-#if DEBUG > 1
+#if DEBUG & 0x04
     printf ("div = %f\n", div);
 #endif
     snd_freq (((double) CLKSTP) * fsys / ( 64 * div ));
@@ -492,25 +492,42 @@ static void snd_pop (int ch)
             }
         else
             {
-#if DEBUG > 0
+#if DEBUG & 0x01
             printf ("Pop queue: durn = %d, amp = %d, pitch = %d\n",
                 pdef->durn, pdef->amp, pdef->pitch);
 #endif
             if ( pdef->durn == 0xFF ) durn[ch] = -1;
             else durn[ch] = ( tempo & 0x3F ) * pdef->durn;
-            if ( pdef->amp == 0x80 )
+            if ( pdef->amp == (int8_t) 0x80 )
                 {
+#if DEBUG & 0x01
+                printf ("Hold previous note\n");
+#endif
                 if ( penv[ch] ) psd->easect[ch] = AS_RELEASE;
                 }
             else if ( pdef->amp <= 0 )
                 {
+#if DEBUG & 0x01
+                printf ("Fixed amplitude and pitch\n");
+#endif
                 penv[ch] = NULL;
                 psd->eenvel[ch] = -8 * pdef->amp;
                 psd->epitch[ch] = pdef->pitch;
                 }
             else
                 {
-                penv[ch] = &senv[(psd->eenvel[ch] - 1) & 0x0F];
+#if DEBUG & 0x01
+                printf ("Envelope %d: ntick = %d, ip = %d %d %d, np = %d %d %d, ia = %d %d %d %d, la = %d %d %d %d\n",
+                    (pdef->amp - 1) & 0x0F, penv[ch]->ntick,
+                    penv[ch]->ip[0], penv[ch]->ip[1], penv[ch]->ip[2],
+                    penv[ch]->np[0], penv[ch]->np[1], penv[ch]->np[2],
+                    penv[ch]->ia[0], penv[ch]->ia[1], penv[ch]->ia[2], penv[ch]->ia[3],
+                    penv[ch]->la[0], penv[ch]->la[1], penv[ch]->la[2], penv[ch]->la[3]);
+#endif
+                penv[ch] = &senv[(pdef->amp - 1) & 0x0F];
+                psd->escale[ch] = 0;
+                psd->ecount[ch] = 0;
+                psd->epsect[ch] = 0;
                 psd->easect[ch] = AS_ATTACK;
                 psd->eenvel[ch] = 0;
                 psd->epitch[ch] = pdef->pitch;
@@ -553,7 +570,7 @@ static void snd_process (void)
         else if ( durn[ch] > 0 )
             {
             --durn[ch];
-#if DEBUG > 0
+#if DEBUG & 0x01
             if ( durn[ch] == 0 )
                 {
                 printf ("End of sound on channel %d: cnt = %d, min = %d, max = %d\n",
@@ -584,9 +601,15 @@ static void snd_process (void)
                     }
                 if ( stage < 3 )
                     {
+#if DEBUG & 0x02
+                    printf ("Pitch %d, step %d\n", psd->epitch[ch], penv[ch]->ip[stage]);
+#endif
                     psd->epitch[ch] += penv[ch]->ip[stage];
                     if ( ++psd->ecount[ch] >= penv[ch]->np[stage] )
                         {
+#if DEBUG & 0x01
+                        printf ("End of pitch stage %d\n", psd->epsect[ch]);
+#endif
                         ++psd->epsect[ch];
                         psd->ecount[ch] = 0;
                         }
@@ -595,6 +618,9 @@ static void snd_process (void)
                 int amp = psd->eenvel[ch];
                 int step = penv[ch]->ia[stage];
                 int target = penv[ch]->la[stage];
+#if DEBUG & 0x02
+                printf ("Amplitude %d, step %d\n", amp, step);
+#endif
                 amp += step;
                 if ( amp < 0 )
                     {
@@ -606,6 +632,9 @@ static void snd_process (void)
                     if ((( step > 0 ) && ( amp >= target ))
                         || (( step < 0 ) && ( amp <= target )))
                         {
+#if DEBUG & 0x01
+                        printf ("End of amplitude stage %d\n", psd->easect[ch]);
+#endif
                         ++psd->easect[ch];
                         amp = target;
                         }
@@ -634,7 +663,7 @@ void envel (signed char *env)
 
 void sound (short chan, signed char ampl, unsigned char pitch, unsigned char duration)
     {
-#if DEBUG > 0
+#if DEBUG & 0x01
     printf ("sound (0x%04X, %d, %d, %d)\n", chan, ampl, pitch, duration);
 #endif
     if ( ! bInitSnd ) snd_init ();
@@ -642,7 +671,7 @@ void sound (short chan, signed char ampl, unsigned char pitch, unsigned char dur
     uint8_t sync = ( chan >> 8 ) & 0x03;
     if (( chan & 0x10 ) > 0)
         {
-#if DEBUG > 0
+#if DEBUG & 0x01
         printf ("Flush queue\n");
 #endif
         psd->sndqw[ch] = psd->sndqr[ch];
@@ -650,7 +679,7 @@ void sound (short chan, signed char ampl, unsigned char pitch, unsigned char dur
         }
     uint8_t nxwr = psd->sndqw[ch] + 1;
     if ( nxwr >= LEN_SNDQUE ) nxwr = 0;
-#if DEBUG > 0
+#if DEBUG & 0x01
     printf ("nrd = %d, nwr = %d, nxwr = %d\n", psd->sndqr[ch], psd->sndqw[ch], nxwr);
 #endif
     while ( psd->sndqr[ch] == nxwr ) sleep_ms (100);
@@ -674,7 +703,7 @@ int snd_free (int ch)
 void snd_term (void)
     {
     if ( ! bInitSnd ) return;
-#if DEBUG > 1
+#if DEBUG & 0x04
     printf ("snd_term\n");
 #endif
     pio_sm_set_enabled (pio_snd, sm_snd_out, false);
