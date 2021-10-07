@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdint.h>
 #include "BBC.h"
 
 #ifndef __WINDOWS__
@@ -297,7 +298,7 @@ void assemble (void)
 	while (1)
 	    {
 		int mnemonic, condition, instruction = 0;
-		unsigned char ccode;
+		unsigned char ccode = 0b1110;;
 
 		if (liston & BIT7)
 		    {
@@ -807,7 +808,7 @@ void assemble (void)
                     {
                     // ADR <reg8>, <label>
                     int offpc;
-                    instruction = opcodes[mnemonic] | reg8 () << 8;
+                    instruction = 0xA000 | reg8 () << 8;
                     comma ();
                     offpc = expri () - (((uint32_t)PC + 4) & 0xFFFFFFFC);
                     if (offpc >= 0)
@@ -839,7 +840,7 @@ void assemble (void)
 
                     case BKPT:
                         // BKPT <data>
-                        instruction = instruction = opcodes[mnemonic] | ( expri () & 0xFF );
+                        instruction = 0xBE00 | ( expri () & 0xFF );
                         break;
                         
 					case BL:
