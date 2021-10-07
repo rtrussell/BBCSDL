@@ -14,6 +14,9 @@
 #include <stdint.h>
 #include "BBC.h"
 
+#define DEBUG   1
+#define DBGLOG  if (DEBUG > 0) printf
+
 #ifndef __WINDOWS__
 #define stricmp strcasecmp
 #define strnicmp strncasecmp
@@ -63,19 +66,19 @@ void oscli (char *);
 int osbyte (int, int);
 void osword (int, void *);
 
-enum {		CMP, MOV,                                                           // 3 opcodes
-            ASR, LSL, LSR,                                                      // 2 Opcodes
-            LDRB, STRB,                                                         // 2 opcodes
-            LDRH, STRH,                                                         // 2 opcodes
+enum {		CMP, MOV,                                                       // 0-1: 3 opcodes
+            ASR, LSL, LSR,                                                  // 2-4: 2 Opcodes
+            LDRB, STRB,                                                     // 5-6: 2 opcodes
+            LDRH, STRH,                                                     // 7-8: 2 opcodes
             ADC, AND, BIC, CMN, EOR, MVN, ORR, REV16, REVSH, REV, ROR, SBC,
-            SXTB, SXTH, TST, UXTB, UTXH,                                        // <reg8>, <reg8>
-            NOP, SEV, WFE, WFI,                                                 // <opcode>
-            BLX, BX,                                                            // <reg8>
-            DMB, DSB, ISB,                                                      // 32-bit 0xF3BF____
-            LDRSB, LDRSH,                                                       // <reg8>, [<reg8>, <reg8>]
+            SXTB, SXTH, TST, UXTB, UTXH,                                    // 9-25: <reg8>, <reg8>
+            NOP, SEV, WFE, WFI,                                             // 26-29: <opcode>
+            BLX, BX,                                                        // 30-31: <reg8>
+            DMB, DSB, ISB,                                                  // 32-34: 32-bit 0xF3BF____
+            LDRSB, LDRSH,                                                   // 35-36: <reg8>, [<reg8>, <reg8>]
             ADD, ADR, BKPT, BL, B, CPS, LDM, LDR, MRS, MSR, MUL,
-            POP, PUSH, RSB, STM, STr, SUB, SVC,                                 // Unique opcodes
-            ALIGN, DB, DCB, DCD, DCS, DCW, EQUB, EQUD, EQUQ, EQUS, EQUW, OPT    // Pseudo-ops
+            POP, PUSH, RSB, STM, STr, SUB, SVC,                             // 37-54: Unique opcodes
+            ALIGN, DB, DCB, DCD, DCS, DCW, EQUB, EQUD, EQUQ, EQUS, EQUW, OPT    // 55-66: Pseudo-ops
     };
 
 static const char *mnemonics[] = {
@@ -84,12 +87,11 @@ static const char *mnemonics[] = {
     "ldrb", "strb",
     "ldrh", "strh",
     "adc", "and", "bic", "cmn", "eor", "mvn", "orr", "rev16", "revsh", "rev", "ror", "sbc",
-    "sxtb", "sxth", "tst", "uxtb", "utxh"
-    "ldrb", "strb",
-    "ldrh", "strh",
+    "sxtb", "sxth", "tst", "uxtb", "utxh",
     "nop", "sev", "wfe", "wfi",
     "blx", "bx",
     "dmb", "dsb", "isb",
+    "ldrsb", "ldrsh",
     "add", "adr", "bkpt", "bl", "b", "cps", "ldm", "ldr", "mrs", "msr", "mul",
     "pop", "push", "rsb", "stm", "str", "sub", "svc",
     "align", "db", "dcb", "dcd", "dcs", "dcw", "equb", "equd", "equq", "equs", "equw", "opt"};
@@ -313,6 +315,7 @@ void assemble (void)
 
 		al = nxt ();
 		esi++;
+        DBGLOG ("al = 0x%02X\r\n", al);
 
 		switch (al) 
 		    {
@@ -424,7 +427,9 @@ void assemble (void)
 
 			default:
 				esi--;
+                DBGLOG ("line = %s\r\n", esi);
 				mnemonic = lookup (mnemonics, sizeof(mnemonics)/sizeof(mnemonics[0]));
+                DBGLOG ("mnemonic = %d\r\n", mnemonic);
 
                 if ( mnemonic == B )
                     {
@@ -714,6 +719,7 @@ void assemble (void)
                     // ADD <reg8>, SP, <reg8>
                     // ADD <reg>,<reg>
                     int rd = reg ();
+                    DBGLOG ("ADD rd = %d\r\n", rd);
                     if ( rd < 8 )
                         {
                         int bImm;
@@ -721,6 +727,7 @@ void assemble (void)
 						int	offreg = offset (&bImm);
                         if ( bImm )
                             {
+                            DBGLOG ("Immediate = %d\r\n", offreg);
                             // Add rd, #n
                             if ((offreg < 0) || (offreg > 255)) error (2, NULL); // 'Bad immediate constant'
                             instruction = 0x3000 | ( rd << 8 ) | ( offreg & 0xFF );
@@ -728,6 +735,7 @@ void assemble (void)
                         else
                             {
                             int rn = offreg;
+                            DBGLOG ("rn = %d\r\n", rn);
                             if ( nxt () == ',' )
                                 {
                                 ++esi;
@@ -735,6 +743,7 @@ void assemble (void)
                                 if ( bImm )
                                     {
                                     // ADD rd, rn, #n
+                                    DBGLOG ("Immediate = %d\r\n", offreg);
                                     if ( rn < 8 )
                                         {
                                         if ((offreg < 0) || (offreg > 7))
@@ -752,33 +761,39 @@ void assemble (void)
                                 // ADD rd, rn, rm
                                 else if ( rn < 8 )
                                     {
+                                    DBGLOG ("rm = %d\r\n", offreg);
                                     if ( offreg > 7 ) error (4, NULL); // Mistake
                                     instruction = 0x1800 | ( ( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
                                     }
                                 else if ( rn == 13 )
                                     {
+                                    DBGLOG ("rn = sp\r\n");
                                     if ( offreg != rd ) error (4, NULL); // Mistake
                                     instruction = 0x4468 | rd;
                                     }
                                 else
                                     {
+                                    DBGLOG ("rn invalid\r\n");
                                     error (4, NULL); // Mistake
                                     }
                                 }
                             else
                                 {
                                 // ADD rd, rn
+                                DBGLOG ("ADD r%d, r%d\r\n", rd, rn);
                                 instruction = 0x4400 | ( rn << 3 ) | rd;
                                 }
                             }
                         }
                     else
                         {
+                        DBGLOG ("rd = %d\r\n", rd);
                         int bImm;
 						comma ();
 						int	offreg = offset (&bImm);
                         if ( bImm )
                             {
+                            DBGLOG ("Immediate = %d\r\n", offreg);
                             // ADD SP, #n
                             if ( rd != 13 ) error (4, NULL); // Mistake
                             if ((offreg < 0) || (offreg > 508) || (offreg & 0x03))
@@ -787,10 +802,13 @@ void assemble (void)
                             }
                         else if (( rd == 13 ) && ( offreg == 13 ) && ( nxt () == ',' ))
                             {
+                            DBGLOG ("ADD sp, sp,...\r\n");
                             // ADD SP, SP, #n
                             ++esi;
-                            if ( nxt () != '#' ) error (2, NULL); // 'Bad immediate constant'
+                            if ( nxt () == '#' ) ++esi;
+                            else error (2, NULL); // 'Bad immediate constant'
                             int imm = expri ();
+                            DBGLOG ("Immediate = %d\r\n", imm);
                             if (( imm < 0 ) || ( imm > 508 ) || ( imm & 0x03 ))
                                 error (2, NULL); // 'Bad immediate constant'
                             instruction = 0xB000 | (( imm >> 2 ) & 0x7F );
@@ -798,6 +816,7 @@ void assemble (void)
                         else
                             {
                             // ADD rd, rn
+                            DBGLOG ("ADD r%d, r%d\r\n", rd, offreg);
                             instruction = 0x4400 | (( rd & 0x08 ) << 4 ) | ( offreg << 3 ) | ( rd & 0x07 );
                             }
                         }
@@ -1139,6 +1158,10 @@ void assemble (void)
                 oldpc = align ();
 
                 poke (&instruction, 2);
+                int eol = nxt ();
+                DBGLOG ("eol = 0x%02X\n", eol);
+                if (( eol != 0x0D ) && ( eol != ':' ) && ( eol != ';' ) && ( eol != TREM ))
+                    error (16, NULL); // 'Syntax error'
             }
         };
     }
