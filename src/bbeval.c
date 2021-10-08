@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.24a, 18-Aug-2021                                *
+*       Version 1.25a, 07-Oct-2021                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -702,6 +702,11 @@ VAR math (VAR x, signed char op, VAR y)
 		case TEOR:
 			fix2(&x, &y) ;
 			x.i.n ^= y.i.n ;
+			return x ;
+
+		case TSUM:
+			fix2(&x, &y) ;
+			x.i.n += y.i.n ;
 			return x ;
 
 		case '<':
@@ -2292,7 +2297,7 @@ static VAR expr4 (void)
 	return x;
 }
 
-// Level 3: +, -:
+// Level 3: +, -, SUM:
 static VAR expr3 (void)
 {
 	VAR x = expr4 () ;
@@ -2324,7 +2329,7 @@ static VAR expr3 (void)
 	while (1) 
 	    {
 		signed char op = *esi ;
-		if ((op == '+') || (op == '-'))
+		if ((op == '+') || (op == '-') || (op == TSUM))
 		    {
 			esi++ ;
 			VAR y = expr4 () ;
