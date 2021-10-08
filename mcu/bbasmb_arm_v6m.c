@@ -470,6 +470,8 @@ void assemble (void)
                         ccode = ccodes[condition];
                     }
 
+                oldpc = align (2);
+
 				switch (mnemonic)
 				    {
 					case OPT:
@@ -913,12 +915,9 @@ void assemble (void)
                     if (( dest > 0x00FFFFFF ) || ( dest <= (int) 0xFF000000 ))
                         asmerr (1); // 'Jump out of range'
                     instruction = 0xF000 | (( dest >> 12 ) & 0x3FF );
-                    int instlow = 0xB000 | (( dest & 0x1000) << 1 ) | ( dest & 0xFFF );
-                    if ( dest < 0 )
-                        {
-                        instruction ^= 0x400;
-                        instlow ^= 0x2800;
-                        }
+                    int instlow = 0xD000 | (( dest & 0x1000) << 1 ) | ( dest & 0xFFF );
+                    if ( dest < 0 ) instruction ^= 0x400;
+                    else instlow ^= 0x2800;
                     poke (&instlow, 2);
                     break;
                     }
@@ -1011,11 +1010,12 @@ void assemble (void)
 
                     case MRS:
                     {
-                    instruction = 0x1000 | ( reg () << 8 );
+                    instruction = 0x8000 | ( reg () << 8 );
                     comma ();
                     nxt ();
                     int sys = lookup (sysm, sizeof (sysm) / sizeof (sysm[0]));
                     if ( sys < 0 ) asmerr (109);    // 'Invalid special register'
+                    if ( sys >= 4 ) ++sys;
                     if ( sys == 10 ) sys = 16;
                     else if ( sys == 11 ) sys = 20;
                     instruction |= sys;
@@ -1029,6 +1029,7 @@ void assemble (void)
                     nxt ();
                     int sys = lookup (sysm, sizeof (sysm) / sizeof (sysm[0]));
                     if ( sys < 0 ) asmerr (109);    // 'Invalid special register'
+                    if ( sys >= 4 ) ++sys;
                     if ( sys == 10 ) sys = 16;
                     else if ( sys == 11 ) sys = 20;
                     instruction = 0x8800 | sys;
@@ -1228,8 +1229,6 @@ void assemble (void)
                         asmerr (101); // 'Invalid opcode'
                         while (! eol (*esi)) ++esi;
                     }
-
-                oldpc = align (2);
 
                 poke (&instruction, 2);
                 if (! eol (nxt ())) asmerr (102); // 'Too many parameters'
