@@ -94,7 +94,7 @@ static const char *mnemonics[] = {
     "align", "db", "dcb", "dcd", "dcs", "dcw", "equb", "equd", "equq", "equs", "equw", "opt"};
 
 static const uint16_t opcodes[] = {
-    0x2100,     // CMP \ <reg8>, #<imm8>
+    0x2800,     // CMP \ <reg8>, #<imm8>
     0x2000,     // MOV /
     0x1000,     // ASR \ <reg8>, <reg8>, #<imm5>
     0x0000,     // LSL |
@@ -106,7 +106,7 @@ static const uint16_t opcodes[] = {
     0x4140,     // ADC   \ <reg8>, <reg8>
     0x4000,     // AND   |
     0x4380,     // BIC   |
-    0x4200,     // CMN   |
+    0x42C0,     // CMN   |
     0x4040,     // EOR   |
     0x43C0,     // MVN   |
     0x4300,     // ORR   |
@@ -124,7 +124,7 @@ static const uint16_t opcodes[] = {
     0xBF40,     // SEV |
     0xBF20,     // WFE |
     0xBF30,     // WFI /
-    0x4710,     // BLX \ <reg8>
+    0x4780,     // BLX \ <reg8>
     0x4700,     // BX  /
     0x8F5F,     // DMB \ 32-bit 0xF3BF____
     0x8F4F,     // DSB |
@@ -137,7 +137,7 @@ static const uint16_t opcode2[] = {
     0x4280,     // CMP \ <reg8>, <reg8>
     0x0000,     // MOV /
     0x4100,     // ASR \ <reg8>, <reg8>
-    0x4000,     // LSL |
+    0x4080,     // LSL |
     0x40C0,     // LSR /
     0x5C00,     // LDRB \ <reg8>, [<reg8>, <reg8>]
     0x5400,     // STRB /
@@ -793,7 +793,7 @@ void assemble (void)
                                             asmerr (2); // 'Bad immediate constant'
                                         else if (offreg & 0x03)
                                             asmerr (105);   // 'Invalid alignment'
-                                        instruction = 0xA100 | ((offreg >> 2) & 0xFF);
+                                        instruction = 0xA800 | ( rd << 8 ) | ((offreg >> 2) & 0xFF);
                                         }
                                     else asmerr (103); // 'Invalid register'
                                     }
@@ -1097,6 +1097,7 @@ void assemble (void)
                     comma ();
                     int rl = reglist ();
                     if ( rl & 0xFF00 ) asmerr (107); // 'Invalid register list'
+                    instruction |= rl;
                     break;
                     }
 
@@ -1202,7 +1203,7 @@ void assemble (void)
                             asmerr (2); // 'Bad immediate constant'
                         else if ( imm & 0x03 )
                             asmerr (105);   // 'Invalid alignment'
-                        instruction = 0xB010 | (( imm >> 2 ) & 0x7F );
+                        instruction = 0xB080 | (( imm >> 2 ) & 0x7F );
                         }
                     else
                         {
@@ -1219,7 +1220,7 @@ void assemble (void)
                     int imm = expri ();
                     if (( imm < 0 ) || ( imm > 0xFF ))
                         asmerr (2); // 'Bad immediate constant'
-                    instruction = 0xBF00 | ( imm & 0xFF );
+                    instruction = 0xDF00 | ( imm & 0xFF );
                     break;
                     }
 
