@@ -319,8 +319,7 @@ void assemble (void)
     {
 	signed char al;
 	signed char *oldesi = esi;
-	int init = 1;
-	void *oldpc = PC;
+	void *oldpc = align (4);
 
 	while (1)
 	    {
@@ -428,27 +427,25 @@ void assemble (void)
 				break;
 
 			case '.':
-				if (init)
-					// oldpc = align ();
-                    {
-                    VAR v;
-                    unsigned char type;
-                    void *ptr = getput (&type);
-                    if (ptr == NULL)
-                        asmerr (16); // 'Syntax error'
-                    if (type >= 128)
-                        asmerr (6); // 'Type mismatch'
-                    if ((liston & BIT5) == 0)
-                        {
-                        v = loadn (ptr, type);
-                        if (v.i.n)
-                            asmerr (3); // 'Multiple label'
-                        }
-                    v.i.t = 0;
-                    v.i.n = (intptr_t) PC;
-                    storen (v, ptr, type);
-                    }
+            {
+            VAR v;
+            unsigned char type;
+            void *ptr = getput (&type);
+            if (ptr == NULL)
+                asmerr (16); // 'Syntax error'
+            if (type >= 128)
+                asmerr (6); // 'Type mismatch'
+            if ((liston & BIT5) == 0)
+                {
+                v = loadn (ptr, type);
+                if (v.i.n)
+                    asmerr (3); // 'Multiple label'
+                }
+            v.i.t = 0;
+            v.i.n = (intptr_t) PC;
+            storen (v, ptr, type);
             break;
+            }
 
 			default:
 				esi--;
@@ -471,9 +468,6 @@ void assemble (void)
                     else
                         ccode = ccodes[condition];
                     }
-
-				if (mnemonic != OPT)
-					init = 0;
 
 				switch (mnemonic)
 				    {
