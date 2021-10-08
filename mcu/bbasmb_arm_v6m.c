@@ -14,9 +14,6 @@
 #include <stdint.h>
 #include "BBC.h"
 
-#define DEBUG   0
-#define DBGLOG  if (DEBUG > 0) printf
-
 #ifndef __WINDOWS__
 #define stricmp strcasecmp
 #define strnicmp strncasecmp
@@ -71,7 +68,7 @@ enum {		CMP, MOV,                                                       // 0-1: 
             LDRB, STRB,                                                     // 5-6: 2 opcodes
             LDRH, STRH,                                                     // 7-8: 2 opcodes
             ADC, AND, BIC, CMN, EOR, MVN, ORR, REV16, REVSH, REV, ROR, SBC,
-            SXTB, SXTH, TST, UXTB, UTXH,                                    // 9-25: <reg8>, <reg8>
+            SXTB, SXTH, TST, UXTB, UXTH,                                    // 9-25: <reg8>, <reg8>
             NOP, SEV, WFE, WFI,                                             // 26-29: <opcode>
             BLX, BX,                                                        // 30-31: <reg8>
             DMB, DSB, ISB,                                                  // 32-34: 32-bit 0xF3BF____
@@ -87,7 +84,7 @@ static const char *mnemonics[] = {
     "ldrb", "strb",
     "ldrh", "strh",
     "adc", "and", "bic", "cmn", "eor", "mvn", "orr", "rev16", "revsh", "rev", "ror", "sbc",
-    "sxtb", "sxth", "tst", "uxtb", "utxh",
+    "sxtb", "sxth", "tst", "uxtb", "uxth",
     "nop", "sev", "wfe", "wfi",
     "blx", "bx",
     "dmb", "dsb", "isb",
@@ -186,7 +183,9 @@ static const char *asmmsg[] = {
     "Low register required",        // 104
     "Invalid alignment",            // 105
     "Register / list conflict",     // 106
-    "Invalid register list"         // 107
+    "Invalid register list",        // 107
+    "Status flags not set",         // 108
+    "Invalid special register"      // 109
     };
 
 static void asmerr (int ierr)
@@ -212,6 +211,16 @@ static int lookup (const char **arr, int num)
 		return -1;
 	esi += n;
 	return i;
+    }
+
+static int status (void)
+    {
+    if (( *esi == 's' ) || ( *esi == 'S' ))
+        {
+        ++esi;
+        return 1;
+        }
+    return 0;
     }
 
 static unsigned char reg (void)
@@ -339,7 +348,6 @@ void assemble (void)
 
 		al = nxt ();
 		esi++;
-        DBGLOG ("al = 0x%02X\r\n", al);
 
 		switch (al) 
 		    {
@@ -449,14 +457,7 @@ void assemble (void)
 
 			default:
 				esi--;
-#if DEBUG > 0
-                printf ("line = ");
-                for (const char *ps = esi; !eol (*ps); ++ps)
-                    printf ("%c", *ps);
-                printf ("\r\n");
-#endif
 				mnemonic = lookup (mnemonics, sizeof(mnemonics)/sizeof(mnemonics[0]));
-                DBGLOG ("mnemonic = %d\r\n", mnemonic);
 
                 if ( mnemonic == B )
                     {
@@ -564,12 +565,14 @@ void assemble (void)
 
                     // Thumb Instructions
 
-					case CMP:
                     case MOV:
+					case CMP:
                     {
                     // <opcode> <reg8>, #<imm8>
                     // <opcode> <reg8>, <reg8>
                     // <opcode> <reg>, <reg>
+                    int st = 0;
+                    if ( mnemonic == MOV ) st = status ();
                     int rn = reg ();
                     comma ();
                     if ( rn < 8 )
@@ -593,6 +596,7 @@ void assemble (void)
                         }
                     else
                         {
+                        if ( st ) asmerr (108); // 'Status flags not set'
                         instruction = opcode3[mnemonic] | 0x80 | ( reg () << 3 ) | ( rn & 0x07 );
                         }
                     break;
@@ -604,6 +608,7 @@ void assemble (void)
                     {
                     // <opcode> <reg8>,<reg8>,#<offset>
                     // <opcode> <reg8>,<reg8>,<reg8>
+                    status ();
                     int rd = reg8 ();
                     comma ();
                     int rm = reg8 ();
@@ -633,6 +638,7 @@ void assemble (void)
                     if ( nxt () == '[' ) ++esi;
                     else asmerr (16); // 'Syntax error'
                     int rn = reg8 ();
+                    comma ();
                     int bImm;
                     int offreg = offset (&bImm);
                     if ( bImm )
@@ -661,6 +667,7 @@ void assemble (void)
                     if ( nxt () == '[' ) ++esi;
                     else asmerr (16); // 'Syntax error'
                     int rn = reg8 ();
+                    comma ();
                     int bImm;
                     int offreg = offset (&bImm);
                     if ( bImm )
@@ -684,20 +691,22 @@ void assemble (void)
 					case ADC:
 					case AND:
 					case BIC:
-					case CMN:
 					case EOR:
                     case MVN:
                     case ORR:
+                    case ROR:
+                    case SBC:
+                        status ();
+                        // Intentional fall through
+					case CMN:
                     case REV:
                     case REV16:
                     case REVSH:
-                    case ROR:
-                    case SBC:
                     case SXTB:
                     case SXTH:
                     case TST:
                     case UXTB:
-                    case UTXH:
+                    case UXTH:
                         // <opcode> <reg8>, <reg8>
                         instruction = opcodes[mnemonic] | reg8 ();
 						comma ();
@@ -748,8 +757,8 @@ void assemble (void)
                     // ADD <reg8>, <reg8>, <reg8>
                     // ADD <reg8>, SP, <reg8>
                     // ADD <reg>,<reg>
+                    int st = status ();
                     int rd = reg ();
-                    DBGLOG ("ADD rd = %d\r\n", rd);
                     if ( rd < 8 )
                         {
                         int bImm;
@@ -757,7 +766,6 @@ void assemble (void)
 						int	offreg = offset (&bImm);
                         if ( bImm )
                             {
-                            DBGLOG ("Immediate = %d\r\n", offreg);
                             // Add rd, #n
                             if ((offreg < 0) || (offreg > 255)) asmerr (2); // 'Bad immediate constant'
                             instruction = 0x3000 | ( rd << 8 ) | ( offreg & 0xFF );
@@ -765,7 +773,6 @@ void assemble (void)
                         else
                             {
                             int rn = offreg;
-                            DBGLOG ("rn = %d\r\n", rn);
                             if ( nxt () == ',' )
                                 {
                                 ++esi;
@@ -773,7 +780,6 @@ void assemble (void)
                                 if ( bImm )
                                     {
                                     // ADD rd, rn, #n
-                                    DBGLOG ("Immediate = %d\r\n", offreg);
                                     if ( rn < 8 )
                                         {
                                         if ((offreg < 0) || (offreg > 7))
@@ -782,6 +788,7 @@ void assemble (void)
                                         }
                                     else if ( rn == 13 )
                                         {
+                                        if ( st ) asmerr (108); // 'Status flags not set'
                                         if ((offreg < 0) || (offreg > 1020))
                                             asmerr (2); // 'Bad immediate constant'
                                         else if (offreg & 0x03)
@@ -793,41 +800,37 @@ void assemble (void)
                                 // ADD rd, rn, rm
                                 else if ( rn < 8 )
                                     {
-                                    DBGLOG ("rm = %d\r\n", offreg);
                                     if ( offreg > 7 ) asmerr (104); // 'Low register required'
                                     instruction = 0x1800 | ( ( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
                                     }
                                 else if ( rn == 13 )
                                     {
-                                    DBGLOG ("rn = sp\r\n");
                                     if ( offreg != rd ) asmerr (103); // 'Invalid register'
+                                    if ( st ) asmerr (108); // 'Status flags not set'
                                     instruction = 0x4468 | rd;
                                     }
                                 else
                                     {
-                                    DBGLOG ("rn invalid\r\n");
                                     asmerr (103); // 'Invalid register'
                                     }
                                 }
                             else
                                 {
                                 // ADD rd, rn
-                                DBGLOG ("ADD r%d, r%d\r\n", rd, rn);
                                 instruction = 0x4400 | ( rn << 3 ) | rd;
                                 }
                             }
                         }
                     else
                         {
-                        DBGLOG ("rd = %d\r\n", rd);
                         int bImm;
 						comma ();
 						int	offreg = offset (&bImm);
                         if ( bImm )
                             {
-                            DBGLOG ("Immediate = %d\r\n", offreg);
                             // ADD SP, #n
                             if ( rd != 13 ) asmerr (103); // 'Invalid register'
+                            if ( st ) asmerr (108); // 'Status flags not set'
                             if ((offreg < 0) || (offreg > 508))
                                 asmerr (2); // 'Bad immediate constant'
                             else if (offreg & 0x03)
@@ -836,13 +839,12 @@ void assemble (void)
                             }
                         else if (( rd == 13 ) && ( offreg == 13 ) && ( nxt () == ',' ))
                             {
-                            DBGLOG ("ADD sp, sp,...\r\n");
                             // ADD SP, SP, #n
+                            if ( st ) asmerr (108); // 'Status flags not set'
                             ++esi;
                             if ( nxt () == '#' ) ++esi;
                             else asmerr (2); // 'Bad immediate constant'
                             int imm = expri ();
-                            DBGLOG ("Immediate = %d\r\n", imm);
                             if (( imm < 0 ) || ( imm > 508 ))
                                 asmerr (2); // 'Bad immediate constant'
                             else if ( imm & 0x03 )
@@ -852,7 +854,7 @@ void assemble (void)
                         else
                             {
                             // ADD rd, rn
-                            DBGLOG ("ADD r%d, r%d\r\n", rd, offreg);
+                            if ( st ) asmerr (108); // 'Status flags not set'
                             instruction = 0x4400 | (( rd & 0x08 ) << 4 ) | ( offreg << 3 ) | ( rd & 0x07 );
                             }
                         }
@@ -897,6 +899,8 @@ void assemble (void)
 
                     case BKPT:
                         // BKPT <data>
+                        if ( nxt () == '#' ) ++esi;
+                        else asmerr (2); // 'Bad immediate constant'
                         instruction = 0xBE00 | ( expri () & 0xFF );
                         break;
                         
@@ -984,14 +988,14 @@ void assemble (void)
                                 asmerr (103); // 'Invalid register'
                                 instruction = opcodes[NOP];
                                 }
-                            if ( nxt () == ']' ) ++esi;
-                            else asmerr (16); // 'Syntax error'
                             }
                         else
                             {
                             if (( rn > 7 ) || ( offreg > 7 )) asmerr (104); // 'Low register required'
                             instruction = 0x5800 | (( offreg & 0x07 ) << 6 ) | (( rn & 0x07 ) << 3 ) | rd;
                             }
+                        if ( nxt () == ']' ) ++esi;
+                        else asmerr (16); // 'Syntax error'
                         }
                     else
                         {
@@ -1009,7 +1013,9 @@ void assemble (void)
                     {
                     instruction = 0x1000 | ( reg () << 8 );
                     comma ();
+                    nxt ();
                     int sys = lookup (sysm, sizeof (sysm) / sizeof (sysm[0]));
+                    if ( sys < 0 ) asmerr (109);    // 'Invalid special register'
                     if ( sys == 10 ) sys = 16;
                     else if ( sys == 11 ) sys = 20;
                     instruction |= sys;
@@ -1020,10 +1026,13 @@ void assemble (void)
 
                     case MSR:
                     {
-                    int sys = lookup (sysm, 12);
+                    nxt ();
+                    int sys = lookup (sysm, sizeof (sysm) / sizeof (sysm[0]));
+                    if ( sys < 0 ) asmerr (109);    // 'Invalid special register'
                     if ( sys == 10 ) sys = 16;
                     else if ( sys == 11 ) sys = 20;
                     instruction = 0x8800 | sys;
+                    poke (&instruction, 2);
                     comma ();
                     instruction = 0xF380 | reg ();
                     break;
@@ -1031,6 +1040,7 @@ void assemble (void)
 
                     case MUL:
                     {
+                    status ();
                     int rd = reg8 ();
                     comma ();
                     int rn = reg8 ();
@@ -1060,12 +1070,14 @@ void assemble (void)
                     }
 
                     case RSB:
+                        status ();
                         instruction = 0x4240 | reg8 ();
                         comma ();
                         instruction |= ( reg8 () << 3 );
                         comma ();
                         if ( nxt () == '#' )
                             {
+                            ++esi;
                             int imm = expri ();
                             if ( imm != 0 ) asmerr (2); // 'Bad immediate constant'
                             }
@@ -1080,7 +1092,8 @@ void assemble (void)
                     // STM <reg8>!, <reg8 list>
                     int rn = reg8 ();
                     instruction = 0xC000 | ( rn << 8 );
-                    if ( nxt () != '!' ) asmerr (16); // 'Syntax error'
+                    if ( nxt () == '!' ) ++esi;
+                    else asmerr (16); // 'Syntax error'
                     comma ();
                     int rl = reglist ();
                     if ( rl & 0xFF00 ) asmerr (107); // 'Invalid register list'
@@ -1124,14 +1137,14 @@ void assemble (void)
                                 asmerr (103); // Invalid register
                                 instruction = opcodes[NOP];
                                 }
-                            if ( nxt () == ']' ) ++esi;
-                            else asmerr (16); // 'Syntax error'
                             }
                         else
                             {
                             if (( rn > 7 ) || ( offreg > 7 )) asmerr (104); // 'Low register required'
                             instruction = 0x5000 | (( offreg & 0x07 ) << 6 ) | (( rn & 0x07 ) << 3 ) | rd;
                             }
+                        if ( nxt () == ']' ) ++esi;
+                        else asmerr (16); // 'Syntax error'
                         }
                     else asmerr (16); // 'Syntax error'
                     break;
@@ -1143,6 +1156,7 @@ void assemble (void)
                     // SUB <reg8>, #<imm8>
                     // SUB <reg8>, <reg8>, <reg8>
                     // SUB SP, SP, #<imm7>
+                    int st = status ();
                     int rd = reg ();
                     comma ();
                     if ( rd < 8 )
@@ -1177,6 +1191,7 @@ void assemble (void)
                         }
                     else if ( rd == 13 )
                         {
+                        if ( st ) asmerr (108); // 'Status flags not set'
                         int rn = reg ();
                         if ( rn != 13 ) asmerr (103); // 'Invalid register'
                         comma ();
@@ -1216,7 +1231,6 @@ void assemble (void)
                 oldpc = align (2);
 
                 poke (&instruction, 2);
-                DBGLOG ("eol = 0x%02X\n", nxt ());
                 if (! eol (nxt ())) asmerr (102); // 'Too many parameters'
                 while (! eol (*esi)) ++esi;
             }
