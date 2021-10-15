@@ -342,7 +342,7 @@ void assemble (void)
     {
 	signed char al;
 	signed char *oldesi = esi;
-	void *oldpc = align (4);
+	void *oldpc = PC;
 
 	while (1)
 	    {
@@ -413,6 +413,7 @@ void assemble (void)
                                 sprintf (ps, "%02X ", *((unsigned char *)p));
                                 ps += 3;
                                 ++p;
+                            case 0:
                                 break;
 						    }
 						if (n > 4)
@@ -481,9 +482,10 @@ void assemble (void)
 				esi--;
 				mnemonic = lookup (mnemonics, sizeof(mnemonics)/sizeof(mnemonics[0]));
 
-                oldpc = align (2);
+                oldpc = PC;
 
                 instruction = opcodes[NOP];
+                int instruction2 = -1;
 				switch (mnemonic)
 				    {
 					case OPT:
@@ -517,6 +519,7 @@ void assemble (void)
 					case DCW:
 					case EQUW:
                     {
+                    oldpc = align (2);
                     int n = expri ();
                     poke (&n, 2);
                     continue; // n.b. not break
@@ -549,6 +552,7 @@ void assemble (void)
                         n = v.i.n;
                     else
                         n = v.f;
+                    oldpc = align (4);
                     if (mnemonic == EQUQ)   poke (&n, 8);
                     else                    poke (&n, 4);
                     }
@@ -772,8 +776,7 @@ void assemble (void)
                         // <opcode32>
                         nxt ();
                         if ( !strnicmp ((const char *)esi, "sy", 2) ) esi += 2;
-                        instruction = 0xF3BF;
-                        poke (&instruction, 2);
+                        instruction2 = 0xF3BF;
                         instruction = opcodes[mnemonic];
                         break;
 
@@ -995,11 +998,10 @@ void assemble (void)
                             dest >>= 1;
                             if (( dest > 0x00FFFFFF ) || ( dest <= (int) 0xFF000000 ))
                                 asmerr (1); // 'Jump out of range'
-                            int instlow = 0xF000 | (( dest >> 12 ) & 0x3FF );
+                            instruction2 = 0xF000 | (( dest >> 12 ) & 0x3FF );
                             instruction = 0xD000 | (( dest & 0x1000) << 1 ) | ( dest & 0xFFF );
-                            if ( dest < 0 ) instlow ^= 0x400;
+                            if ( dest < 0 ) instruction2 ^= 0x400;
                             else instruction ^= 0x2800;
-                            poke (&instlow, 2);
                             break;
                             }
                         condition = 0;
@@ -1131,8 +1133,7 @@ void assemble (void)
                     if ( sys == 10 ) sys = 16;
                     else if ( sys == 11 ) sys = 20;
                     instruction |= sys;
-                    uint16_t instlow = 0xF3EF;
-                    poke (&instlow, 2);
+                    instruction2 = 0xF3EF;
                     break;
                     }
 
@@ -1145,8 +1146,7 @@ void assemble (void)
                     if ( sys == 10 ) sys = 16;
                     else if ( sys == 11 ) sys = 20;
                     comma ();
-                    instruction = 0xF380 | reg ();
-                    poke (&instruction, 2);
+                    instruction2 = 0xF380 | reg ();
                     instruction = 0x8800 | sys;
                     break;
                     }
@@ -1280,6 +1280,8 @@ void assemble (void)
                         while (! eol (*esi)) ++esi;
                     }
 
+                oldpc = align (2);
+                if ( instruction2 >= 0 ) poke (&instruction2, 2);
                 poke (&instruction, 2);
                 if (! eol (nxt ())) asmerr (102); // 'Too many parameters'
                 while (! eol (*esi)) ++esi;
