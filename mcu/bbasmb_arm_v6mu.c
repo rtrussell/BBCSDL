@@ -794,15 +794,29 @@ void assemble (void)
                                 {
                                 if ( rd == rn )
                                     {
-                                    if ((offreg < 0) || (offreg > 255))
-                                        asmerr (2); // 'Bad immediate constant'
-                                    instruction = 0x3000 | ( rd << 8 ) | ( offreg & 0xFF );
+                                    if ( offreg >= 0 )
+                                        {
+                                        instruction = 0x3000 | ( rd << 8 ) | ( offreg & 0xFF );
+                                        }
+                                    else
+                                        {
+                                        offreg = -offreg;
+                                        instruction = 0x3800 | ( rd << 8 ) | ( offreg & 0xFF );
+                                        }
+                                    if (offreg > 255) asmerr (2); // 'Bad immediate constant'
                                     }
                                 else
                                     {
-                                    if ((offreg < 0) || (offreg > 7))
-                                        asmerr (2); // 'Bad immediate constant'
-                                    instruction = 0x1C00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
+                                    if ( offreg >= 0 )
+                                        {
+                                        instruction = 0x1C00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
+                                        }
+                                    else
+                                        {
+                                        offreg = -offreg;
+                                        instruction = 0x1E00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
+                                        }
+                                    if (offreg > 7) asmerr (2); // 'Bad immediate constant'
                                     }
                                 }
                             else
@@ -825,11 +839,17 @@ void assemble (void)
                                     {
                                     if ( rd == 13 )
                                         {
-                                        if (( offreg < 0 ) || ( offreg > 508 ))
-                                            asmerr (2); // 'Bad offregediate constant'
-                                        else if ( offreg & 0x03 )
-                                            asmerr (105);   // 'Invalid alignment'
-                                        instruction = 0xB000 | (( offreg >> 2 ) & 0x7F );
+                                        if ( offreg >= 0 )
+                                            {
+                                            instruction = 0xB000 | (( offreg >> 2 ) & 0x7F );
+                                            }
+                                        else
+                                            {
+                                            offreg = - offreg;
+                                            instruction = 0xB080 | (( offreg >> 2 ) & 0x7F );
+                                            }
+                                        if ( offreg > 508 ) asmerr (2); // 'Bad offregediate constant'
+                                        else if ( offreg & 0x03 ) asmerr (105);   // 'Invalid alignment'
                                         }
                                     else
                                         {
@@ -863,6 +883,73 @@ void assemble (void)
                                 instruction = 0x4400 | (( rd & 0x08 ) << 4 ) | ( offreg << 3 )
                                     | ( rd & 0x07 );
                                 }
+                            }
+                        break;
+
+                    case SUB:
+                        if ( status () )
+                            {
+                            int rd = reg8 ();
+                            comma ();
+                            int rn = reg8 ();
+                            comma ();
+                            int bImm;
+                            int offreg = offset (&bImm);
+                            if ( bImm )
+                                {
+                                if ( rd == rn )
+                                    {
+                                    if ( offreg >= 0 )
+                                        {
+                                        instruction = 0x3800 | ( rd << 8 ) | ( offreg & 0xFF );
+                                        }
+                                    else
+                                        {
+                                        offreg = - offreg;
+                                        instruction = 0x3000 | ( rd << 8 ) | ( offreg & 0xFF );
+                                        }
+                                    if ( offreg > 255 ) asmerr (2); // 'Bad immediate constant'
+                                    }
+                                else
+                                    {
+                                    if ( offreg >= 0 )
+                                        {
+                                        instruction = 0x1E00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
+                                        }
+                                    else
+                                        {
+                                        offreg = - offreg;
+                                        instruction = 0x1C00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
+                                        }
+                                    if ( offreg > 7 ) asmerr (2); // 'Bad immediate constant'
+                                    }
+                                }
+                            else
+                                {
+                                if ( offreg > 7 ) asmerr (104); // 'Low register required'
+                                instruction = 0x1A00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
+                                }
+                            }
+                        else
+                            {
+                            int rd = reg ();
+                            comma ();
+                            int rn = reg ();
+                            comma ();
+                            int bImm;
+                            int offreg = offset (&bImm);
+                            if (( rd != 13 ) || ( rn != 13 )) asmerr (103); // 'Invalid register'
+                            if ( offreg >= 0 )
+                                {
+                                instruction = 0xB080 | (( offreg >> 2 ) & 0x7F );
+                                }
+                            else
+                                {
+                                offreg = - offreg;
+                                instruction = 0xB000 | (( offreg >> 2 ) & 0x7F );
+                                }
+                            if ( offreg > 508 ) asmerr (2); // 'Bad offregediate constant'
+                            else if ( offreg & 0x03 ) asmerr (105);   // 'Invalid alignment'
                             }
                         break;
 
@@ -1166,53 +1253,6 @@ void assemble (void)
                     else asmerr (16); // 'Syntax error'
                     break;
                     }
-
-                    case SUB:
-                        if ( status () )
-                            {
-                            int rd = reg8 ();
-                            comma ();
-                            int rn = reg8 ();
-                            comma ();
-                            int bImm;
-                            int offreg = offset (&bImm);
-                            if ( bImm )
-                                {
-                                if ( rd == rn )
-                                    {
-                                    if (( offreg < 0 ) || ( offreg > 0xFF ))
-                                        asmerr (2); // 'Bad immediate constant'
-                                    instruction = 0x3800 | ( rd << 8 ) | ( offreg & 0xFF );
-                                    }
-                                else
-                                    {
-                                    if (( offreg < 0 ) || ( offreg > 7 ))
-                                        asmerr (2); // 'Bad immediate constant'
-                                    instruction = 0x1E00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
-                                    }
-                                }
-                            else
-                                {
-                                if ( offreg > 7 ) asmerr (104); // 'Low register required'
-                                instruction = 0x1A00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
-                                }
-                            }
-                        else
-                            {
-                            int rd = reg ();
-                            comma ();
-                            int rn = reg ();
-                            comma ();
-                            int bImm;
-                            int offreg = offset (&bImm);
-                            if (( rd != 13 ) || ( rn != 13 )) asmerr (103); // 'Invalid register'
-                            if (( offreg < 0 ) || ( offreg > 0x1FF ))
-                                asmerr (2); // 'Bad immediate constant'
-                            else if ( offreg & 0x03 )
-                                asmerr (105);   // 'Invalid alignment'
-                            instruction = 0xB080 | (( offreg >> 2 ) & 0x7F );
-                            }
-                        break;
 
                     case SVC:
                     {
