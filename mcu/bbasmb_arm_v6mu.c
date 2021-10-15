@@ -76,7 +76,7 @@ enum {
     LDRSB, LDRSH,                                                   // 35-36: <reg8>, [<reg8>, <reg8>]
     CPSID, CPSIE,
     CMP, MOV,
-    ADD, ADR, BKPT, BL, B, LDM, LDR, MRS, MSR, MUL,
+    ADD, ADR, BKPT, B, LDM, LDR, MRS, MSR, MUL,
     POP, PUSH, RSB, STM, STr, SUB, SVC,                             // 37-54: Unique opcodes
     ALIGN, DB, DCB, DCD, DCS, DCW, EQUB, EQUD, EQUQ, EQUS, EQUW, OPT    // 55-66: Pseudo-ops
     };
@@ -93,7 +93,7 @@ static const char *mnemonics[] = {
     "ldrsb", "ldrsh",
     "cpsid", "cpsie",
     "cmp", "mov",
-    "add", "adr", "bkpt", "bl", "b", "ldm", "ldr", "mrs", "msr", "muls",
+    "add", "adr", "bkpt", "b", "ldm", "ldr", "mrs", "msr", "muls",
     "pop", "push", "rsbs", "stm", "str", "sub", "svc",
     "align", "db", "dcb", "dcd", "dcs", "dcw", "equb", "equd", "equq", "equs", "equw", "opt"};
 
@@ -346,8 +346,7 @@ void assemble (void)
 
 	while (1)
 	    {
-		int mnemonic, condition, instruction = 0;
-		unsigned char ccode = 0b1110;;
+		int mnemonic, condition, instruction;
 
 		if (liston & BIT7)
 		    {
@@ -472,17 +471,6 @@ void assemble (void)
 			default:
 				esi--;
 				mnemonic = lookup (mnemonics, sizeof(mnemonics)/sizeof(mnemonics[0]));
-
-                if ( mnemonic == B )
-                    {
-                    condition = lookup (conditions, 
-                        sizeof(conditions) / sizeof(conditions[0]));
-
-                    if (condition == -1)
-                        ccode = 0b1110;
-                    else
-                        ccode = ccodes[condition];
-                    }
 
                 oldpc = align (2);
 
@@ -896,20 +884,45 @@ void assemble (void)
 
 					case B:
                     {
-                    // B <label>
-                    // B<cond> <label>
+                    condition = lookup (conditions, 
+                        sizeof(conditions) / sizeof(conditions[0]));
+
+                    if (condition == -1)
+                        {
+                        if (( *esi == 'l' ) || ( *esi == 'L' ))
+                            {
+                            // BL <label>
+                            ++esi;
+                            int dest = (void *) (size_t) expri () - PC - 4;
+                            if ( dest & 0x01 ) asmerr (105);    // 'Invalid alignment'
+                            dest >>= 1;
+                            if (( dest > 0x00FFFFFF ) || ( dest <= (int) 0xFF000000 ))
+                                asmerr (1); // 'Jump out of range'
+                            instruction = 0xF000 | (( dest >> 12 ) & 0x3FF );
+                            int instlow = 0xD000 | (( dest & 0x1000) << 1 ) | ( dest & 0xFFF );
+                            if ( dest < 0 ) instruction ^= 0x400;
+                            else instlow ^= 0x2800;
+                            poke (&instlow, 2);
+                            break;
+                            }
+                        condition = 0;
+                        }
+                    
                     int dest = (void *) (size_t) expri () - PC - 4;
                     if ( dest & 0x01 ) asmerr (105);    // 'Invalid alignment'
                     dest >>= 1;
-                    if ( ccode == 0b1110 )
+                    if ( condition == 0 )
                         {
+                        // B <label>
+                        // BAL <label>
                         if (( dest < -1024 ) || ( dest >= 1024 )) asmerr (1); // 'Jump out of range'
                         instruction = 0xE000 | ( dest & 0x7FF );
                         }
                     else
                         {
+                        // B<cond> <label>
                         if (( dest < -128 ) || ( dest >= 128 )) asmerr (1); // 'Jump out of range'
-                        instruction = 0xD000 | ( ccode << 8 ) | ( dest & 0xFF );
+                        instruction = 0xD000 | ( ccodes[condition] << 8 ) | ( dest & 0xFF );
                         }
                     break;
                     }
@@ -919,22 +932,6 @@ void assemble (void)
                         if ( nxt () == '#' ) ++esi;
                         instruction = 0xBE00 | ( expri () & 0xFF );
                         break;
-                        
-					case BL:
-                    {
-                    // BL <label>
-                    int dest = (void *) (size_t) expri () - PC - 4;
-                    if ( dest & 0x01 ) asmerr (105);    // 'Invalid alignment'
-                    dest >>= 1;
-                    if (( dest > 0x00FFFFFF ) || ( dest <= (int) 0xFF000000 ))
-                        asmerr (1); // 'Jump out of range'
-                    instruction = 0xF000 | (( dest >> 12 ) & 0x3FF );
-                    int instlow = 0xD000 | (( dest & 0x1000) << 1 ) | ( dest & 0xFFF );
-                    if ( dest < 0 ) instruction ^= 0x400;
-                    else instlow ^= 0x2800;
-                    poke (&instlow, 2);
-                    break;
-                    }
 
                     case CPSID:
                     case CPSIE:
