@@ -389,26 +389,36 @@ void assemble (void)
 
 					do
 					    {
-						unsigned int i = *(unsigned int *)p;
 #if (defined (_WIN32)) && (__GNUC__ < 9)
 						sprintf (accs, "%08I64X ", (long long) (size_t) oldpc);
 #else
 						sprintf (accs, "%08llX ", (long long) (size_t) oldpc);
 #endif
+                        char *ps = accs + 9;
 						switch (n)
 						    {
-							case 0: break;
-							case 1:	i &= 0xFF;
-							case 2: i &= 0xFFFF;
-							case 3: i &= 0xFFFFFF;
-							case 4: sprintf (accs + 9, "%0*X ", n*2, i);
-								break;
-							default: sprintf (accs + 9, "%08X ", i);
+                            case 4:
+                                sprintf (ps, "%02X ", *((unsigned char *)p));
+                                ps += 3;
+                                ++p;
+                            case 3:
+                                sprintf (ps, "%02X ", *((unsigned char *)p));
+                                ps += 3;
+                                ++p;
+                            case 2:
+                                sprintf (ps, "%02X ", *((unsigned char *)p));
+                                ps += 3;
+                                ++p;
+                            case 1:
+                                sprintf (ps, "%02X ", *((unsigned char *)p));
+                                ps += 3;
+                                ++p;
+                            default:
+                                break;
 						    }
 						if (n > 4)
 						    {
 							n -= 4;
-							p += 4;
 							oldpc += 4;
 						    }
 						else 
@@ -418,7 +428,7 @@ void assemble (void)
 
 						if (*oldesi == '.')
 						    {
-							tabit (18);
+							tabit (21);
 							do	
 							    {
 								token (*oldesi++ );
@@ -763,8 +773,9 @@ void assemble (void)
                         // <opcode32>
                         nxt ();
                         if ( !strnicmp ((const char *)esi, "sy", 2) ) esi += 2;
-                        poke (&opcodes[mnemonic], 2);
                         instruction = 0xF3BF;
+                        poke (&instruction, 2);
+                        instruction = opcodes[mnemonic];
                         break;
 
                     case LDRSB:
@@ -1120,9 +1131,9 @@ void assemble (void)
                     if ( sys >= 4 ) ++sys;
                     if ( sys == 10 ) sys = 16;
                     else if ( sys == 11 ) sys = 20;
-                    instruction |= sys;
-                    poke (&instruction, 2);
                     instruction = 0xF3EF;
+                    poke (&instruction, 2);
+                    instruction |= sys;
                     break;
                     }
 
@@ -1134,10 +1145,10 @@ void assemble (void)
                     if ( sys >= 4 ) ++sys;
                     if ( sys == 10 ) sys = 16;
                     else if ( sys == 11 ) sys = 20;
-                    instruction = 0x8800 | sys;
-                    poke (&instruction, 2);
                     comma ();
                     instruction = 0xF380 | reg ();
+                    poke (&instruction, 2);
+                    instruction = 0x8800 | sys;
                     break;
                     }
 
