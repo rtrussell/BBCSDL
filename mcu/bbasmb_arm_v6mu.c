@@ -871,8 +871,9 @@ void assemble (void)
                                 }
                             else
                                 {
-                                if ( offreg != rd ) asmerr (103);   // 'Invalid register'
-                                instruction = 0x4400 | (( rd & 0x08 ) << 4 ) | ( rn << 3 ) | ( rd & 0x07 );
+                                if ( rn != rd ) asmerr (103);   // 'Invalid register'
+                                instruction = 0x4400 | (( rd & 0x08 ) << 4 ) | ( offreg << 3 )
+                                    | ( rd & 0x07 );
                                 }
                             }
                         break;
