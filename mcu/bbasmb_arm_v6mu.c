@@ -397,7 +397,7 @@ void assemble (void)
                         char *ps = accs + 9;
 						switch (n)
 						    {
-                            case 4:
+                            default:
                                 sprintf (ps, "%02X ", *((unsigned char *)p));
                                 ps += 3;
                                 ++p;
@@ -413,7 +413,6 @@ void assemble (void)
                                 sprintf (ps, "%02X ", *((unsigned char *)p));
                                 ps += 3;
                                 ++p;
-                            default:
                                 break;
 						    }
 						if (n > 4)
@@ -996,10 +995,10 @@ void assemble (void)
                             dest >>= 1;
                             if (( dest > 0x00FFFFFF ) || ( dest <= (int) 0xFF000000 ))
                                 asmerr (1); // 'Jump out of range'
-                            instruction = 0xF000 | (( dest >> 12 ) & 0x3FF );
-                            int instlow = 0xD000 | (( dest & 0x1000) << 1 ) | ( dest & 0xFFF );
-                            if ( dest < 0 ) instruction ^= 0x400;
-                            else instlow ^= 0x2800;
+                            int instlow = 0xF000 | (( dest >> 12 ) & 0x3FF );
+                            instruction = 0xD000 | (( dest & 0x1000) << 1 ) | ( dest & 0xFFF );
+                            if ( dest < 0 ) instlow ^= 0x400;
+                            else instruction ^= 0x2800;
                             poke (&instlow, 2);
                             break;
                             }
@@ -1131,9 +1130,9 @@ void assemble (void)
                     if ( sys >= 4 ) ++sys;
                     if ( sys == 10 ) sys = 16;
                     else if ( sys == 11 ) sys = 20;
-                    instruction = 0xF3EF;
-                    poke (&instruction, 2);
                     instruction |= sys;
+                    uint16_t instlow = 0xF3EF;
+                    poke (&instlow, 2);
                     break;
                     }
 
