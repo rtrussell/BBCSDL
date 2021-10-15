@@ -133,7 +133,7 @@ static const uint16_t opcodes[] = {
     0x8F4F,     // DSB |
     0x8F6F,     // ISB /
     0x5600,     // LDRSB \ <reg8>, [<reg8>, <reg8>]
-    0x5700,     // LDRSH /
+    0x5E00,     // LDRSH /
     0xB672,     // CPSID \ i
     0xB662      // CPSIE /
     };
