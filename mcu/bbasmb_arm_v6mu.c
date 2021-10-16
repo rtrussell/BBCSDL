@@ -519,7 +519,7 @@ void assemble (void)
 					case DCW:
 					case EQUW:
                     {
-                    oldpc = align (2);
+                    align (2);
                     int n = expri ();
                     poke (&n, 2);
                     continue; // n.b. not break
@@ -552,7 +552,7 @@ void assemble (void)
                         n = v.i.n;
                     else
                         n = v.f;
-                    oldpc = align (4);
+                    align (4);
                     if (mnemonic == EQUQ)   poke (&n, 8);
                     else                    poke (&n, 4);
                     }
@@ -861,14 +861,14 @@ void assemble (void)
                                             offreg = - offreg;
                                             instruction = 0xB080 | (( offreg >> 2 ) & 0x7F );
                                             }
-                                        if ( offreg > 508 ) asmerr (2); // 'Bad offregediate constant'
+                                        if ( offreg > 508 ) asmerr (2); // 'Bad immediate constant'
                                         else if ( offreg & 0x03 ) asmerr (105);   // 'Invalid alignment'
                                         }
                                     else
                                         {
                                         if ( rd > 7 ) asmerr (104); //'Low register required'
                                         if (( offreg < 0 ) || ( offreg > 1020 ))
-                                            asmerr (2); // 'Bad offregediate constant'
+                                            asmerr (2); // 'Bad immediate constant'
                                         else if ( offreg & 0x03 )
                                             asmerr (105);   // 'Invalid alignment'
                                         instruction = 0xA800 | (( rd & 0x07 ) << 8 )
@@ -879,7 +879,7 @@ void assemble (void)
                                     {
                                     if ( rd > 7 ) asmerr (104); //'Low register required'
                                     if (( offreg < 0 ) || ( offreg > 1020 ))
-                                        asmerr (2); // 'Bad offregediate constant'
+                                        asmerr (2); // 'Bad immediate constant'
                                     else if ( offreg & 0x03 )
                                         asmerr (105);   // 'Invalid alignment'
                                     instruction = 0xA000 | (( rd & 0x07 ) << 8 )
@@ -961,7 +961,7 @@ void assemble (void)
                                 offreg = - offreg;
                                 instruction = 0xB000 | (( offreg >> 2 ) & 0x7F );
                                 }
-                            if ( offreg > 508 ) asmerr (2); // 'Bad offregediate constant'
+                            if ( offreg > 508 ) asmerr (2); // 'Bad immediate constant'
                             else if ( offreg & 0x03 ) asmerr (105);   // 'Invalid alignment'
                             }
                         break;
