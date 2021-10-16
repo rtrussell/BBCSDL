@@ -342,7 +342,8 @@ void assemble (void)
     {
 	signed char al;
 	signed char *oldesi = esi;
-	void *oldpc = align (4);
+	int init = 1 ;
+	void *oldpc = PC;
 
 	while (1)
 	    {
@@ -472,6 +473,7 @@ void assemble (void)
                 if (v.i.n)
                     asmerr (3); // 'Multiple label'
                 }
+            if (init) oldpc = align (4);
             v.i.t = 0;
             v.i.n = (intptr_t) PC;
             storen (v, ptr, type);
@@ -483,9 +485,10 @@ void assemble (void)
 				mnemonic = lookup (mnemonics, sizeof(mnemonics)/sizeof(mnemonics[0]));
 
                 oldpc = PC;
-
+				if (mnemonic != OPT) init = 0;
                 instruction = opcodes[NOP];
                 int instruction2 = -1;
+                
 				switch (mnemonic)
 				    {
 					case OPT:
