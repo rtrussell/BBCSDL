@@ -491,7 +491,8 @@ size_t myfread(void *ptr, size_t size, size_t nmemb, FILE *fp)
 	unsigned int nbyte;
 	if (size == 1)
 	    {
-	    if ( f_read (fatptr (fp), ptr, nmemb, &nbyte) < FR_OK ) return nbyte;
+	    f_read (fatptr (fp), ptr, nmemb, &nbyte);
+        return nbyte;
 	    }
 	else
 	    {
@@ -535,7 +536,8 @@ size_t myfwrite(void *ptr, size_t size, size_t nmemb, FILE *fp)
 	unsigned int nbyte;
 	if (size == 1)
 	    {
-	    if ( f_write (fatptr (fp), ptr, nmemb, &nbyte) < FR_OK ) return nbyte;
+	    f_write (fatptr (fp), ptr, nmemb, &nbyte);
+        return nbyte;
 	    }
 	else
 	    {
