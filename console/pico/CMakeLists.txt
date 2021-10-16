@@ -20,13 +20,13 @@ pico_sdk_init()
 
 if (TARGET tinyusb_device)
   add_executable(bbcbasic 
+    ../../src/bbdata_arm_32.s
     ../../src/bbmain.c
     ../../src/bbexec.c
     ../../src/bbeval.c
     ../../src/bbccos.c
-    ../../src/bbdata_arm_32.s
     ../../src/bbpico.c
-    ../../mcu/bbasmb_arm_v6mu.c 
+    ../../mcu/bbasmb_arm_v6m2.c 
     ../../mcu/lfswrap.c 
     ../../mcu/m0FaultDispatch/m0FaultDispatch.c
     ../../mcu/fault.c
@@ -115,6 +115,13 @@ if (TARGET tinyusb_device)
       tinyusb_board
       )
     pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/vga_pico.ld)
+  elseif ( ${STDIO} STREQUAL "USB+UART" )
+    message(STATUS "BBC Basic console I/O will be on USB and UART")
+    pico_enable_stdio_usb(bbcbasic 1)
+    pico_enable_stdio_uart(bbcbasic 1)
+    target_compile_definitions(bbcbasic PRIVATE -DSTDIO_USB -DSTDIO_UART)
+    target_compile_definitions(bbcbasic PUBLIC PICO_STACK_SIZE=0x3C000)
+    pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/bbc_pico.ld)
   elseif ( ${STDIO} STREQUAL "UART" )
     message(STATUS "BBC Basic console I/O will be on UART")
     pico_enable_stdio_usb(bbcbasic 0)

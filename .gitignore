@@ -6,7 +6,7 @@
 *.o
 *.ko
 *.obj
-build/
+build*/
 
 # Linker output
 *.ilk

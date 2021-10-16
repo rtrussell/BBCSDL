@@ -1768,13 +1768,15 @@ void sigbus(void){
 	printf("SIGBUS exception caught...\n");
 	for(;;);
 }
+
+static int waitdone=0;
 void waitconsole(void){
-	static int waitdone=0;
 	if(waitdone) return;
 # ifdef STDIO_USB
 	printf("Waiting for usb host");
-	while (!tud_cdc_connected()) {
+	while ((!tud_cdc_connected()) && (inpqw == 0)) {
 		printf(".");
+        myPoll ();
 		sleep_ms(500);
 	}
 # endif
@@ -1981,6 +1983,7 @@ pthread_t hThread = NULL ;
 		fread (progRAM, 1, userTOP - progRAM, ProgFile) ;
 		fclose (ProgFile) ;
 		immediate = NULL ;
+        waitdone = 1;
 	    }
 	else
 	    {
