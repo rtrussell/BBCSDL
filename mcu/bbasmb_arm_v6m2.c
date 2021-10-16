@@ -1,10 +1,11 @@
-/*****************************************************************\
+/*******************************************************************\
  *       32-bit BBC BASIC Interpreter                              *
  *       (c) 2018-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
  *                                                                 *
  *       bbasmb_arm_v6m.c Assembler for ARMv6m thunb instructions  *
+ *       Unified & Divided syntax                                  *
  *       Version 1.24a, 12-Jul-2021                                *
-\*****************************************************************/
+\*******************************************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -63,39 +64,41 @@ void oscli (char *);
 int osbyte (int, int);
 void osword (int, void *);
 
-enum {		CMP, MOV,                                                       // 0-1: 3 opcodes
-            ASR, LSL, LSR,                                                  // 2-4: 2 Opcodes
-            LDRB, STRB,                                                     // 5-6: 2 opcodes
-            LDRH, STRH,                                                     // 7-8: 2 opcodes
-            ADC, AND, BIC, CMN, EOR, MVN, ORR, REV16, REVSH, REV, ROR, SBC,
-            SXTB, SXTH, TST, UXTB, UXTH,                                    // 9-25: <reg8>, <reg8>
-            NOP, SEV, WFE, WFI,                                             // 26-29: <opcode>
-            BLX, BX,                                                        // 30-31: <reg8>
-            DMB, DSB, ISB,                                                  // 32-34: 32-bit 0xF3BF____
-            LDRSB, LDRSH,                                                   // 35-36: <reg8>, [<reg8>, <reg8>]
-            ADD, ADR, BKPT, BL, B, CPS, LDM, LDR, MRS, MSR, MUL,
-            POP, PUSH, RSB, STM, STr, SUB, SVC,                             // 37-54: Unique opcodes
-            ALIGN, DB, DCB, DCD, DCS, DCW, EQUB, EQUD, EQUQ, EQUS, EQUW, OPT    // 55-66: Pseudo-ops
+int bUni = 1;   // Set for unified syntax
+
+enum {
+    ASR, LSL, LSR,                                                  // 0-2: 2 Opcodes
+    LDRB, STRB,                                                     // 3-4: 2 opcodes
+    LDRH, STRH,                                                     // 5-6: 2 opcodes
+    ADC, AND, BIC, CMN, EOR, MVN, ORR, REV16, REVSH, REV, ROR, SBC,
+    SXTB, SXTH, TST, UXTB, UXTH,                                    // 7-23: <reg8>, <reg8>
+    NOP, SEV, WFE, WFI, YIELD,                                      // 24-28: <opcode>
+    BLX, BX,                                                        // 29-30: <reg8>
+    DMB, DSB, ISB,                                                  // 31-33: 32-bit 0xF3BF____
+    LDRSB, LDRSH,                                                   // 34-35: <reg8>, [<reg8>, <reg8>]
+    CPSID, CPSIE,
+    CMP, MOV, ADD, ADR, BKPT, B, LDM, LDR, MRS, MSR, MUL,
+    POP, PUSH, RSB, STM, STr, SUB, SVC,                             // 36-53: Unique opcodes
+    ALIGN, DB, DCB, DCD, DCS, DCW, EQUB, EQUD, EQUQ, EQUS, EQUW,
+    OPT, SYNTAX                                                     // 54-66: Pseudo-ops
     };
 
 static const char *mnemonics[] = {
-    "cmp", "mov",
     "asr", "lsl", "lsr",
     "ldrb", "strb",
     "ldrh", "strh",
     "adc", "and", "bic", "cmn", "eor", "mvn", "orr", "rev16", "revsh", "rev", "ror", "sbc",
     "sxtb", "sxth", "tst", "uxtb", "uxth",
-    "nop", "sev", "wfe", "wfi",
+    "nop", "sev", "wfe", "wfi", "yield",
     "blx", "bx",
     "dmb", "dsb", "isb",
     "ldrsb", "ldrsh",
-    "add", "adr", "bkpt", "bl", "b", "cps", "ldm", "ldr", "mrs", "msr", "mul",
+    "cpsid", "cpsie",
+    "cmp", "mov", "add", "adr", "bkpt", "b", "ldm", "ldr", "mrs", "msr", "mul",
     "pop", "push", "rsb", "stm", "str", "sub", "svc",
-    "align", "db", "dcb", "dcd", "dcs", "dcw", "equb", "equd", "equq", "equs", "equw", "opt"};
+    "align", "db", "dcb", "dcd", "dcs", "dcw", "equb", "equd", "equq", "equs", "equw", "opt", "syntax"};
 
 static const uint16_t opcodes[] = {
-    0x2800,     // CMP \ <reg8>, #<imm8>
-    0x2000,     // MOV /
     0x1000,     // ASR \ <reg8>, <reg8>, #<imm5>
     0x0000,     // LSL |
     0x0800,     // LSR /
@@ -120,22 +123,23 @@ static const uint16_t opcodes[] = {
     0x4200,     // TST   |
     0xB2C0,     // UXTB  |
     0xB280,     // UXTH  /
-    0xBF00,     // NOP \ <opcode>
-    0xBF40,     // SEV |
-    0xBF20,     // WFE |
-    0xBF30,     // WFI /
+    0xBF00,     // NOP   \ <opcode>
+    0xBF40,     // SEV   |
+    0xBF20,     // WFE   |
+    0xBF30,     // WFI   |
+    0xBF10,     // YIELD /
     0x4780,     // BLX \ <reg8>
     0x4700,     // BX  /
     0x8F5F,     // DMB \ 32-bit 0xF3BF____
     0x8F4F,     // DSB |
     0x8F6F,     // ISB /
     0x5600,     // LDRSB \ <reg8>, [<reg8>, <reg8>]
-    0x5700      // LDRSH /
+    0x5E00,     // LDRSH /
+    0xB672,     // CPSID \ i
+    0xB662      // CPSIE /
     };
 
 static const uint16_t opcode2[] = {
-    0x4280,     // CMP \ <reg8>, <reg8>
-    0x0000,     // MOV /
     0x4100,     // ASR \ <reg8>, <reg8>
     0x4080,     // LSL |
     0x40C0,     // LSR /
@@ -143,11 +147,6 @@ static const uint16_t opcode2[] = {
     0x5400,     // STRB /
     0x5A00,     // LDRH \ <reg8>, [<reg8>, <reg8>]
     0x5200,     // STRH /
-    };
-
-static const uint16_t opcode3[] = {
-    0x4500,     // CMP \ <reg>, <reg>
-    0x4600,     // MOV /
     };
 
 static const char *conditions[] = {
@@ -185,7 +184,8 @@ static const char *asmmsg[] = {
     "Register / list conflict",     // 106
     "Invalid register list",        // 107
     "Status flags not set",         // 108
-    "Invalid special register"      // 109
+    "Invalid special register",     // 109
+    "Instruction sets status flags" // 110
     };
 
 static void asmerr (int ierr)
@@ -221,6 +221,12 @@ static int status (void)
         return 1;
         }
     return 0;
+    }
+
+static void chkstatus (void)
+    {
+    int st = status ();
+    if (( bUni ) && ( ! st )) asmerr (110); // 'Instruction sets status flags'
     }
 
 static unsigned char reg (void)
@@ -340,6 +346,66 @@ static inline int eol (char ch)
     return (( ch == 0x0D ) || ( ch == ':' ) || ( ch == ';' ) || ( ch == TREM )) ? 1 : 0;
     }
 
+static void asarg (int *rd, int *rn, int *offreg, int *bImm)
+    {
+    *bImm = 0;
+    *rd = reg ();
+    comma ();
+    *rn = offset (bImm);
+    if ( *bImm )
+        {
+        if ( bUni ) asmerr (16);    // 'Syntax error'
+        *offreg = *rn;
+        *rn = *rd;
+        }
+    else
+        {
+        if ( nxt () == ',' )
+            {
+            ++esi;
+            *offreg = offset (bImm);
+            }
+        else
+            {
+            if ( bUni ) asmerr (16);    // 'Syntax error'
+            *offreg = *rn;
+            *rn = *rd;
+            }
+        }
+    }
+
+static int addsi (int rd, int rn, int offreg)
+    {
+    int instruction;
+    if ( rd == rn )
+        {
+        if ( offreg >= 0 )
+            {
+            instruction = 0x3000 | ( rd << 8 ) | ( offreg & 0xFF );
+            }
+        else
+            {
+            offreg = -offreg;
+            instruction = 0x3800 | ( rd << 8 ) | ( offreg & 0xFF );
+            }
+        if (offreg > 255) asmerr (2); // 'Bad immediate constant'
+        }
+    else
+        {
+        if ( offreg >= 0 )
+            {
+            instruction = 0x1C00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
+            }
+        else
+            {
+            offreg = -offreg;
+            instruction = 0x1E00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
+            }
+        if (offreg > 7) asmerr (2); // 'Bad immediate constant'
+        }
+    return instruction;
+    }
+
 void assemble (void)
     {
 	signed char al;
@@ -348,8 +414,7 @@ void assemble (void)
 
 	while (1)
 	    {
-		int mnemonic, condition, instruction = 0;
-		unsigned char ccode = 0b1110;;
+		int mnemonic, condition, instruction;
 
 		if (liston & BIT7)
 		    {
@@ -392,26 +457,36 @@ void assemble (void)
 
 					do
 					    {
-						unsigned int i = *(unsigned int *)p;
 #if (defined (_WIN32)) && (__GNUC__ < 9)
 						sprintf (accs, "%08I64X ", (long long) (size_t) oldpc);
 #else
 						sprintf (accs, "%08llX ", (long long) (size_t) oldpc);
 #endif
+                        char *ps = accs + 9;
 						switch (n)
 						    {
-							case 0: break;
-							case 1:	i &= 0xFF;
-							case 2: i &= 0xFFFF;
-							case 3: i &= 0xFFFFFF;
-							case 4: sprintf (accs + 9, "%0*X ", n*2, i);
-								break;
-							default: sprintf (accs + 9, "%08X ", i);
+                            default:
+                                sprintf (ps, "%02X ", *((unsigned char *)p));
+                                ps += 3;
+                                ++p;
+                            case 3:
+                                sprintf (ps, "%02X ", *((unsigned char *)p));
+                                ps += 3;
+                                ++p;
+                            case 2:
+                                sprintf (ps, "%02X ", *((unsigned char *)p));
+                                ps += 3;
+                                ++p;
+                            case 1:
+                                sprintf (ps, "%02X ", *((unsigned char *)p));
+                                ps += 3;
+                                ++p;
+                            case 0:
+                                break;
 						    }
 						if (n > 4)
 						    {
 							n -= 4;
-							p += 4;
 							oldpc += 4;
 						    }
 						else 
@@ -421,7 +496,7 @@ void assemble (void)
 
 						if (*oldesi == '.')
 						    {
-							tabit (18);
+							tabit (21);
 							do	
 							    {
 								token (*oldesi++ );
@@ -475,19 +550,10 @@ void assemble (void)
 				esi--;
 				mnemonic = lookup (mnemonics, sizeof(mnemonics)/sizeof(mnemonics[0]));
 
-                if ( mnemonic == B )
-                    {
-                    condition = lookup (conditions, 
-                        sizeof(conditions) / sizeof(conditions[0]));
+                oldpc = PC;
 
-                    if (condition == -1)
-                        ccode = 0b1110;
-                    else
-                        ccode = ccodes[condition];
-                    }
-
-                oldpc = align (2);
-
+                instruction = opcodes[NOP];
+                int instruction2 = -1;
 				switch (mnemonic)
 				    {
 					case OPT:
@@ -521,6 +587,7 @@ void assemble (void)
 					case DCW:
 					case EQUW:
                     {
+                    align (2);
                     int n = expri ();
                     poke (&n, 2);
                     continue; // n.b. not break
@@ -553,6 +620,7 @@ void assemble (void)
                         n = v.i.n;
                     else
                         n = v.f;
+                    align (4);
                     if (mnemonic == EQUQ)   poke (&n, 8);
                     else                    poke (&n, 4);
                     }
@@ -569,7 +637,7 @@ void assemble (void)
                     }
 
                     case ALIGN:
-                        oldpc = align (2);
+                        align (4);
                         if ((nxt() >= '1') && (*esi <= '9'))
                             {
                             int n = expri ();
@@ -581,41 +649,93 @@ void assemble (void)
                             }
                         continue;
 
+                    case SYNTAX:
+                        switch (nxt ())
+                            {
+                            case 'u':
+                            case 'U':
+                                bUni = 1;
+                                break;
+                            case 'd':
+                            case 'D':
+                                bUni = 0;
+                                break;
+                            default:
+                                asmerr (16); // 'Syntax error'
+                                break;
+                            }
+                        ++esi;
+                        continue;
+
                     // Thumb Instructions
 
                     case MOV:
+                        // MOVS <reg8>, #<imm>
+                        // MOVS <reg8>, <reg8>
+                        // MOV <reg>, <reg>
+                        if ( status () )
+                            {
+                            int rd = reg8 ();
+                            comma ();
+                            int bImm;
+                            int offreg = offset (&bImm);
+                            if ( bImm )
+                                {
+                                if (( offreg < 0 ) || ( offreg > 0xFF ))
+                                    asmerr (2); // 'Bad immediate constant'
+                                instruction = 0x2000 | (( rd & 0x07 ) << 8 ) | ( offreg & 0xFF );
+                                }
+                            else
+                                {
+                                if ( offreg > 7 ) asmerr (104); // 'Low register required'
+                                instruction = 0x0000 | (( offreg & 0x07 ) << 3 ) | rd;
+                                }
+                            }
+                        else
+                            {
+                            int rd = reg ();
+                            comma ();
+                            int bImm;
+                            int offreg = offset (&bImm);
+                            if ( bImm )
+                                {
+                                if ( bUni ) asmerr (110);   // 'Instruction affects status flags'
+                                if ( rd > 7 ) asmerr (104); // 'Low register required'
+                                if (( offreg < 0 ) || ( offreg > 0xFF ))
+                                    asmerr (2); // 'Bad immediate constant'
+                                instruction = 0x2000 | (( rd & 0x07 ) << 8 ) | ( offreg & 0xFF );
+                                }
+                            else
+                                {
+                                instruction = 0x4600 | (( rd & 0x08 ) << 4 ) | ( offreg << 3 )
+                                    | ( rd & 0x07 );
+                                }
+                            }
+                        break;
+                        
 					case CMP:
                     {
                     // <opcode> <reg8>, #<imm8>
                     // <opcode> <reg8>, <reg8>
                     // <opcode> <reg>, <reg>
-                    int st = 0;
-                    if ( mnemonic == MOV ) st = status ();
                     int rn = reg ();
                     comma ();
-                    if ( rn < 8 )
+                    int bImm;
+                    int	offreg = offset (&bImm);
+                    if ( bImm )
                         {
-                        int bImm;
-						int	offreg = offset (&bImm);
-                        if ( bImm )
-                            {
-                            if (( offreg < 0 ) || ( offreg > 0xFF ))
-                                asmerr (2); // 'Bad immediate constant'
-                            instruction = opcodes[mnemonic] | ( rn << 8 ) | ( offreg & 0xFF );
-                            }
-                        else if ( offreg < 8 )
-                            {
-                            instruction = opcode2[mnemonic] | ( offreg << 3 ) | rn;
-                            }
-                        else
-                            {
-                            instruction = opcode3[mnemonic] | ( offreg << 3 ) | rn;
-                            }
+                        if ( rn > 7 ) asmerr (104); // 'Low register required'
+                        if (( offreg < 0 ) || ( offreg > 0xFF ))
+                            asmerr (2); // 'Bad immediate constant'
+                        instruction = 0x2800 | ( rn << 8 ) | ( offreg & 0xFF );
+                        }
+                    else if (( rn < 8 ) && ( offreg < 8 ))
+                        {
+                        instruction = 0x4280 | ( offreg << 3 ) | rn;
                         }
                     else
                         {
-                        if ( st ) asmerr (108); // 'Status flags not set'
-                        instruction = opcode3[mnemonic] | 0x80 | ( reg () << 3 ) | ( rn & 0x07 );
+                        instruction = 0x4500 | (( rn & 0x08 ) << 4 ) | ( reg () << 3 ) | ( rn & 0x07 );
                         }
                     break;
                     }
@@ -624,34 +744,39 @@ void assemble (void)
                     case LSL:
                     case LSR:
                     {
-                    // <opcode> <reg8>,<reg8>,#<offset>
-                    // <opcode> <reg8>,<reg8>,<reg8>
-                    // <opcode> <reg8>,<reg8>
-                    status ();
+                    // <opcode> Rd, Rm, #<offset>
+                    // <opcode> {Rd,} Rd, Rm
+                    chkstatus ();
                     int rd = reg8 ();
                     comma ();
                     int rm = reg8 ();
+                    int bImm = 0;
+                    int offreg = rm;
                     if ( nxt () == ',' )
                         {
-                        int bImm;
-						int	offreg = offset (&bImm);
-                        if ( bImm )
-                            {
-                            if (( offreg < 0 ) || ( offreg > 31 )) asmerr (2); // 'Bad immediate constant'
-                            instruction = opcodes[mnemonic] | ( offreg << 6 ) | ( rm << 3 ) | rd;
-                            }
-                        else if (( rm != rd ) || ( offreg > 7 ))
-                            {
-                            asmerr (103);   //'Invalid register'
-                            }
-                        else
-                            {
-                            instruction = opcode2[mnemonic] | ( offreg << 3 ) | rd;
-                            }
+                        ++esi;
+                        offreg = offset (&bImm);
+                        }
+                    else if ( bUni )
+                        {
+                        asmerr (16);    // 'Syntax error'
                         }
                     else
                         {
-                        instruction = opcode2[mnemonic] | ( rm << 3 ) | rd;
+                        rm = rd;
+                        }
+                    if ( bImm )
+                        {
+                        if (( offreg < 0 ) || ( offreg > 31 )) asmerr (2); // 'Bad immediate constant'
+                        instruction = opcodes[mnemonic] | ( offreg << 6 ) | ( rm << 3 ) | rd;
+                        }
+                    else if (( rm == rd ) && ( offreg < 8 ))
+                        {
+                        instruction = opcode2[mnemonic] | ( offreg << 3 ) | rd;
+                        }
+                    else
+                        {
+                        asmerr (103);   //'Invalid register'
                         }
                     break;
                     }
@@ -713,17 +838,37 @@ void assemble (void)
                     else asmerr (16); // 'Syntax error'
                     break;
                     }
-                    
+
 					case ADC:
 					case AND:
 					case BIC:
 					case EOR:
-                    case MVN:
                     case ORR:
                     case ROR:
                     case SBC:
-                        status ();
-                        // Intentional fall through
+                    {
+                    // <opcode> {rd,} rd, rn
+                    chkstatus ();
+                    int rd = reg8 ();
+                    comma ();
+                    int rn = reg8 ();
+                    int rm = rn;
+                    if ( nxt () == ',' )
+                        {
+                        ++esi;
+                        rm = reg8 ();
+                        if ( rn != rd ) asmerr (103);  // 'Invalid register'
+                        }
+                    else if ( bUni )
+                        {
+                        asmerr (16);    // 'Syntax error'
+                        }
+                    instruction = opcodes[mnemonic] | ( rm << 3 ) | rd;
+                    break;
+                    }
+                    
+                    case MVN:
+                        chkstatus ();
 					case CMN:
                     case REV:
                     case REV16:
@@ -733,26 +878,17 @@ void assemble (void)
                     case TST:
                     case UXTB:
                     case UXTH:
-                    {
-                    // <opcode> <reg8>, <reg8>
-                    // <opcode> <reg8>, <reg8>, <reg8>
-                    int rd = reg8 ();
-                    comma ();
-                    int rm = reg8 ();
-                    if ( nxt () == ',' )
-                        {
-                        if ( rm != rd ) asmerr (103);   // 'Invalid register'
-                        ++esi;
-                        rm = reg8 ();
-                        }
-                    instruction = opcodes[mnemonic] | ( rm << 3 ) | rd;
-                    break;
-                    }
+                        // <opcode> Rd, Rn
+                        instruction = opcodes[mnemonic] | reg8 ();
+                        comma ();
+                        instruction |= reg8 () << 3;
+                        break;
 
 					case NOP:
                     case SEV:
                     case WFE:
                     case WFI:
+                    case YIELD:
 						instruction = opcodes[mnemonic];
 						break;
 
@@ -768,8 +904,8 @@ void assemble (void)
                         // <opcode32>
                         nxt ();
                         if ( !strnicmp ((const char *)esi, "sy", 2) ) esi += 2;
-                        poke (&opcodes[mnemonic], 2);
-                        instruction = 0xF3BF;
+                        instruction2 = 0xF3BF;
+                        instruction = opcodes[mnemonic];
                         break;
 
                     case LDRSB:
@@ -788,123 +924,142 @@ void assemble (void)
 
                     case ADD:
                     {
-                    // ADD <reg8>, #<offset>
-                    // ADD <reg8>, <reg8>, #<offset>
-                    // ADD <reg8>, SP, #<offset>
-                    // ADD <reg8>, PC, #<offset>
-                    // ADD <reg8>, <reg8>, <reg8>
-                    // ADD <reg8>, SP, <reg8>
-                    // ADD SP, <reg8>
-                    // ADD <reg>,<reg>
                     int st = status ();
-                    int rd = reg ();
-                    if ( rd < 8 )
+                    int rd;
+                    int rn;
+                    int offreg;
+                    int bImm;
+                    asarg (&rd, &rn, &offreg, &bImm);
+                    if ( st )
                         {
-                        int bImm;
-						comma ();
-						int	offreg = offset (&bImm);
+                        if (( rd > 7 ) || ( rn > 7 )) asmerr (104); //'Low register required'
                         if ( bImm )
                             {
-                            // Add rd, #n
-                            if ((offreg < 0) || (offreg > 255)) asmerr (2); // 'Bad immediate constant'
-                            instruction = 0x3000 | ( rd << 8 ) | ( offreg & 0xFF );
+                            instruction = addsi (rd, rn, offreg);
                             }
                         else
                             {
-                            int rn = offreg;
-                            if ( nxt () == ',' )
-                                {
-                                ++esi;
-                                offreg = offset (&bImm);
-                                if ( bImm )
-                                    {
-                                    // ADD rd, rn, #n
-                                    if ( rn < 8 )
-                                        {
-                                        if ((offreg < 0) || (offreg > 7))
-                                            asmerr (2); // 'Bad immediate constant'
-                                        instruction = 0x1C00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
-                                        }
-                                    else if ( rn == 13 )
-                                        {
-                                        if ( st ) asmerr (108); // 'Status flags not set'
-                                        if ((offreg < 0) || (offreg > 1020))
-                                            asmerr (2); // 'Bad immediate constant'
-                                        else if (offreg & 0x03)
-                                            asmerr (105);   // 'Invalid alignment'
-                                        instruction = 0xA800 | ( rd << 8 ) | ((offreg >> 2) & 0xFF);
-                                        }
-                                    else asmerr (103); // 'Invalid register'
-                                    }
-                                // ADD rd, rn, rm
-                                else if (( rn == rd ) && ( ! st ))
-                                    {
-                                    instruction = 0x4400 | ( offreg << 3 ) | rd;
-                                    }
-                                else if ( rn < 8 )
-                                    {
-                                    if ( offreg > 7 ) asmerr (104); // 'Low register required'
-                                    instruction = 0x1800 | ( ( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
-                                    }
-                                else if ( rn == 13 )
-                                    {
-                                    if ( offreg != rd ) asmerr (103); // 'Invalid register'
-                                    if ( st ) asmerr (108); // 'Status flags not set'
-                                    instruction = 0x4468 | rd;
-                                    }
-                                else
-                                    {
-                                    asmerr (103); // 'Invalid register'
-                                    }
-                                }
-                            else if (( rn < 8 ) && ( st ))
-                                {
-                                // ADDS rd, rn
-                                instruction = 0x1800 | ( rn << 6 ) | ( rd << 3 ) | rd;
-                                }
-                            else
-                                {
-                                // ADD rd, rn
-                                if ( st ) asmerr (108); // 'Status flags not set'
-                                instruction = 0x4400 | ( rn << 3 ) | rd;
-                                }
+                            if ( offreg > 7 ) asmerr (104); // 'Low register required'
+                            instruction = 0x1800 | ( ( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
                             }
                         }
                     else
                         {
-                        int bImm;
-						comma ();
-						int	offreg = offset (&bImm);
                         if ( bImm )
                             {
-                            // ADD SP, #n
-                            if ( rd != 13 ) asmerr (103); // 'Invalid register'
-                            if ( st ) asmerr (108); // 'Status flags not set'
-                            if ((offreg < 0) || (offreg > 508))
-                                asmerr (2); // 'Bad immediate constant'
-                            else if (offreg & 0x03)
-                                asmerr (105);   // 'Invalid alignment'
-                            instruction = 0xB000 | (( offreg >> 2 ) & 0x7F );
-                            }
-                        else if (( rd == 13 ) && ( offreg == 13 ) && ( nxt () == ',' ))
-                            {
-                            // ADD SP, SP, #n
-                            if ( st ) asmerr (108); // 'Status flags not set'
-                            ++esi;
-                            if ( nxt () == '#' ) ++esi;
-                            else asmerr (2); // 'Bad immediate constant'
-                            int imm = expri ();
-                            if (( imm < 0 ) || ( imm > 508 ))
-                                asmerr (2); // 'Bad immediate constant'
-                            else if ( imm & 0x03 )
-                                asmerr (105);   // 'Invalid alignment'
-                            instruction = 0xB000 | (( imm >> 2 ) & 0x7F );
+                            if ( rn == 13 )
+                                {
+                                if ( rd == 13 )
+                                    {
+                                    if ( offreg >= 0 )
+                                        {
+                                        instruction = 0xB000 | (( offreg >> 2 ) & 0x7F );
+                                        }
+                                    else
+                                        {
+                                        offreg = - offreg;
+                                        instruction = 0xB080 | (( offreg >> 2 ) & 0x7F );
+                                        }
+                                    if ( offreg > 508 ) asmerr (2); // 'Bad immediate constant'
+                                    else if ( offreg & 0x03 ) asmerr (105);   // 'Invalid alignment'
+                                    }
+                                else
+                                    {
+                                    if ( rd > 7 ) asmerr (104); //'Low register required'
+                                    if (( offreg < 0 ) || ( offreg > 1020 ))
+                                        asmerr (2); // 'Bad immediate constant'
+                                    else if ( offreg & 0x03 )
+                                        asmerr (105);   // 'Invalid alignment'
+                                    instruction = 0xA800 | (( rd & 0x07 ) << 8 )
+                                        | (( offreg >> 2 ) & 0xFF );
+                                    }
+                                }
+                            else if ( rn == 15 )
+                                {
+                                if ( rd > 7 ) asmerr (104); //'Low register required'
+                                if (( offreg < 0 ) || ( offreg > 1020 ))
+                                    asmerr (2); // 'Bad immediate constant'
+                                else if ( offreg & 0x03 )
+                                    asmerr (105);   // 'Invalid alignment'
+                                instruction = 0xA000 | (( rd & 0x07 ) << 8 )
+                                    | (( offreg >> 2 ) & 0xFF );
+                                }
+                            else if ( ! bUni )
+                                {
+                                if (( rd > 7 ) || ( rn > 7 )) asmerr (104); //'Low register required'
+                                instruction = addsi (rd, rn, offreg);
+                                }
+                            else
+                                {
+                                asmerr (103);   // 'Invalid register'
+                                }
                             }
                         else
                             {
-                            // ADD rd, rn
-                            if ( st ) asmerr (108); // 'Status flags not set'
-                            instruction = 0x4400 | (( rd & 0x08 ) << 4 ) | ( offreg << 3 ) | ( rd & 0x07 );
+                            if ( rn == rd )
+                                {
+                                instruction = 0x4400 | (( rd & 0x08 ) << 4 ) | ( offreg << 3 )
+                                    | ( rd & 0x07 );
+                                }
+                            else if ( ! bUni )
+                                {
+                                if (( rd > 7 ) || ( rn > 7 ) || ( offreg > 7 ))
+                                    asmerr (104); // 'Low register required'
+                                instruction = 0x1800 | ( ( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
+                                }
+                            else
+                                {
+                                asmerr (103);   // 'Invalid register'
+                                }
+                            }
+                        }
+                    break;
+                    }
+
+                    case SUB:
+                    {
+                    int st = status ();
+                    int rd;
+                    int rn;
+                    int offreg;
+                    int bImm;
+                    asarg (&rd, &rn, &offreg, &bImm);
+                    if ( st )
+                        {
+                        if ( bImm )
+                            {
+                            instruction = addsi (rd, rn, -offreg);
+                            }
+                        else
+                            {
+                            if ( offreg > 7 ) asmerr (104); // 'Low register required'
+                            instruction = 0x1A00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
+                            }
+                        }
+                    else
+                        {
+                        if (( rd == 13 ) && ( rn == 13 ))
+                            {
+                            if ( offreg >= 0 )
+                                {
+                                instruction = 0xB080 | (( offreg >> 2 ) & 0x7F );
+                                }
+                            else
+                                {
+                                offreg = - offreg;
+                                instruction = 0xB000 | (( offreg >> 2 ) & 0x7F );
+                                }
+                            if ( offreg > 508 ) asmerr (2); // 'Bad immediate constant'
+                            else if ( offreg & 0x03 ) asmerr (105);   // 'Invalid alignment'
+                            }
+                        else if ( ! bUni )
+                            {
+                            if (( rd > 7 ) || ( rn > 7 )) asmerr (104); //'Low register required'
+                            instruction = addsi (rd, rn, -offreg);
+                            }
+                        else
+                            {
+                            asmerr (103); // 'Invalid register'
                             }
                         }
                     break;
@@ -928,20 +1083,44 @@ void assemble (void)
 
 					case B:
                     {
-                    // B <label>
-                    // B<cond> <label>
+                    condition = lookup (conditions, 
+                        sizeof(conditions) / sizeof(conditions[0]));
+
+                    if (condition == -1)
+                        {
+                        if (( *esi == 'l' ) || ( *esi == 'L' ))
+                            {
+                            // BL <label>
+                            ++esi;
+                            int dest = (void *) (size_t) expri () - PC - 4;
+                            if ( dest & 0x01 ) asmerr (105);    // 'Invalid alignment'
+                            dest >>= 1;
+                            if (( dest > 0x00FFFFFF ) || ( dest <= (int) 0xFF000000 ))
+                                asmerr (1); // 'Jump out of range'
+                            instruction2 = 0xF000 | (( dest >> 12 ) & 0x3FF );
+                            instruction = 0xD000 | (( dest & 0x1000) << 1 ) | ( dest & 0xFFF );
+                            if ( dest < 0 ) instruction2 ^= 0x400;
+                            else instruction ^= 0x2800;
+                            break;
+                            }
+                        condition = 0;
+                        }
+                    
                     int dest = (void *) (size_t) expri () - PC - 4;
                     if ( dest & 0x01 ) asmerr (105);    // 'Invalid alignment'
                     dest >>= 1;
-                    if ( ccode == 0b1110 )
+                    if ( condition == 0 )
                         {
+                        // B <label>
+                        // BAL <label>
                         if (( dest < -1024 ) || ( dest >= 1024 )) asmerr (1); // 'Jump out of range'
                         instruction = 0xE000 | ( dest & 0x7FF );
                         }
                     else
                         {
+                        // B<cond> <label>
                         if (( dest < -128 ) || ( dest >= 128 )) asmerr (1); // 'Jump out of range'
-                        instruction = 0xD000 | ( ccode << 8 ) | ( dest & 0xFF );
+                        instruction = 0xD000 | ( ccodes[condition] << 8 ) | ( dest & 0xFF );
                         }
                     break;
                     }
@@ -951,25 +1130,13 @@ void assemble (void)
                         if ( nxt () == '#' ) ++esi;
                         instruction = 0xBE00 | ( expri () & 0xFF );
                         break;
-                        
-					case BL:
-                    {
-                    // BL <label>
-                    int dest = (void *) (size_t) expri () - PC - 4;
-                    if ( dest & 0x01 ) asmerr (105);    // 'Invalid alignment'
-                    dest >>= 1;
-                    if (( dest > 0x00FFFFFF ) || ( dest <= (int) 0xFF000000 ))
-                        asmerr (1); // 'Jump out of range'
-                    instruction = 0xF000 | (( dest >> 12 ) & 0x3FF );
-                    int instlow = 0xD000 | (( dest & 0x1000) << 1 ) | ( dest & 0xFFF );
-                    if ( dest < 0 ) instruction ^= 0x400;
-                    else instlow ^= 0x2800;
-                    poke (&instlow, 2);
-                    break;
-                    }
 
-                    case CPS:
-                        instruction = 0xB662 | (( expri () & 0x01 ) << 4 );
+                    case CPSID:
+                    case CPSIE:
+                        nxt ();
+                        if (( *esi == 'i' ) || ( *esi == 'I' )) ++esi;
+                        else asmerr (16); // 'Syntax error' 
+                        instruction = opcodes[mnemonic];
                         break;
 
 					case LDM:
@@ -1032,7 +1199,6 @@ void assemble (void)
                             else
                                 {
                                 asmerr (103); // 'Invalid register'
-                                instruction = opcodes[NOP];
                                 }
                             }
                         else
@@ -1066,8 +1232,7 @@ void assemble (void)
                     if ( sys == 10 ) sys = 16;
                     else if ( sys == 11 ) sys = 20;
                     instruction |= sys;
-                    poke (&instruction, 2);
-                    instruction = 0xF3EF;
+                    instruction2 = 0xF3EF;
                     break;
                     }
 
@@ -1079,31 +1244,27 @@ void assemble (void)
                     if ( sys >= 4 ) ++sys;
                     if ( sys == 10 ) sys = 16;
                     else if ( sys == 11 ) sys = 20;
-                    instruction = 0x8800 | sys;
-                    poke (&instruction, 2);
                     comma ();
-                    instruction = 0xF380 | reg ();
+                    instruction2 = 0xF380 | reg ();
+                    instruction = 0x8800 | sys;
                     break;
                     }
 
                     case MUL:
                     {
-                    status ();
+                    // MULS rd, rn, rd
+                    chkstatus ();
                     int rd = reg8 ();
                     comma ();
                     int rn = reg8 ();
-                    int rm;
                     if ( nxt () == ',' )
                         {
                         ++esi;
-                        rm = reg8 ();
-                        if ( rm != rd ) asmerr (103); // 'Invalid register'
+                        if ( reg8 () != rd ) asmerr (103); // 'Invalid register'
                         }
-                    else
+                    else if ( bUni )
                         {
-                        rm = rn;
-                        rn = rd;
-                        rd = rm;
+                        asmerr (16);    // 'Syntax error'
                         }
                     instruction = 0x4340 | ( rn << 3 ) | rd;
                     break;
@@ -1128,7 +1289,7 @@ void assemble (void)
                     }
 
                     case RSB:
-                        status ();
+                        chkstatus ();
                         instruction = 0x4240 | reg8 ();
                         comma ();
                         instruction |= ( reg8 () << 3 );
@@ -1195,7 +1356,6 @@ void assemble (void)
                             else
                                 {
                                 asmerr (103); // Invalid register
-                                instruction = opcodes[NOP];
                                 }
                             }
                         else
@@ -1207,91 +1367,6 @@ void assemble (void)
                         else asmerr (16); // 'Syntax error'
                         }
                     else asmerr (16); // 'Syntax error'
-                    break;
-                    }
-
-                    case SUB:
-                    {
-                    // SUB <reg8>, <reg8>, #<imm3>
-                    // SUB <reg8>, #<imm8>
-                    // SUB <reg8>, <reg8>, <reg8>
-                    // SUB <reg8>, <reg8>
-                    // SUB SP, SP, #<imm7>
-                    // SUB SP, #<imm7>
-                    int st = status ();
-                    int rd = reg ();
-                    comma ();
-                    if ( rd < 8 )
-                        {
-                        int bImm;
-                        int offreg = offset (&bImm);
-                        if ( bImm )
-                            {
-                            if (( offreg < 0 ) || ( offreg > 0xFF ))
-                                asmerr (2); // 'Bad immediate constant'
-                            instruction = 0x3800 | ( rd << 8 ) | ( offreg & 0xFF );
-                            }
-                        else
-                            {
-                            int rn = offreg;
-                            if ( rn > 7 ) asmerr (104); // 'Low register required'
-                            rn &= 0x07;
-                            if ( nxt () == ',' )
-                                {
-                                ++esi;
-                                offreg = offset (&bImm);
-                                }
-                            else
-                                {
-                                bImm = 0;
-                                offreg = rn;
-                                rn = rd;
-                                }
-                            if ( bImm )
-                                {
-                                if ( rn == rd )
-                                    {
-                                    if (( offreg < 0 ) || ( offreg > 0xFF ))
-                                        asmerr (2); // 'Bad immediate constant'
-                                    instruction = 0x3800 | ( rd << 8 ) | ( offreg & 0xFF );
-                                    }
-                                else
-                                    {
-                                    if (( offreg < 0 ) || ( offreg > 7 ))
-                                        asmerr (2); // 'Bad immediate constant'
-                                    instruction = 0x1E00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
-                                    }
-                                }
-                            else
-                                {
-                                if ( offreg > 7 ) asmerr (104); // 'Low register required'
-                                instruction = 0x1A00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
-                                }
-                            }
-                        }
-                    else if ( rd == 13 )
-                        {
-                        if ( st ) asmerr (108); // 'Status flags not set'
-                        int bImm;
-                        int offreg = offset (&bImm);
-                        if ( ! bImm )
-                            {
-                            if ( offreg != 13 ) asmerr (103); // 'Invalid register'
-                            comma ();
-                            if ( nxt () == '#' ) ++esi;
-                            else asmerr (2); // 'Bad immediate constant'
-                            offreg = expri ();
-                            }
-                        if (( offreg < 0 ) || ( offreg > 0x1FF ))
-                            asmerr (2); // 'Bad immediate constant'
-                        else if ( offreg & 0x03 )
-                            asmerr (105);   // 'Invalid alignment'
-                        instruction = 0xB080 | (( offreg >> 2 ) & 0x7F );
-                        }
-                    else
-                        {
-                        asmerr (103); // 'Invalid register'
-                        }
                     break;
                     }
 
@@ -1311,6 +1386,8 @@ void assemble (void)
                         while (! eol (*esi)) ++esi;
                     }
 
+                align (2);
+                if ( instruction2 >= 0 ) poke (&instruction2, 2);
                 poke (&instruction, 2);
                 if (! eol (nxt ())) asmerr (102); // 'Too many parameters'
                 while (! eol (*esi)) ++esi;

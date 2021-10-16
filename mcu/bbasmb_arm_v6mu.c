@@ -342,7 +342,7 @@ void assemble (void)
     {
 	signed char al;
 	signed char *oldesi = esi;
-	void *oldpc = PC;
+	void *oldpc = align (4);
 
 	while (1)
 	    {
@@ -569,7 +569,7 @@ void assemble (void)
                     }
 
                     case ALIGN:
-                        oldpc = align (2);
+                        oldpc = align (4);
                         if ((nxt() >= '1') && (*esi <= '9'))
                             {
                             int n = expri ();
