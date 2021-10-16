@@ -1280,7 +1280,7 @@ void assemble (void)
                         while (! eol (*esi)) ++esi;
                     }
 
-                oldpc = align (2);
+                align (2);
                 if ( instruction2 >= 0 ) poke (&instruction2, 2);
                 poke (&instruction, 2);
                 if (! eol (nxt ())) asmerr (102); // 'Too many parameters'
