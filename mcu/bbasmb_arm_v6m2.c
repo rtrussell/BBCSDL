@@ -1029,6 +1029,7 @@ void assemble (void)
                     asarg (&rd, &rn, &offreg, &bImm);
                     if ( st )
                         {
+                        if (( rd > 7 ) || ( rn > 7 )) asmerr (104); //'Low register required'
                         if ( bImm )
                             {
                             instruction = addsi (rd, rn, -offreg);
@@ -1041,7 +1042,7 @@ void assemble (void)
                         }
                     else
                         {
-                        if (( rd == 13 ) && ( rn == 13 ))
+                        if (( rd == 13 ) && ( rn == 13 ) && ( bImm ))
                             {
                             if ( offreg >= 0 )
                                 {
@@ -1057,8 +1058,17 @@ void assemble (void)
                             }
                         else if ( ! bUni )
                             {
-                            if (( rd > 7 ) || ( rn > 7 )) asmerr (104); //'Low register required'
-                            instruction = addsi (rd, rn, -offreg);
+                            if ( bImm )
+                                {
+                                if (( rd > 7 ) || ( rn > 7 )) asmerr (104); //'Low register required'
+                                instruction = addsi (rd, rn, -offreg);
+                                }
+                            else
+                                {
+                                if (( rd > 7 ) || ( rn > 7 ) || ( offreg > 7 ))
+                                    asmerr (104); // 'Low register required'
+                                instruction = 0x1A00 | (( offreg & 0x07 ) << 6 ) | ( rn << 3 ) | rd;
+                                }
                             }
                         else
                             {
