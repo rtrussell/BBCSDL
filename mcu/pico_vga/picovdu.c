@@ -3,7 +3,7 @@
 #define VID_CORE    1
 #define USE_INTERP  1
 #define HIRES       0   // CAUTION - Enabling HIRES requires extreme Pico overclock
-#define DEBUG       1
+#define DEBUG       0
 
 #include "pico/platform.h"
 #include "pico.h"
