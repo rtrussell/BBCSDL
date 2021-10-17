@@ -14,6 +14,8 @@
 
 */
 
+#define DEBUG 1
+
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -147,6 +149,9 @@ static const uint32_t bkwmsk[] = {
 
 static void newpt (int xp, int yp)
     {
+#if DEBUG > 0
+    printf ("newpt (%d, %d)\n", xp, yp);
+#endif
     memmove (&pltpt[1], &pltpt[0], (NPLT - 1) * sizeof (pltpt[0]));
     pltpt[0].x = xp;
     pltpt[0].y = yp;
@@ -567,7 +572,7 @@ static void rstview (void)
     gvb = pmode->grow - 1;
     gvl = 0;
     gvr = pmode->gcol - 1;
-    newpt (0, pmode->grow << yshift - 1);
+    newpt (0, (pmode->grow << yshift) - 1);
     showcsr ();
     }
 
@@ -583,12 +588,9 @@ void modechg (int mode)
 #endif
     if ( setmode (mode, &framebuf, &pmode, &cdef) )
         {
-        clrreset ();
-        rstview ();
-        cls ();
-        xshift = 0;
-        xscale = 1;
         int gunit = pmode->gcol;
+        xscale = 1;
+        xshift = 0;
         while ( gunit < 1280 )
             {
             ++xshift;
@@ -597,6 +599,12 @@ void modechg (int mode)
             }
         yshift = pmode->yshf + 1;
         yscale = 1 << yshift;
+#if DEBUG > 0
+        printf ("xscale = %d, xshift = %d, yscale = %d, yshift = %d\n", xscale, xshift, yscale, yshift);
+#endif
+        clrreset ();
+        rstview ();
+        cls ();
         dispmode ();
 #if DEBUG > 0
         printf ("modechg: New mode set\n");
@@ -610,6 +618,9 @@ void modechg (int mode)
 
 static inline void pixop (int op, uint32_t *fb, uint32_t msk, uint32_t cpx)
     {
+#if DEBUG > 1
+    printf ("pixop (%d, %p, 0x%08X, 0x%08X)\n", op, fb, msk, cpx);
+#endif
     cpx &= msk;
     switch (op)
         {
@@ -645,14 +656,22 @@ static void hline (int clrop, int xp1, int xp2, int yp)
     if (( xp2 < gvl ) || ( xp1 > gvr )) return;
     if ( xp1 < gvl ) xp1 = gvl;
     if ( xp2 > gvr ) xp2 = gvr;
+#if DEBUG > 1
+    printf ("hline (0x%04X, %d, %d, %d)\n", clrop, xp1, xp2, yp);
+#endif
     xp1 <<= cdef->bitsh;
     xp2 <<= cdef->bitsh;
     uint32_t *fb1 = (uint32_t *)(framebuf + yp * pmode->nbpl);
     uint32_t *fb2 = fb1 + ( xp2 >> 5 );
     fb1 += ( xp1 >> 5 );
     uint32_t msk1 = fwdmsk[xp1 & 0x1F];
-    uint32_t msk2 = bkwmsk[xp2 & 0x1F];
+    uint32_t msk2 = bkwmsk[(xp2 & 0x1F) + pmode->ncbt - 1];
     uint32_t cpx = cdef->cpx[clrop & cdef->clrmsk];
+#if DEBUG > 1
+    printf ("xp1 = %d, xp2 = %d, clrmsk = %d, fb1 = %p, fb2 = %p\n",
+        xp1 & 0x1F, xp2 & 0x1F, cdef->clrmsk, fb1, fb2);
+    printf ("msk1 = 0x%08X, msk2 = 0x%08X, cpx = 0x%08X\n", msk1, msk2, cpx);
+#endif
     if ( fb2 == fb1 )
         {
         pixop (op, fb1, msk1 & msk2, cpx);
@@ -1106,7 +1125,7 @@ static inline int gxscale (int xp)
 
 static inline int gyscale (int yp)
     {
-    return pmode->grow - 1 - yp >> yshift;
+    return pmode->grow - 1 - (yp >> yshift);
     }
 
 static void gwind (int vl, int vb, int vr, int vt)
@@ -1263,6 +1282,9 @@ static inline bool doflood (bool bEq, uint8_t tclr, int xp, int yp)
 
 static void flood (bool bEq, uint8_t tclr, int clrop, int xp, int yp)
     {
+#if DEBUG > 0
+    printf ("flood (%d, 0x%02X, 0x%02X, %d, %d)\n", bEq, tclr, clrop, xp, yp);
+#endif
     if ( ! doflood (bEq, tclr, xp, yp) ) return;
     int xl = xp;
     int xr = xp;
@@ -1312,7 +1334,7 @@ static int iroot (int s)
 static void ellipse (bool bFill, int clrop, int xc, int yc, uint32_t aa, uint32_t bb, uint64_t dd)
     {
 #if DEBUG > 0
-    printf ("ellipse (%d, 0x%02X, %d, (%d, %d), %d, %d)\n", bFill, clrop, bCircle, xc, yc, aa, bb);
+    printf ("ellipse (%d, 0x%02X, (%d, %d), %d, %d, %lld)\n", bFill, clrop, xc, yc, aa, bb, dd);
 #endif
     uint32_t xp = pmode->gcol;
     uint32_t yp = 0;
@@ -1375,7 +1397,7 @@ static void ellipse (bool bFill, int clrop, int xc, int yc, uint32_t aa, uint32_
             }
         else if ( bFill )
             {
-#if DEBUG > 0
+#if DEBUG > 1
             printf ("yp = %d: fill %d\n", yp, xp);
 #endif
             hline (clrop, xc - xp, xc + xp, yc + yp);
@@ -1383,7 +1405,7 @@ static void ellipse (bool bFill, int clrop, int xc, int yc, uint32_t aa, uint32_
             }
         else if ( xp == xl )
             {
-#if DEBUG > 0
+#if DEBUG > 1
             printf ("yp = %d: dot %d\n", yp, xp);
 #endif
             clippoint (clrop, xc + xl, yc + yp - 1);
@@ -1396,7 +1418,7 @@ static void ellipse (bool bFill, int clrop, int xc, int yc, uint32_t aa, uint32_
             }
         else
             {
-#if DEBUG > 0
+#if DEBUG > 1
             printf ("yp = %d: dash %d - %d\n", yp, xp, xl);
 #endif
             hline (clrop, xc + xp + 1, xc + xl, yc + yp - 1);
@@ -1414,7 +1436,7 @@ static void ellipse (bool bFill, int clrop, int xc, int yc, uint32_t aa, uint32_
         }
     if ( ! bFill )
         {
-#if DEBUG > 0
+#if DEBUG > 1
         printf ("yp = %d: final dash 0 - %d\n", yp, xl);
 #endif
         hline (clrop, xc - xl, xc + xl, yc + yp - 1);
@@ -1429,8 +1451,8 @@ static void plotcir (bool bFill, int clrop)
     int yd = pltpt[0].y - pltpt[1].y;
     int r2 = xd * xd + yd * yd;
 #if DEBUG > 0
-    printf ("plotcir: (%d, %d) (%d, %d), r = %d, r2 = %d\n", pltpt[1].x, pltpt[1].y, pltpt[0].x,
-        pltpt[0].y, r, r2);
+    printf ("plotcir: (%d, %d) (%d, %d), r2 = %d\n", pltpt[1].x, pltpt[1].y, pltpt[0].x,
+        pltpt[0].y, r2);
 #endif
     if ( r2 < 4 ) clippoint (clrop, pltpt[1].x >> xshift, pltpt[1].y >> yshift);
     else ellipse (bFill, clrop, pltpt[1].x >> xshift, pltpt[1].y >> yshift,
@@ -1464,12 +1486,16 @@ static void plotellipse (bool bFill, int clrop)
         xa *= xa;
         yb *= yb;
         uint64_t dd = ((uint64_t) xa) * ((uint64_t) yb);
+        xa <<= 2 * yshift;
+        yb <<= 2 * xshift;
         ellipse (bFill, clrop, xc, yc, yb, xa, dd);
         }
     }
 
 static int octant (int xp, int yp)
     {
+    xp <<= 2 * xshift;
+    yp <<= 2 * yshift;
     int iOct;
     if ( yp >= 0 )
         {
@@ -1517,6 +1543,8 @@ static void arc (int clrop)
     int s2 = iroot ((xe * xe + ye * ye) << 8);
     xe = xe * s1 / s2;
     ye = ye * s1 / s2;
+    pltpt[0].x = pltpt[2].x + xe;
+    pltpt[0].y = pltpt[2].y - ye;
     int iOct = octant (xp, yp);
     int iEnd = octant (xe, ye);
     if ( iEnd < iOct )
@@ -1547,12 +1575,19 @@ static void arc (int clrop)
                 break;
             }
         }
-    printf ("%d: (%d, %d), %d: (%d, %d)\n", iOct, xp, yp, iEnd, xe, ye);
+#if DEBUG > 0
+    printf ("Arc from: %d: (%d, %d), to: %d: (%d, %d)\n", iOct, xp, yp, iEnd, xe, ye);
+#endif
     bool bDone = false;
     xp >>= xshift;
     yp >>= yshift;
+    xe >>= xshift;
+    ye >>= yshift;
     int xs = 2 * xshift;
     int ys = 2 * yshift;
+#if DEBUG > 0
+    printf ("Octant %d\n", iOct);
+#endif
     while (! bDone)
         {
         clippoint (clrop, xc + xp, yc - yp);
@@ -1561,53 +1596,101 @@ static void arc (int clrop)
             case 0:
                 ++yp;
                 if ( ((xp * xp) << xs) + ((yp * yp) << ys) > r2 ) --xp;
-                if ( (yp << ys) >= (xp << xs) ) ++iOct;
+                if ( (yp << ys) >= (xp << xs) )
+                    {
+                    ++iOct;
+#if DEBUG > 0
+                    printf ("Octant %d\n", iOct);
+#endif
+                    }
                 if (( iOct >= iEnd ) && ( yp > ye )) bDone = true;
                 break;
             case 1:
                 --xp;
                 ++yp;
                 if ( ((xp * xp) << xs) + ((yp * yp) << ys) > r2 ) --yp;
-                if ( xp <= 0 ) ++iOct;
+                if ( xp <= 0 )
+                    {
+                    ++iOct;
+#if DEBUG > 0
+                    printf ("Octant %d\n", iOct);
+#endif
+                    }
                 if (( iOct >= iEnd ) && ( xp < xe )) bDone = true;
                 break;
             case 2:
                 --xp;
                 if ( ((xp * xp) << xs) + ((yp * yp) << ys) > r2 ) --yp;
-                if ( (yp << ys) <= ((-xp) << xs) ) ++iOct;
+                if ( (yp << ys) <= ((-xp) << xs) )
+                    {
+                    ++iOct;
+#if DEBUG > 0
+                    printf ("Octant %d\n", iOct);
+#endif
+                    }
                 if (( iOct >= iEnd ) && ( xp < xe )) bDone = true;
                 break;
             case 3:
                 --yp;
                 --xp;
                 if ( ((xp * xp) << xs) + ((yp * yp) << ys) > r2 ) ++xp;
-                if ( yp <= 0 ) ++iOct;
+                if ( yp <= 0 )
+                    {
+                    ++iOct;
+#if DEBUG > 0
+                    printf ("Octant %d\n", iOct);
+#endif
+                    }
                 if (( iOct >= iEnd ) && ( yp < ye )) bDone = true;
                 break;
             case 4:
                 --yp;
                 if ( ((xp * xp) << xs) + ((yp * yp) << ys) > r2 ) ++xp;
-                if ( (yp << ys) <= (xp << xs) ) ++iOct;
+                if ( (yp << ys) <= (xp << xs) )
+                    {
+                    ++iOct;
+#if DEBUG > 0
+                    printf ("Octant %d\n", iOct);
+#endif
+                    }
                 if (( iOct >= iEnd ) && ( yp < ye )) bDone = true;
                 break;
             case 5:
                 ++xp;
                 --yp;
                 if ( ((xp * xp) << xs) + ((yp * yp) << ys) > r2 ) ++yp;
-                if ( xp >= 0 ) ++iOct;
+                if ( xp >= 0 )
+                    {
+                    ++iOct;
+#if DEBUG > 0
+                    printf ("Octant %d\n", iOct);
+#endif
+                    }
                 if (( iOct >= iEnd ) && ( xp > xe )) bDone = true;
                 break;
             case 6:
                 ++xp;
                 if ( ((xp * xp) << xs) + ((yp * yp) << ys) > r2 ) ++yp;
-                if ( (xp << xs) >= ((-yp) << ys) ) ++iOct;
+                if ( (xp << xs) >= ((-yp) << ys) )
+                    {
+                    ++iOct;
+#if DEBUG > 0
+                    printf ("Octant %d\n", iOct);
+#endif
+                    }
                 if (( iOct >= iEnd ) && ( xp > xe )) bDone = true;
                 break;
             case 7:
                 ++yp;
                 ++xp;
                 if ( ((xp * xp) << xs) + ((yp * yp) << ys) > r2 ) --xp;
-                if ( yp >= 0 ) ++iOct;
+                if ( yp >= 0 )
+                    {
+                    ++iOct;
+#if DEBUG > 0
+                    printf ("Octant %d\n", iOct);
+#endif
+                    }
                 if (( iOct >= iEnd ) && ( yp > ye )) bDone = true;
                 break;
             }
@@ -1631,12 +1714,13 @@ static void plot (uint8_t code, int xp, int yp)
 #if DEBUG > 0
         printf ("Absolute position\n");
 #endif
-        newpt (xp + origx, (pmode->grow << yscale) - 1 - ( yp + origy ));
+        newpt (xp + origx, (pmode->grow << yshift) - 1 - ( yp + origy ));
         }
 #if DEBUG > 0
     printf ("origin: (%d, %d)\n", origx, origy);
     printf ("pltpt: (%d, %d) (%d, %d) (%d, %d)\n", pltpt[0].x, pltpt[0].y,
         pltpt[1].x, pltpt[1].y, pltpt[2].x, pltpt[2].y);
+    printf ("xscale = %d, xshift = %d, yscale = %d, yshift = %d\n", xscale, xshift, yscale, yshift);
 #endif
     int clrop;
     switch (code & 0x03)
@@ -1963,7 +2047,7 @@ void xeqvdu (int code, int data1, int data2)
         case 13: // 0x0D - RETURN
             if ( vflags & HRGFLG )
                 {
-                newpix (gvl, pltpt[0].y >> yscale);
+                newpix (gvl, pltpt[0].y >> yshift);
                 }
             else
                 {

@@ -1773,11 +1773,11 @@ static int waitdone=0;
 void waitconsole(void){
 	if(waitdone) return;
 # ifdef STDIO_USB
-	printf("Waiting for usb host\r\n");
-	while ((!tud_cdc_connected()) && (inpqw == 0)) {
+	printf("Waiting for connection\r\n");
+	while ((!tud_cdc_connected()) && (getinp () != 0x0D)) {
 		printf(".");
         myPoll ();
-		sleep_ms(500);
+		sleep_ms(1000);
 	}
     printf ("\r\n");
 # endif

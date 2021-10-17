@@ -94,9 +94,9 @@ static const uint32_t ttcsr = PICO_SCANVIDEO_PIXEL_FROM_RGB8(255u, 255u, 255u)
 static const uint32_t cpx02[] = { 0x00000000, 0xFFFFFFFF };
 static const uint32_t cpx04[] = { 0x00000000, 0x55555555, 0xAAAAAAAA, 0xFFFFFFFF };
 static const uint32_t cpx16[] = { 0x00000000, 0x11111111, 0x22222222, 0x33333333,
-    0x44444444, 0x5555555, 0x6666666, 0x7777777,
-    0x88888888, 0x9999999, 0xAAAAAAA, 0xBBBBBBB,
-    0xCCCCCCCC, 0xDDDDDDD, 0xEEEEEEE, 0xFFFFFFF };
+                                  0x44444444, 0x55555555, 0x66666666, 0x77777777,
+                                  0x88888888, 0x99999999, 0xAAAAAAAA, 0xBBBBBBBB,
+                                  0xCCCCCCCC, 0xDDDDDDDD, 0xEEEEEEEE, 0xFFFFFFFF };
 
 static CLRDEF clrdef[] = {
 //   nclr,   cpx, bsh, clrm,     csrmsk
