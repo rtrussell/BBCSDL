@@ -6,18 +6,33 @@ SOURCES= \
     ../../src/bbdata_arm_32.s \
     ../../src/bbpico.c \
     ../../src/bbasmb_arm_v6m2.c \
+	../../src/fbufvdu.c \
+	../../src/sn76489.c \
     ../../mcu/lfswrap.c \
     ../../mcu/m0FaultDispatch/m0FaultDispatch.c \
     ../../mcu/fault.c \
     ../../mcu/pico/sympico.c \
 	../../mcu/pico/sympico.i \
+	../../mcu/pico/pico_snd.c \
+	../../mcu/fatfs/ff.c \
+	../../mcu/fatfs/ffsystem.c \
+	../../mcu/fatfs/ffunicode.c \
+	../../mcu/pico/ff_disk.c \
+	../../mcu/pico/sd_spi2.c \
+	../../mcu/pico_gui/picokbd.c \
+	../../mcu/pico_gui/picofbuf.c \
+	../../mcu/pico_gui/framebuffer.S \
 	../../include/BBC.h \
 	../../include/version.h \
 	../../include/mcu/lfsmcu.h \
 	../../include/mcu/ffconf.h \
 	../../include/mcu/lfswrap.h \
 	../../include/bbccon.h \
-	../../mcu/pico/bbc_pico.ld
+	../../mcu/fatfs/ff.h \
+	../../mcu/fatfs/diskio.h \
+	../../mcu/pico/sd_spi.pio \
+	../../mcu/pico/sound.pio \
+	../../mcu/pico_gui/gui_pico.ld \
 
 all: bbcbasic filesystem
 bbcbasic: bbcbasic.uf2
@@ -27,7 +42,7 @@ build/CMakeCache.txt: ../../mcu/pico/CMakeLists.txt
 	rm -rf build
 	mkdir -p build
 	cd build && PICO_SDK_PATH=$(PICO_SDK_PATH) \
-		cmake -DPICO_BOARD=pico -DSTDIO=USB+UART -DLFS=Y -DFAT=N -S ../../../mcu/pico -B .
+		cmake -DPICO_BOARD=vgaboard -DSTDIO=PICO -DLFS=Y -DFAT=Y -DSOUND=Y -S ../../../mcu/pico -B .
 
 bbcbasic.uf2: build/CMakeCache.txt $(SOURCES)
 	cd build && make
@@ -39,8 +54,8 @@ bbcbasic.uf2: build/CMakeCache.txt $(SOURCES)
 
 filesystem.uf2:
 	cd ../../mcu/lfsutil && make
-	cp ../../mcu/lfsutil/filesystem.uf2 ../../console/pico
-	cp ../../mcu/lfsutil/filesystem.elf ../../console/pico
+	cp ../../mcu/lfsutil/filesystem.uf2 ../../bin/pico
+	cp ../../mcu/lfsutil/filesystem.elf ../../bin/pico
 
 clean:
 	rm -rf build

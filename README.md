@@ -15,12 +15,12 @@ Apologies to anyone else I omitted.
 
 There are two somewhat divergent lines of development:
 
-1.  To be able to use the Pico as a microcontroller programmed in BBC Basic.
+1.  Console Version: To be able to use the Pico as a microcontroller programmed in BBC Basic.
     User interaction (if any) would be via a console interface over USB or serial.
     Includes program and data storage either in Pico flash and/or an attached SD card.
     This is in a fairly advanced state of development.
 
-2.  To be able to use the Pico as a computer programmable in BBC Basic with input
+2.  GUI Version: To be able to use the Pico as a computer programmable in BBC Basic with input
     by an attached USB keyboard and display on an attached VGA monitor. This
     development is aimed at a Pico attached to a VGA demonstration board as per
     chapter 3 of
@@ -30,42 +30,51 @@ There are two somewhat divergent lines of development:
     This is now also fairly advanced, although there are some issues to be resolved and
     more testing required.
 
+The following limitations are noted:
+
+1.  HIMEM-PAGE=65K with an additional 32K has reserved for CALL and
+    INSTALL libraries.
+
+2.  m0FaultDispatch is linked in by default.  This license for this
+    library is free for hobby and other non-commercial products.  If
+    you wish to create a commercial version of the program contained
+    here, please add -DFREE to the CMakeLists.txt file.
+
+3.  All programs in tests and the root filesystem have been tested
+    and appear to work.  However, any remaining bugs are more likely
+    to be related to the Pico port.  As always this is open source
+    with expressly no warranty provided.
+
+4.  The *CD command has been modified to automatically change the
+    built-in variable @dir$ as the Pico doesn't have an operating
+    system from which the executable was launched.
+
+5.  There is are known buffer overflows in the wrappers appearing in
+    lfswrap.c which are triggered when a filename path grows to be
+    greater than 256 characters.  Please don't do that.
+
 This project includes source from various locations with difference licenses. See the
 various LICENSE.txt files.
 
-## Build Instructions (thanks to Eric)
+## Build Instructions - Console Version
 
 To build this for the Pico, make sure you have the SDK installed and the
 tinyusb module installed.
 
 Ensure that the environment variable PICO_SDK_PATH points to the path where the SDK is installed.
-Then type
+Then type:
 
-     $ mkdir build
-     $ cd build
-     $ cmake [options] -S ../console/pico -B .
+     $ cd console/pico
      $ make
 
-Note the stop (current folder) after the -B flag.
-
-The following options may be specified with the cmake command:
-
-* -DPICO_BOARD=vgaboard if using the VGA demo board, or other board as appropriate.
-* -DSTDIO=... to select the user interface
-  * -DSTDIO=USB for the basic console on USB
-  * -DSTDIO=UART for the basic console on UART.
-  * -DSTDIO=PICO for input via USB keyboard and output via VGA monitor.
-* -DLFS=Y to include storage on Pico flash or -DLFS=N to exclude it.
-* -DFAT=Y to include storage on SD card or -DFAT=N to exclude it.
-* -DSOUND=Y to include sound support or -DSOUND=N to exclude it.
-* Other cmake options if required.
-
-At this point the file bbcbasic.uf2 should be in the build directory.
+At this point the files bbcbasic.uf2 and filesystem.uf2 should be in the build directory.
 
 Plug a Pico into the USB port while holding the boot button and then assuming developing
 on a Raspberry Pi with Raspberry Pi OS:
 
      $ cp -v bbcbasic.uf2 /media/pi/RPI-RP2
+
+Repeat the process for filesystem.uf2
 
 If using USB, connect as
 
@@ -79,33 +88,22 @@ to use the interpreter.  Note that you may use minicom as well, however,
 minicom will not display color correctly or resize the terminal window
 for the different MODE settings in BBC Basic.
 
-The following limitations are noted:
+## Build Instructions - GUI Version
 
-1.  There is no assembler.  Something might appear to happen, but
-    it will surely crash immediately afterwards.
+Ensure that the environment variable PICO_SDK_PATH points to the path where the SDK is installed
+and PICO_EXTRAS_PATH points to where these are installed. Then type:
 
-2.  HIMEM-PAGE=65K with an additional 32K has reserved for CALL and
-    INSTALL libraries.
+     $ cd bin/pico
+     $ make
 
-3.  m0FaultDispatch is linked in by default.  This license for this
-    library is free for hobby and other non-commercial products.  If
-    you wish to create a commercial version of the program contained
-    here, please add -DFREE to the CMakeLists.txt file.
+Plug a Pico into the USB port while holding the boot button and then assuming developing
+on a Raspberry Pi with Raspberry Pi OS:
 
-4.  All programs in tests and the root filesystem have been tested
-    and appear to work.  However, any remaining bugs are more likely
-    to be related to the Pico port.  As always this is open source
-    with expressly no warranty provided.
+     $ cp -v bbcbasic.uf2 /media/pi/RPI-RP2
 
-5.  The *CD command has been modified to automatically change the
-    built-in variable @dir$ as the Pico doesn't have an operating
-    system from which the executable was launched.
+Repeat the process for filesystem.uf2
 
-6.  There is are known buffer overflows in the wrappers appearing in
-    lfswrap.c which are triggered when a filename path grows to be
-    greater than 256 characters.  Please don't do that.
-
-## Usage Notes - Stand-Alone (USB keyboard and VGA Output)
+### Usage Notes
 
 The code has been designed for use with the VGA demonstration board.
 To use (once the Pico has been programmed):
@@ -164,11 +162,8 @@ replacing it.
 * VDU 23 can only be used to control the appearance of the cursor and to select
 page or scroll mode.
 * PLOT modes 0-167 & 192-207 are implemented.
-* There is no sound
-* VGA output is lost while writing programs or data to internal flash memory.
-This does not happen writing to SD card.
 
-## TO DO - For the second development line
+### TO DO
 
 * Sort out the memory map for this mode - DONE but needs revisiting
 * Enhance text processing (viewports) - DONE
@@ -181,6 +176,30 @@ This does not happen writing to SD card.
 * Plotting: arc - DONE
 * Plotting: segment & sector - Probaby will not do, too many cases. Can sometimes be achieved with arc & fill.
 * 800x600 VGA output (currently only 640x480)?
-* Sound?
+* Sound - DONE
 * Testing - Lots of it
 * Documentation
+
+## Custom Builds
+
+The makefiles (above) produce two standard builds. Custom builds can be performed using CMake.
+
+     $ mkdir build
+     $ cd build
+     $ cmake [options] -S ../mcu/pico -B .
+     $ make
+
+Note the stop (current folder) after the -B flag.
+
+The following options may be specified with the cmake command:
+
+* -DPICO_BOARD=vgaboard if using the VGA demo board, or other board as appropriate.
+* -DSTDIO=... to select the user interface:
+  * -DSTDIO=USB+UART for the console on both USB and UART.
+  * -DSTDIO=USB for the basic console on USB.
+  * -DSTDIO=UART for the basic console on UART.
+  * -DSTDIO=PICO for input via USB keyboard and output via VGA monitor.
+* -DLFS=Y to include storage on Pico flash or -DLFS=N to exclude it.
+* -DFAT=Y to include storage on SD card or -DFAT=N to exclude it.
+* -DSOUND=Y to include sound support or -DSOUND=N to exclude it.
+* Other cmake options if required.

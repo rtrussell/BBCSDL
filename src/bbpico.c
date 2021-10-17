@@ -146,7 +146,7 @@ void crlf (void) ;		// Output a newline
 // Declared in bbeval.c:
 unsigned int rnd (void) ;	// Return a pseudo-random number
 
-#ifdef PICO_VGA
+#ifdef PICO_GUI
 // Declared in picovdu.c
 void setup_vdu (void);
 int vgetc (int x, int y);
@@ -520,7 +520,7 @@ void quiet (void)
 }
 #endif
 
-#ifndef PICO_VGA
+#ifndef PICO_GUI
 // Get text cursor (caret) coordinates:
 void getcsr(int *px, int *py)
 {
@@ -761,7 +761,7 @@ int oskey (int wait)
 			usleep (5000) ;
 		    }
 	    }
-#ifdef PICO_VGA
+#ifdef PICO_GUI
     else if ( wait >= -128 )
         return testkey (-wait);
 #endif
@@ -1813,7 +1813,7 @@ int main (int argc, char* argv[])
 # endif
 	char *cmdline[]={"/autorun.bbc",0};
 	argc=1; argv=cmdline;
-#ifdef PICO_VGA
+#ifdef PICO_GUI
     setup_vdu ();
     setup_keyboard ();
 #endif

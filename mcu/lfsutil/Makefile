@@ -1,4 +1,4 @@
-CFLAGS=-O2 -Wall -I.. -I../littlefs
+CFLAGS=-O2 -Wall -I.. -I../littlefs -I../../include/mcu
 TARGETS=filesystem.uf2 filesystem.elf filesystem.lfs mklfsimage uf2conv
 SOURCES=mklfsimage.c ../lfsmcu.c ../littlefs/lfs.a
 

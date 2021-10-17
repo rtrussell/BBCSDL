@@ -1,8 +1,8 @@
 #  If building on Linux or other Posix-like operating system simply
 #  use the Makefile.  This file is for using the SDK to create a 
-#  that runs on the Raspberry Pi Pico.  Please update
+#  that runs on the Raspberry Pi Pico.  Please set
 #
-#     PICO_SKD_PATH
+#     PICO_SDK_PATH
 #
 #  to the subdirectory where you have installed the SDK. */
 
@@ -26,7 +26,7 @@ if (TARGET tinyusb_device)
     ../../src/bbeval.c
     ../../src/bbccos.c
     ../../src/bbpico.c
-    ../../mcu/bbasmb_arm_v6m2.c 
+    ../../src/bbasmb_arm_v6m2.c 
     ../../mcu/lfswrap.c 
     ../../mcu/m0FaultDispatch/m0FaultDispatch.c
     ../../mcu/fault.c
@@ -44,7 +44,7 @@ if (TARGET tinyusb_device)
   target_compile_definitions(bbcbasic PUBLIC PICO)
   target_include_directories(bbcbasic PRIVATE
     ../../include
-    ../../mcu
+    ../../include/mcu
     ../../mcu/m0FaultDispatch
     )
 
@@ -52,7 +52,10 @@ if (TARGET tinyusb_device)
     message(STATUS "Generate sound using I2S output")
     target_compile_definitions(bbcbasic PUBLIC -DPICO_SOUND)
     pico_generate_pio_header(bbcbasic ${CMAKE_CURRENT_LIST_DIR}/../../mcu/pico/sound.pio)
-    target_sources(bbcbasic PRIVATE ../../mcu/pico/pico_snd.c)
+    target_sources(bbcbasic PRIVATE
+      ../../src/sn76489.c
+      ../../mcu/pico/pico_snd.c
+      )
   endif()
 
   if ( ${LFS} )
@@ -90,22 +93,24 @@ if (TARGET tinyusb_device)
     pico_enable_stdio_usb(bbcbasic 0)
     pico_enable_stdio_uart(bbcbasic 1)
     target_sources(bbcbasic PRIVATE
-      ../../mcu/pico_vga/picokbd.c
-      ../../mcu/pico_vga/picovdu.c
-      ../../mcu/pico_vga/framebuffer.S
+      ../../src/fbufvdu.c
+      ../../mcu/pico_gui/picokbd.c
+      ../../mcu/pico_gui/picofbuf.c
+      ../../mcu/pico_gui/framebuffer.S
       )
     target_compile_definitions(bbcbasic PUBLIC
       PICO_STACK_SIZE=0x2B800
       PICO_CORE1_STACK_SIZE=0x800
       )
     target_compile_definitions(bbcbasic PRIVATE -DSTDIO_PICO)
-    target_compile_definitions(bbcbasic PRIVATE -DPICO_VGA)
+    target_compile_definitions(bbcbasic PRIVATE -DPICO_GUI)
     target_compile_definitions(bbcbasic PUBLIC
       -DPICO_SCANVIDEO_MAX_SCANLINE_BUFFER_WORDS=402
       -DPICO_SCANVIDEO_SCANLINE_BUFFER_COUNT=8
       )
     target_include_directories(bbcbasic PRIVATE
-      ../../mcu/pico_vga
+      ../../include/mcu/pico
+      ../../include/mcu/pico_gui
       )
     target_link_libraries(bbcbasic
       pico_scanvideo_dpi
@@ -114,9 +119,9 @@ if (TARGET tinyusb_device)
       tinyusb_host
       tinyusb_board
       )
-    pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/vga_pico.ld)
+    pico_set_linker_script(bbcbasic ${CMAKE_SOURCE_DIR}/../pico_gui/gui_pico.ld)
   elseif ( ${STDIO} STREQUAL "USB+UART" )
-    message(STATUS "BBC Basic console I/O will be on USB and UART")
+    message(STATUS "BBC Basic console I/O will be on UART")
     pico_enable_stdio_usb(bbcbasic 1)
     pico_enable_stdio_uart(bbcbasic 1)
     target_compile_definitions(bbcbasic PRIVATE -DSTDIO_USB -DSTDIO_UART)

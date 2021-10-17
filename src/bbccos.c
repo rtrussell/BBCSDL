@@ -119,7 +119,7 @@ static void newmode (short wx, short wy, short cx, short cy, short nc, signed ch
 	scroln = 0 ;
 }
 
-#ifndef PICO_VGA
+#ifndef PICO_GUI
 //VDU 22,n - MODE n
 static void modechg (char al) 
 {
