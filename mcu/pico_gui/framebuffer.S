@@ -206,3 +206,67 @@ convert_from_pal16_4:
     blo 3b                                                          // Repeat if r1 < r2 (= &src[count])
 
     pop {r4-r7, pc}                                                 // Restore registers and exit
+
+    // Convert a line of framebuffer to 16-bit pixel values
+    // Each byte becomes 16 pixel values (32 bytes)
+// setup: note palette is 16 entries of 8 pixels (16 bytes); i.e. all pixel combinations for 1 nibble
+//
+// interp_config c = interp_default_config();
+// interp_config_set_shift(&c, 20);
+// interp_config_set_mask(&c, 4, 7);
+// interp_set_config(interp0, 0, &c);
+// interp_config_set_shift(&c, 24);
+// interp_config_set_cross_input(&c, true);
+// interp_set_config(interp0, 1, &c);
+// interp_set_base(interp0, 0, (uintptr_t)palette256);
+// interp_set_base(interp0, 1, (uintptr_t)palette256);
+
+// dest - pixel buffer 16bpp
+// src - source pixel buffer 1-4bpp (must be 32 bit aligned)
+// count - is number of bytes to convert (must be a multiple of 4)
+// extern void convert_from_pal16_4(uint32_t *dest, uint8_t *src, uint count);
+    // r0 = &dest
+    // r1 = &src
+    // r2 = count
+
+.global convert_from_pal16_16
+.type convert_from_pal16_16,%function
+.thumb_func
+convert_from_pal16_16:
+    push {r4-r7, lr}                                                // Save registers
+    add r2, r1                                                      // r2 = &src + count
+    ldr r7, =(SIO_BASE + SIO_INTERP0_ACCUM0_OFFSET)                 // Address of SIO_INTERP0 registers
+    mov r6, #8                                                      // Bit rotate count
+4:  
+    ldmia r1!, {r3}                                                 // r3 = *(src++)
+    mov r6, #4                                                      // Number of bytes in a word
+5:  
+    mov r5, #8                                                      // Rotate by 8 bits
+    ror r3, r3, r5
+    str r3, [r7, #INTERP_OFFSET0(SIO_INTERP0_ACCUM0_OFFSET)]        // SIO_INTERP0_ACCUM0 = r3
+    ldr r4, [r7, #INTERP_OFFSET0(SIO_INTERP0_PEEK_LANE0_OFFSET)]    // r4 = &palette256[8*(r3>>20)]
+    ldr r5, [r4]                                                    // Copy 8 pixels from *r4 to *r0
+    str r5, [r0]
+    ldr r5, [r4, #4]
+    str r5, [r0, #4]
+    ldr r5, [r4, #8]
+    str r5, [r0, #8]
+    ldr r5, [r4, #12]
+    str r5, [r0, #12]
+    ldr r4, [r7, #INTERP_OFFSET0(SIO_INTERP0_PEEK_LANE1_OFFSET)]    // r4 = &palette256[8*(r3>>24)]
+    ldr r5, [r4]                                                    // Copy 8 pixels from *r4 to *(r0+16)
+    str r5, [r0, #16]
+    ldr r5, [r4, #4]
+    str r5, [r0, #20]
+    ldr r5, [r4, #8]
+    str r5, [r0, #24]
+    ldr r5, [r4, #12]
+    str r5, [r0, #28]
+    add r0, #32                                                     // Increment destination by 32 pixels
+    sub r6, r6, #1                                                  // Count bytes in the word
+    bne 5b
+    
+    cmp r1, r2                                                      // Compare (r1 - r2)
+    blo 4b                                                          // Repeat if r1 < r2 (= &src[count])
+
+    pop {r4-r7, pc}                                                 // Restore registers and exit

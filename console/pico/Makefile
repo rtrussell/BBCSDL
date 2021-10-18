@@ -1,3 +1,4 @@
+BOARD=pico
 SOURCES= \
     ../../src/bbmain.c \
     ../../src/bbexec.c \
@@ -27,7 +28,7 @@ build/CMakeCache.txt: ../../mcu/pico/CMakeLists.txt
 	rm -rf build
 	mkdir -p build
 	cd build && PICO_SDK_PATH=$(PICO_SDK_PATH) \
-		cmake -DPICO_BOARD=pico -DSTDIO=USB+UART -DLFS=Y -DFAT=N -S ../../../mcu/pico -B .
+		cmake -DPICO_BOARD=$(BOARD) -DSTDIO=USB+UART -DLFS=Y -DFAT=N -S ../../../mcu/pico -B .
 
 bbcbasic.uf2: build/CMakeCache.txt $(SOURCES)
 	cd build && make

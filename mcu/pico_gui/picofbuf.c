@@ -3,7 +3,7 @@
 #define VID_CORE    1
 #define USE_INTERP  1
 #define HIRES       0   // CAUTION - Enabling HIRES requires extreme Pico overclock
-#define DEBUG       1
+#define DEBUG       0
 
 #include "pico/platform.h"
 #include "pico.h"
@@ -135,22 +135,22 @@ static const MODE modes[] = {
 #else   // 640x480 VGA
 static const MODE modes[] = {
 // ncbt gcol grow tcol trw  vmg hmg pb nbpl ys thg
-    { 1, 640, 256,  80, 32, 112,  0, 8,  80, 0,  8},  // Mode  0 - 20KB
-    { 2, 320, 256,  40, 32, 112,  0, 8,  80, 0,  8},  // Mode  1 - 20KB
-    { 4, 160, 256,  20, 32, 112,  0, 8,  80, 0,  8},  // Mode  2 - 20KB
-    { 1, 640, 240,  80, 24,   0,  0, 8,  80, 1, 10},  // Mode  3 - 20KB
-    { 1, 320, 256,  40, 32, 112,  0, 8,  80, 0,  8},  // Mode  4 - 10KB
-    { 2, 160, 256,  20, 32, 112,  0, 8,  80, 0,  8},  // Mode  5 - 10KB
-    { 1, 320, 240,  40, 24,   0,  0, 8,  80, 1, 10},  // Mode  6 - 10KB
-    { 3, 320, 225,  40, 25,  15,  0, 4, 160, 1,TTH},  // Mode  7 - ~1KB - Teletext
-    { 1, 640, 480,  80, 30,   0,  0, 8,  80, 0, 16},  // Mode  8 - 37.5KB
-    { 2, 320, 480,  40, 30,   0,  0, 8,  80, 0, 16},  // Mode  9 - 37.5KB
-    { 4, 160, 480,  20, 30,   0,  0, 8,  80, 0, 16},  // Mode 10 - 37.5KB
-    { 1, 640, 480,  80, 24,   0,  0, 8,  80, 0, 20},  // Mode 11 - 37.5KB
-    { 1, 320, 480,  40, 30,   0,  0, 8,  80, 0, 16},  // Mode 12 - 18.75KB
-    { 2, 160, 480,  20, 30,   0,  0, 8,  80, 0, 16},  // Mode 13 - 18.75KB
-    { 1, 320, 480,  40, 24,   0,  0, 8,  80, 0, 20},  // Mode 14 - 18.75KB
-    { 4, 320, 240,  40, 24,   0,  0, 4, 160, 1, 10},  // Mode 15 - 37.5KB
+    { 1, 640, 256,  80, 32, 112,  0,  8,  80, 0,  8},  // Mode  0 - 20KB
+    { 2, 320, 256,  40, 32, 112,  0,  8,  80, 0,  8},  // Mode  1 - 20KB
+    { 4, 160, 256,  20, 32, 112,  0,  8,  80, 0,  8},  // Mode  2 - 20KB
+    { 1, 640, 225,  80, 25,  15,  0,  8,  80, 1,  9},  // Mode  3 - 20KB
+    { 1, 320, 256,  40, 32, 112,  0, 16,  40, 0,  8},  // Mode  4 - 10KB
+    { 2, 160, 256,  20, 32, 112,  0, 16,  40, 0,  8},  // Mode  5 - 10KB
+    { 1, 320, 240,  40, 25,  15,  0, 16,  40, 1,  9},  // Mode  6 - 10KB
+    { 3, 320, 225,  40, 25,  15,  0,  4, 160, 1,TTH},  // Mode  7 - ~1KB - Teletext
+    { 1, 640, 480,  80, 30,   0,  0,  8,  80, 0, 16},  // Mode  8 - 37.5KB
+    { 2, 320, 480,  40, 30,   0,  0,  8,  80, 0, 16},  // Mode  9 - 37.5KB
+    { 4, 160, 480,  20, 30,   0,  0,  8,  80, 0, 16},  // Mode 10 - 37.5KB
+    { 1, 640, 450,  80, 25,  15,  0,  8,  80, 0, 18},  // Mode 11 - 37.5KB
+    { 1, 320, 480,  40, 30,   0,  0, 16,  40, 0, 16},  // Mode 12 - 18.75KB
+    { 2, 160, 480,  20, 30,   0,  0, 16,  40, 0, 16},  // Mode 13 - 18.75KB
+    { 1, 320, 450,  40, 25,  15,  0, 16,  40, 0, 18},  // Mode 14 - 18.75KB
+    { 4, 320, 240,  40, 30,   0,  0,  4, 160, 1,  8},  // Mode 15 - 37.5KB
     };
 #endif
 
@@ -166,6 +166,7 @@ routines in Flash.
 
 #if USE_INTERP
 static bool bCfgInt = false;    // Configure interpolators
+extern void convert_from_pal16_16 (uint32_t *dest, uint8_t *src, uint32_t count);
 extern void convert_from_pal16_8 (uint32_t *dest, uint8_t *src, uint32_t count);
 extern void convert_from_pal16_4 (uint32_t *dest, uint8_t *src, uint32_t count);
 extern void convert_from_pal16 (uint32_t *dest, uint8_t *src, uint32_t count);
@@ -190,6 +191,7 @@ void __time_critical_func(render_mode7) (void)
 #endif
     while (curmode.ncbt == 3)
         {
+#if USE_INTERP
         if ( bCfgInt )
             {
             bCfgInt = false;
@@ -198,6 +200,7 @@ void __time_critical_func(render_mode7) (void)
             printf ("Mode 7 display enabled\n");
 #endif
             }
+#endif
         struct scanvideo_scanline_buffer *buffer = scanvideo_begin_scanline_generation (true);
         uint32_t *twopix = buffer->data;
         int iScan = scanvideo_scanline_number (buffer->scanline_id) - curmode.vmgn;
@@ -403,7 +406,14 @@ void __time_critical_func(render_mode7) (void)
 static void setup_interp (void)
     {
     interp_config c = interp_default_config();
-    if ( curmode.nppb == 8 )
+    if ( curmode.nppb == 16 )
+        {
+        interp_config_set_shift (&c, 20);
+        interp_config_set_mask (&c, 4, 7);
+        interp_set_config (interp0, 0, &c);
+        interp_config_set_shift (&c, 24);
+        }
+    else if ( curmode.nppb == 8 )
         {
         interp_config_set_shift (&c, 20);
         interp_config_set_mask (&c, 4, 11);
@@ -432,7 +442,6 @@ static void setup_interp (void)
     printf ("Interpolator test:\n");
     for (uint32_t i = 0; i < 256; ++i )
         {
-#if 1
         static uint16_t buf[32];
         static uint8_t dfb[4];
         dfb[0] = i;
@@ -447,18 +456,6 @@ static void setup_interp (void)
             else printf (" ");
             }
         printf ("I\n");
-#else
-        interp_set_accumulator (interp0, 0, i << 24);
-        uint16_t *prb = (uint16_t *) interp_peek_lane_result (interp0, 0);
-        printf ("interp (%3d) = 0x%08X:", i, prb);
-        for (int j = 0; j < 8; ++j)
-            {
-            if ( *prb ) printf (" %04X", *prb);
-            else printf (" ----");
-            ++prb;
-            }
-        printf ("\n");
-#endif
         }
 #endif
     bCfgInt = false;
@@ -506,10 +503,34 @@ void __time_critical_func(render_loop) (void)
                 for (int i = 0; i < curmode.nbpl; ++i)
                     {
                     uint32_t *twoclr = (uint32_t *) &renderbuf[8 * (*pfb)];
+                    *(twopix) = *twoclr;
+                    *(++twopix) = *(++twoclr);
+                    *(++twopix) = *(++twoclr);
+                    *(++twopix) = *(++twoclr);
+                    ++twopix;
+                    ++pfb;
+                    }
+#endif
+                }
+            else if ( curmode.nppb == 16 )
+                {
+#if USE_INTERP
+                convert_from_pal16_16 (twopix, pfb, curmode.nbpl);
+                twopix += 8 * curmode.nbpl;
+#else
+                for (int i = 0; i < curmode.nbpl; ++i)
+                    {
+                    uint32_t *twoclr = (uint32_t *) &renderbuf[8 * ((*pfb) & 0x0F)];
+                    *(twopix) = *twoclr;
+                    *(++twopix) = *(++twoclr);
+                    *(++twopix) = *(++twoclr);
+                    *(++twopix) = *(++twoclr);
+                    twoclr = (uint32_t *) &renderbuf[8 * ((*pfb) >> 4)];
                     *(++twopix) = *twoclr;
                     *(++twopix) = *(++twoclr);
                     *(++twopix) = *(++twoclr);
                     *(++twopix) = *(++twoclr);
+                    ++twopix;
                     ++pfb;
                     }
 #endif
@@ -523,8 +544,9 @@ void __time_critical_func(render_loop) (void)
                 for (int i = 0; i < curmode.nbpl; ++i)
                     {
                     uint32_t *twoclr = (uint32_t *) &renderbuf[4 * (*pfb)];
-                    *(++twopix) = *twoclr;
+                    *(twopix) = *twoclr;
                     *(++twopix) = *(++twoclr);
+                    ++twopix;
                     ++pfb;
                     }
 #endif
@@ -537,8 +559,9 @@ void __time_critical_func(render_loop) (void)
 #else
                 for (int i = 0; i < curmode.nbpl; ++i)
                     {
-                    uint32_t *twoclr = (uint32_t *) &renderbuf[2*(*pfb)];
-                    *(++twopix) = *twoclr;
+                    uint32_t *twoclr = (uint32_t *) &renderbuf[2 * (*pfb)];
+                    *(twopix) = *twoclr;
+                    ++twopix;
                     ++pfb;
                     }
 #endif
@@ -764,35 +787,75 @@ void csrdef (int data2)
 
 void genrb (uint16_t *curpal)
     {
+    uint16_t *prb = (uint16_t *)renderbuf;
 #if DEBUG > 0
     printf ("genrb\n");
 #endif
-    uint16_t *prb = (uint16_t *)renderbuf;
+#if 1
+    int nbuf = 256;
+    int npix = 8 / curmode.ncbt;
+    int nrpt = curmode.nppb / npix;
+    uint32_t clrmsk = clrdef[curmode.ncbt].clrmsk;
+    if ( curmode.nppb == 16 )
+        {
+        nbuf = 16;
+        npix /= 2;
+        }
+    for (int i = 0; i < nbuf; ++i)
+        {
+        uint32_t ibuf = i;
+        for (int j = 0; j < npix; ++j)
+            {
+            uint16_t clr = curpal[clrmsk & ibuf];
+            for (int k = 0; k < nrpt; ++k)
+                {
+                *prb = clr;
+                ++prb;
+                }
+            ibuf >>= curmode.ncbt;
+            }
+        }
+#else
+    int npix = ( curmode.nppb == 16 ) ? 16 : 256;
     if ( curmode.ncbt == 1 )
         {
-        for (int i = 0; i < 256; ++i)
+        for (int i = 0; i < npix; ++i)
             {
             uint8_t pix = i;
             for (int j = 0; j < 8; ++j)
                 {
-                *prb = curpal[pix & 0x01];
+                uint16_t clr = curpal[pix & 0x01];
+                *prb = clr;
                 ++prb;
+                if ( curmode.nppb == 16 )
+                    {
+                    *prb = clr;
+                    ++prb;
+                    }
                 pix >>= 1;
                 }
             }
         }
     else if ( curmode.ncbt == 2 )
         {
-        for (int i = 0; i < 256; ++i)
+        for (int i = 0; i < npix; ++i)
             {
             uint8_t pix = i;
             for (int j = 0; j < 4; ++j)
                 {
-                *prb = curpal[pix & 0x03];
+                uint16_t clr = curpal[pix & 0x01];
+                *prb = clr;
                 ++prb;
-                if ( curmode.nppb == 8 )
+                if ( curmode.nppb >= 8 )
                     {
-                    *prb = curpal[pix & 0x03];
+                    *prb = clr;
+                    ++prb;
+                    }
+                if ( curmode.nppb == 16 )
+                    {
+                    *prb = clr;
+                    ++prb;
+                    *prb = clr;
                     ++prb;
                     }
                 pix >>= 2;
@@ -809,7 +872,7 @@ void genrb (uint16_t *curpal)
         }
     else if ( curmode.ncbt == 4 )
         {
-        for (int i = 0; i < 256; ++i)
+        for (int i = 0; i < npix; ++i)
             {
             uint16_t clr = curpal[i & 0x0F];
             for (int j = 0; j < curmode.nppb / 2; ++j)
@@ -817,14 +880,18 @@ void genrb (uint16_t *curpal)
                 *prb = clr;
                 ++prb;
                 }
-            clr = curpal[i >> 4];
-            for (int j = 0; j < curmode.nppb / 2; ++j)
+            if ( curmode.nppb < 16 )
                 {
-                *prb = clr;
-                ++prb;
+                clr = curpal[i >> 4];
+                for (int j = 0; j < curmode.nppb / 2; ++j)
+                    {
+                    *prb = clr;
+                    ++prb;
+                    }
                 }
             }
         }
+#endif
 #if DEBUG > 0
     printf ("End genrb: prb - renderbuf = %p - %p = %d\n", prb, renderbuf, prb - renderbuf);
 #endif

@@ -186,7 +186,7 @@ static int putinp (unsigned char inp)
 	if ( bFirst )
 	    {
 	    bFirst = 0;
-	    if ( inp == 0xFF ) return 0;
+        return 0;
 	    }
 #endif
 	if (al != inpqr)
@@ -1774,7 +1774,10 @@ void waitconsole(void){
 	if(waitdone) return;
 # ifdef STDIO_USB
 	printf("Waiting for connection\r\n");
-	while ((!tud_cdc_connected()) && (getinp () != 0x0D)) {
+	while (!tud_cdc_connected()) {
+        unsigned char ch;
+        getinp (&ch);
+        if ( ch == 0x0D ) break;
 		printf(".");
         myPoll ();
 		sleep_ms(1000);
@@ -1790,7 +1793,7 @@ int main (int argc, char* argv[])
 {
 #ifdef PICO
     stdio_init_all();
-#ifndef STDIO_USB
+#ifndef DEBUG
 	// Wait for UART connection
 	const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 	gpio_init(LED_PIN);

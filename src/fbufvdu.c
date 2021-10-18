@@ -14,7 +14,7 @@
 
 */
 
-#define DEBUG 1
+#define DEBUG 0
 
 #include <string.h>
 #include <stdio.h>
@@ -299,6 +299,8 @@ static void cls ()
     {
 #if DEBUG > 0
     printf ("cls: bgfill = 0x%02\n", bgfill);
+    printf ("textwt = %d, textwb = %d, textwl = %d, textwr = %d\n", textwt, textwb, textwl, textwr);
+    printf ("thgt = %d, nbpl = %d\n", pmode->thgt, pmode->nbpl);
 #endif
     hidecsr ();
     if ( pmode->ncbt == 3 )
@@ -321,6 +323,10 @@ static void cls ()
         }
     else if (( textwl == 0 ) && ( textwr == pmode->tcol - 1 ))
         {
+#if DEBUG > 0
+        printf ("cls: start = %d, length = %d\n", textwt * pmode->thgt * pmode->nbpl,
+            ( textwb - textwt + 1 ) * pmode->thgt * pmode->nbpl);
+#endif
         memset (framebuf + textwt * pmode->thgt * pmode->nbpl, bgfill,
             ( textwb - textwt + 1 ) * pmode->thgt * pmode->nbpl);
         }
@@ -330,6 +336,9 @@ static void cls ()
             + ( textwl << cdef->bitsh );
         int nr = ( textwb - textwt + 1 ) * pmode->thgt;
         int nb = ( textwr - textwl + 1 ) << cdef->bitsh;
+#if DEBUG > 0
+        printf ("cls: start = %d, nr = %d, nb = \n", textwt * pmode->thgt * pmode->nbpl, nr, nb);
+#endif
         for (int ir = 0; ir < nr; ++ir)
             {
             memset (fb1, bgfill, nb);
@@ -586,8 +595,12 @@ void modechg (int mode)
 #if DEBUG > 0
     printf ("modechg (%d)\n", mode);
 #endif
+    hidecsr ();
     if ( setmode (mode, &framebuf, &pmode, &cdef) )
         {
+#if DEBUG > 0
+        printf ("grow = %d, gcol = %d\n", pmode->grow, pmode->gcol);
+#endif
         int gunit = pmode->gcol;
         xscale = 1;
         xshift = 0;
@@ -597,21 +610,33 @@ void modechg (int mode)
             xscale <<= 1;
             gunit <<= 1;
             }
-        yshift = pmode->yshf + 1;
-        yscale = 1 << yshift;
+        gunit = pmode->grow;
+        yscale = 1;
+        yshift = 0;
+        while ( gunit < 900 )
+            {
+            ++yshift;
+            yscale <<= 1;
+            gunit <<= 1;
+            }
 #if DEBUG > 0
         printf ("xscale = %d, xshift = %d, yscale = %d, yshift = %d\n", xscale, xshift, yscale, yshift);
 #endif
         clrreset ();
         rstview ();
         cls ();
+#if DEBUG > 0
+        printf ("modechg: Completed cls\n");
+#endif
         dispmode ();
 #if DEBUG > 0
         printf ("modechg: New mode set\n");
 #endif
+        showcsr ();
         }
     else
         {
+        showcsr ();
         error (25, NULL);
         }
     }
@@ -1318,7 +1343,7 @@ static int iroot (int s)
         {
         int r3 = ( r1 + r2 ) / 2;
         int st = r3 * r3;
-#if DEBUG > 0
+#if DEBUG > 1
         printf ("r1 = %d, r2 = %d, r3 = %d, st = %d\n", r1, r2, r3, st);
 #endif
         if ( st == s ) { r1 = r3; break; }
@@ -1494,8 +1519,14 @@ static void plotellipse (bool bFill, int clrop)
 
 static int octant (int xp, int yp)
     {
-    xp <<= 2 * xshift;
-    yp <<= 2 * yshift;
+#if DEBUG > 0
+    printf ("octant (%d, %d)\n", xp, yp);
+#endif
+    xp <<= xshift;
+    yp <<= yshift;
+#if DEBUG > 0
+    printf ("scaled: xp = %d, yp = %d\n", xp, yp);
+#endif
     int iOct;
     if ( yp >= 0 )
         {
@@ -1523,6 +1554,9 @@ static int octant (int xp, int yp)
             else iOct = 7;
             }
         }
+#if DEBUG > 0
+    printf ("octant = %d\n", iOct);
+#endif
     return iOct;
     }
 

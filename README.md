@@ -67,6 +67,11 @@ Then type:
      $ cd console/pico
      $ make
 
+To build for hardware other than a Pico (assuming the hardware is supported by the SDK) use:
+
+     $ cd console/pico
+     $ make BOARD=...
+
 At this point the files bbcbasic.uf2 and filesystem.uf2 should be in the build directory.
 
 Plug a Pico into the USB port while holding the boot button and then assuming developing
@@ -95,6 +100,12 @@ and PICO_EXTRAS_PATH points to where these are installed. Then type:
 
      $ cd bin/pico
      $ make
+
+To build for hardware other than a Pico on a VGA Demo Board (assuming the hardware is supported by
+the SDK) use:
+
+     $ cd console/pico
+     $ make BOARD=...
 
 Plug a Pico into the USB port while holding the boot button and then assuming developing
 on a Raspberry Pi with Raspberry Pi OS:
@@ -129,25 +140,24 @@ Mode | Colours |   Text  | Graphics  | Letterbox
    0 |     2   | 80 x 32 | 640 x 256 |     Y
    1 |     4   | 40 x 32 | 320 x 256 |     Y
    2 |    16   | 20 x 32 | 160 x 256 |     Y
-   3 |     2   | 80 x 24 | 640 x 240 |
+   3 |     2   | 80 x 25 | 640 x 225 |
    4 |     2   | 40 x 32 | 320 x 256 |     Y
    5 |     4   | 20 x 32 | 160 x 256 |     Y
-   6 |     2   | 40 x 24 | 320 x 240 |
-   7 |     8   | 40 x 24 | Teletext  |
+   6 |     2   | 40 x 25 | 320 x 225 |
+   7 |     8   | 40 x 25 | Teletext  |
    8 |     2   | 80 x 30 | 640 x 480 |
    9 |     4   | 40 x 30 | 320 x 480 |
   10 |    16   | 20 x 30 | 160 x 480 |
-  11 |     2   | 80 x 24 | 640 x 480 |
+  11 |     2   | 80 x 25 | 640 x 450 |
   12 |     2   | 40 x 30 | 320 x 480 |
   13 |     4   | 20 x 30 | 120 x 480 |
-  14 |     2   | 40 x 24 | 320 x 480 |
-  15 |    16   | 40 x 24 | 320 x 240 |
+  14 |     2   | 40 x 25 | 320 x 450 |
+  15 |    16   | 40 x 30 | 320 x 240 |
 
-Modes 0-2, 4 & 5 reproduce those from the BBC Micro. They only have 256 rows of pixels
+Modes 0-6 reproduce those from the BBC Micro. They only have 256 rows of pixels
 which are displayed in the centre of the monitor so may appear squashed.
 
-Modes 3 & 6 only have 24 lines of text compared to 25 on the BBC Micro (this may be changed),
-however they can also display graphics.
+Modes 3 & 6 can also display graphics.
 
 Except for Mode 7, colours 8-15 are high intensity rather than flashing.
 
