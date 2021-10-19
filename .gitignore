@@ -36,6 +36,8 @@ build*/
 *.i*86
 *.x86_64
 *.hex
+*.elf
+*.uf2
 
 # Debug files
 *.dSYM/
@@ -47,3 +49,10 @@ build*/
 *~
 #*
 .#*
+
+# Misc
+*.zip
+*.lfs
+mklfsimage
+uf2conv
+tree

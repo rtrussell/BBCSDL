@@ -505,13 +505,13 @@ int stdin_handler (int *px, int *py)
 // SOUND Channel,Amplitude,Pitch,Duration
 void sound (short chan, signed char ampl, unsigned char pitch, unsigned char duration)
 {
-	error (255, "Sorry, not implemented") ;
+	error (255, "Sorry, SOUND not implemented") ;
 }
 
 // ENVELOPE N,T,PI1,PI2,PI3,PN1,PN2,PN3,AA,AD,AS,AR,ALA,ALD
 void envel (signed char *env)
 {
-	error (255, "Sorry, not implemented") ;
+	error (255, "Sorry, ENVELOPE not implemented") ;
 }
 
 // Disable sound generation:
@@ -534,41 +534,41 @@ void getcsr(int *px, int *py)
 // Get pixel RGB colour:
 int vtint (int x, int y)
 {
-	error (255, "Sorry, not implemented") ;
+	error (255, "Sorry, TINT not implemented") ;
 	return -1 ;
 }
 
 // Get nearest palette index:
 int vpoint (int x, int y)
 {
-	error (255, "Sorry, not implemented") ;
+	error (255, "Sorry, POINT not implemented") ;
 	return -1 ;
 }
 
 int vgetc (int x, int y)
 {
-	error (255, "Sorry, not implemented") ;
+	error (255, "Sorry, GETXY not implemented") ;
+	return -1 ;
+}
+
+// Get string width in graphics units:
+int widths (unsigned char *s, int l)
+{
+	error (255, "Sorry, WIDTH not implemented") ;
 	return -1 ;
 }
 #endif
 
 int osbyte (int al, int xy)
 {
-	error (255, "Sorry, not implemented") ;
+	error (255, "Sorry, OSBYTE not implemented") ;
 	return -1 ;
 }
 
 void osword (int al, void *xy)
 {
-	error (255, "Sorry, not implemented") ;
+	error (255, "Sorry, OSWORD not implemented") ;
 	return ;
-}
-
-// Get string width in graphics units:
-int widths (unsigned char *s, int l)
-{
-	error (255, "Sorry, not implemented") ;
-	return -1 ;
 }
 
 // ADVAL(n)
@@ -579,7 +579,7 @@ int adval (int n)
 #ifdef PICO_SOUND
     if ((n >= -8) && (n <= -5)) return snd_free (-5 - n);
 #endif
-	error (255, "Sorry, not implemented") ;
+	error (255, "Sorry, ADVAL not implemented") ;
 	return -1 ;
 }
 

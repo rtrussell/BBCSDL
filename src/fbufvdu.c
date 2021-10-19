@@ -25,25 +25,40 @@
 
 #include "mcu/font_10.h"
 
-// VDU variables declared in bbcdata_*.s:
-extern int origx; 	// Graphics x-origin (BASIC units)
-extern int origy; 	// Graphics y-origin (BASIC units)
-extern int lastx;   // Graphics cursor x-position (pixels)
-extern int lasty;   // Graphics cursor y-position (pixels)
-extern int textwl; 	// Text window left (characters)
-extern int textwr; 	// Text window right (characters)
-extern int textwt; 	// Text window top (characters)
-extern int textwb; 	// Text window bottom (characters)
-extern int textx; 	// Text caret x-position (pixels)
-extern int texty; 	// Text caret y-position (pixels)
-
-// Declared in bbmain.c:
-void error (int, const char *);
-
-extern int getkey (unsigned char *pkey);
-
 #define NPLT        3           // Length of plot history
 
+// VDU variables declared in bbcdata_*.s:
+extern int origx;                       // Graphics x-origin (BASIC units)
+extern int origy;                       // Graphics y-origin (BASIC units)
+extern int lastx;                       // Graphics cursor x-position (pixels)
+extern int lasty;                       // Graphics cursor y-position (pixels)
+extern int prevx;                       // Previous Graphics cursor x-position (pixels)
+extern int prevy;                       // Previous Graphics cursor y-position (pixels)
+extern int textwl;                      // Text window left (pixels)
+extern int textwr;                      // Text window right (pixels)
+extern int textwt;                      // Text window top (pixels)
+extern int textwb;                      // Text window bottom (pixels)
+extern int pixelx;                      // Width of a graphics pixel
+extern int pixely;                      // Height of a graphics pixel
+extern int textx;                       // Text caret x-position (pixels)
+extern int texty;                       // Text caret y-position (pixels)
+extern short int forgnd;                // Graphics foreground colour/action
+extern short int bakgnd;                // Graphics background colour/action
+extern unsigned char txtfor;            // Text foreground colour
+extern unsigned char txtbak;            // Text background colour
+extern unsigned char modeno;            // Mode number
+extern int bPaletted;                   // @ispal%
+
+int xcsr;                               // Text cursor horizontal position
+int ycsr;                               // Text cursor vertical position
+int tvt;                                // Top of text viewport
+int tvb;                                // Bottom of text viewport
+int tvl;                                // Left edge of text viewport
+int tvr;                                // Right edge of text viewport
+int gvt;                                // Top of graphics viewport
+int gvb;                                // Bottom of graphics viewport
+int gvl;                                // Left edge of graphics viewport
+int gvr;                                // Right edge of graphics viewport
 static MODE *pmode = NULL;              // Current display mode
 static uint8_t *framebuf;               // Pointer to framebuffer
 CLRDEF *cdef;                           // Colour definitions
@@ -53,14 +68,8 @@ static uint8_t bgfill;                  // Pixel fill for background colour
 static bool bPrint = false;             // Enable output to printer (UART)
 static int gfg;                         // Graphics foreground colour & mode
 static int gbg;                         // Graphics background colour & mode
-static int xscale;                      // X graphics unit per pixel
-static int yscale;                      // Y graphics units per pixel
 static int xshift;                      // Shift to convert X graphics units to pixels
 static int yshift;                      // Shift to convert Y graphics units to pixels
-int gvt;                                // Top of graphics viewport
-int gvb;                                // Bottom of graphics viewport
-int gvl;                                // Left edge of graphics viewport
-int gvr;                                // Right edge of graphics viewport
 typedef struct
     {
     int x;
@@ -147,6 +156,11 @@ static const uint32_t bkwmsk[] = {
     0x0001FFFF, 0x0003FFFF, 0x0007FFFF, 0x000FFFFF, 0x001FFFFF, 0x003FFFFF, 0x007FFFFF, 0x00FFFFFF,
     0x01FFFFFF, 0x03FFFFFF, 0x07FFFFFF, 0x0FFFFFFF, 0x1FFFFFFF, 0x3FFFFFFF, 0x7FFFFFFF, 0xFFFFFFFF };
 
+// Declared in bbmain.c:
+void error (int, const char *);
+
+extern int getkey (unsigned char *pkey);
+
 static void newpt (int xp, int yp)
     {
 #if DEBUG > 0
@@ -155,6 +169,8 @@ static void newpt (int xp, int yp)
     memmove (&pltpt[1], &pltpt[0], (NPLT - 1) * sizeof (pltpt[0]));
     pltpt[0].x = xp;
     pltpt[0].y = yp;
+    prevx = lastx;
+    prevy = lasty;
     lastx = pltpt[0].x >> xshift;
     lasty = pltpt[0].y >> yshift;
     }
@@ -178,9 +194,9 @@ static void home (void)
         }
     else
         {
-        texty = textwt;
-        textx = textwl;
-        if ( scroln & 0x80 ) scroln = 0x80 + textwb - textwt + 1;
+        ycsr = tvt;
+        xcsr = tvl;
+        if ( scroln & 0x80 ) scroln = 0x80 + tvb - tvt + 1;
         }
     showcsr ();
     }
@@ -190,19 +206,19 @@ static void scrldn (void)
     hidecsr ();
     if ( pmode->ncbt == 3 )
         {
-        if (( textwl == 0 ) && ( textwr == pmode->tcol - 1 ))
+        if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
             {
-            memmove (framebuf + ( textwt + 1 ) * pmode->tcol,
-                framebuf + textwt * pmode->tcol,
-                ( textwb - textwt ) * pmode->tcol);
-            memset (framebuf + textwt * pmode->tcol, ' ', pmode->tcol);
+            memmove (framebuf + ( tvt + 1 ) * pmode->tcol,
+                framebuf + tvt * pmode->tcol,
+                ( tvb - tvt ) * pmode->tcol);
+            memset (framebuf + tvt * pmode->tcol, ' ', pmode->tcol);
             }
         else
             {
-            uint8_t *fb1 = framebuf + textwb * pmode->tcol + textwl;
+            uint8_t *fb1 = framebuf + tvb * pmode->tcol + tvl;
             uint8_t *fb2 = fb1 + pmode->tcol;
-            int nr = textwb - textwt;
-            int nb = textwr - textwl + 1;
+            int nr = tvb - tvt;
+            int nb = tvr - tvl + 1;
             for (int ir = 0; ir < nr; ++ir)
                 {
                 fb1 -= pmode->tcol;
@@ -212,20 +228,20 @@ static void scrldn (void)
             memset (fb1, ' ', nb);
             }
         }
-    else if (( textwl == 0 ) && ( textwr == pmode->tcol - 1 ))
+    else if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
         {
-        memmove (framebuf + ( textwt + 1 ) * pmode->thgt * pmode->nbpl,
-            framebuf + textwt * pmode->thgt * pmode->nbpl,
-            ( textwb - textwt ) * pmode->thgt * pmode->nbpl);
-        memset (framebuf + textwt * pmode->thgt * pmode->nbpl, bgfill, pmode->thgt * pmode->nbpl);
+        memmove (framebuf + ( tvt + 1 ) * pmode->thgt * pmode->nbpl,
+            framebuf + tvt * pmode->thgt * pmode->nbpl,
+            ( tvb - tvt ) * pmode->thgt * pmode->nbpl);
+        memset (framebuf + tvt * pmode->thgt * pmode->nbpl, bgfill, pmode->thgt * pmode->nbpl);
         }
     else
         {
-        uint8_t *fb1 = framebuf + textwb * pmode->thgt * pmode->nbpl
-            + ( textwl << cdef->bitsh );
+        uint8_t *fb1 = framebuf + tvb * pmode->thgt * pmode->nbpl
+            + ( tvl << cdef->bitsh );
         uint8_t *fb2 = fb1 + pmode->thgt * pmode->nbpl;
-        int nr = ( textwb - textwt ) * pmode->thgt;
-        int nb = ( textwr - textwl + 1 ) << cdef->bitsh;
+        int nr = ( tvb - tvt ) * pmode->thgt;
+        int nb = ( tvr - tvl + 1 ) << cdef->bitsh;
         for (int ir = 0; ir < nr; ++ir)
             {
             fb1 -= pmode->nbpl;
@@ -246,17 +262,17 @@ static void scrlup (void)
     hidecsr ();
     if ( pmode->ncbt == 3 )
         {
-        if (( textwl == 0 ) && ( textwr == pmode->tcol - 1 ))
+        if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
             {
             memmove (framebuf, framebuf + pmode->tcol, ( pmode->trow - 1 ) * pmode->tcol);
             memset (framebuf + ( pmode->trow - 1 ) * pmode->tcol, ' ', pmode->tcol);
             }
         else
             {
-            uint8_t *fb1 = framebuf + textwt * pmode->tcol + textwl;
+            uint8_t *fb1 = framebuf + tvt * pmode->tcol + tvl;
             uint8_t *fb2 = fb1 + pmode->tcol;
-            int nr = textwb - textwt;
-            int nb = textwr - textwl + 1;
+            int nr = tvb - tvt;
+            int nb = tvr - tvl + 1;
             for (int ir = 0; ir < nr; ++ir)
                 {
                 memcpy (fb1, fb2, nb);
@@ -266,20 +282,20 @@ static void scrlup (void)
             memset (fb2, ' ', nb);
             }
         }
-    else if (( textwl == 0 ) && ( textwr == pmode->tcol - 1 ))
+    else if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
         {
-        memmove (framebuf + textwt * pmode->thgt * pmode->nbpl,
-            framebuf + ( textwt + 1 ) * pmode->thgt * pmode->nbpl,
-            ( textwb - textwt ) * pmode->thgt * pmode->nbpl);
-        memset (framebuf + textwb * pmode->thgt * pmode->nbpl, bgfill, pmode->thgt * pmode->nbpl);
+        memmove (framebuf + tvt * pmode->thgt * pmode->nbpl,
+            framebuf + ( tvt + 1 ) * pmode->thgt * pmode->nbpl,
+            ( tvb - tvt ) * pmode->thgt * pmode->nbpl);
+        memset (framebuf + tvb * pmode->thgt * pmode->nbpl, bgfill, pmode->thgt * pmode->nbpl);
         }
     else
         {
-        uint8_t *fb1 = framebuf + textwt * pmode->thgt * pmode->nbpl
-            + ( textwl << cdef->bitsh );
+        uint8_t *fb1 = framebuf + tvt * pmode->thgt * pmode->nbpl
+            + ( tvl << cdef->bitsh );
         uint8_t *fb2 = fb1 + pmode->thgt * pmode->nbpl;
-        int nr = ( textwb - textwt ) * pmode->thgt;
-        int nb = ( textwr - textwl + 1 ) << cdef->bitsh;
+        int nr = ( tvb - tvt ) * pmode->thgt;
+        int nb = ( tvr - tvl + 1 ) << cdef->bitsh;
         for (int ir = 0; ir < nr; ++ir)
             {
             memcpy (fb1, fb2, nb);
@@ -299,21 +315,21 @@ static void cls ()
     {
 #if DEBUG > 0
     printf ("cls: bgfill = 0x%02\n", bgfill);
-    printf ("textwt = %d, textwb = %d, textwl = %d, textwr = %d\n", textwt, textwb, textwl, textwr);
+    printf ("tvt = %d, tvb = %d, tvl = %d, tvr = %d\n", tvt, tvb, tvl, tvr);
     printf ("thgt = %d, nbpl = %d\n", pmode->thgt, pmode->nbpl);
 #endif
     hidecsr ();
     if ( pmode->ncbt == 3 )
         {
-        if (( textwl == 0 ) && ( textwr == pmode->tcol - 1 ))
+        if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
             {
-            memset (framebuf + textwt * pmode->tcol, ' ', ( textwb - textwt + 1 ) * pmode->tcol);
+            memset (framebuf + tvt * pmode->tcol, ' ', ( tvb - tvt + 1 ) * pmode->tcol);
             }
         else
             {
-            uint8_t *fb1 = framebuf + textwt * pmode->tcol + textwl;
-            int nr = textwb - textwt + 1;
-            int nb = textwr - textwl + 1;
+            uint8_t *fb1 = framebuf + tvt * pmode->tcol + tvl;
+            int nr = tvb - tvt + 1;
+            int nb = tvr - tvl + 1;
             for (int ir = 0; ir < nr; ++ir)
                 {
                 memset (fb1, ' ', nb);
@@ -321,23 +337,23 @@ static void cls ()
                 }
             }
         }
-    else if (( textwl == 0 ) && ( textwr == pmode->tcol - 1 ))
+    else if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
         {
 #if DEBUG > 0
-        printf ("cls: start = %d, length = %d\n", textwt * pmode->thgt * pmode->nbpl,
-            ( textwb - textwt + 1 ) * pmode->thgt * pmode->nbpl);
+        printf ("cls: start = %d, length = %d\n", tvt * pmode->thgt * pmode->nbpl,
+            ( tvb - tvt + 1 ) * pmode->thgt * pmode->nbpl);
 #endif
-        memset (framebuf + textwt * pmode->thgt * pmode->nbpl, bgfill,
-            ( textwb - textwt + 1 ) * pmode->thgt * pmode->nbpl);
+        memset (framebuf + tvt * pmode->thgt * pmode->nbpl, bgfill,
+            ( tvb - tvt + 1 ) * pmode->thgt * pmode->nbpl);
         }
     else
         {
-        uint8_t *fb1 = framebuf + textwt * pmode->thgt * pmode->nbpl
-            + ( textwl << cdef->bitsh );
-        int nr = ( textwb - textwt + 1 ) * pmode->thgt;
-        int nb = ( textwr - textwl + 1 ) << cdef->bitsh;
+        uint8_t *fb1 = framebuf + tvt * pmode->thgt * pmode->nbpl
+            + ( tvl << cdef->bitsh );
+        int nr = ( tvb - tvt + 1 ) * pmode->thgt;
+        int nb = ( tvr - tvl + 1 ) << cdef->bitsh;
 #if DEBUG > 0
-        printf ("cls: start = %d, nr = %d, nb = \n", textwt * pmode->thgt * pmode->nbpl, nr, nb);
+        printf ("cls: start = %d, nr = %d, nb = \n", tvt * pmode->thgt * pmode->nbpl, nr, nb);
 #endif
         for (int ir = 0; ir < nr; ++ir)
             {
@@ -351,11 +367,11 @@ static void cls ()
 
 static void dispchr (int chr)
     {
-    if (( texty < 0 ) || ( texty >= pmode->trow ) || ( textx < 0 ) || ( textx >= pmode->tcol ))
+    if (( ycsr < 0 ) || ( ycsr >= pmode->trow ) || ( xcsr < 0 ) || ( xcsr >= pmode->tcol ))
         {
 #if DEBUG > 0
-        printf ("Cursor out of range: texty = %d, textx = %d, screen = %dx%d\n",
-            texty, textx, pmode->trow, pmode->tcol);
+        printf ("Cursor out of range: ycsr = %d, xcsr = %d, screen = %dx%d\n",
+            ycsr, xcsr, pmode->trow, pmode->tcol);
 #endif
         return;
         }
@@ -365,7 +381,7 @@ static void dispchr (int chr)
 #endif
     if ( pmode->ncbt == 3 )
         {
-        framebuf[texty * pmode->tcol + textx] = chr & 0x7F;
+        framebuf[ycsr * pmode->tcol + xcsr] = chr & 0x7F;
         }
     else
         {
@@ -378,11 +394,11 @@ static void dispchr (int chr)
             bDbl = true;
             }
         const uint8_t *pch = font_10[chr];
-        uint8_t *pfb = framebuf + texty * pmode->thgt * pmode->nbpl;
+        uint8_t *pfb = framebuf + ycsr * pmode->thgt * pmode->nbpl;
         if ( fhgt == 8 ) ++pch;
         if ( pmode->ncbt == 1 )
             {
-            pfb += textx;
+            pfb += xcsr;
             uint8_t fpx = (uint8_t) cdef->cpx[fg];
             uint8_t bpx = (uint8_t) cdef->cpx[bg];
             for (int i = 0; i < fhgt; ++i)
@@ -410,7 +426,7 @@ static void dispchr (int chr)
             }
         else if ( pmode->ncbt == 2 )
             {
-            pfb += 2 * textx;
+            pfb += 2 * xcsr;
             uint16_t fpx = cdef->cpx[fg];
             uint16_t bpx = cdef->cpx[bg];
             for (int i = 0; i < fhgt; ++i)
@@ -429,7 +445,7 @@ static void dispchr (int chr)
             }
         else if ( pmode->ncbt == 4 )
             {
-            pfb += 4 * textx;
+            pfb += 4 * xcsr;
             uint32_t fpx = cdef->cpx[fg];
             uint32_t bpx = cdef->cpx[bg];
             for (int i = 0; i < fhgt; ++i)
@@ -453,12 +469,12 @@ static void dispchr (int chr)
 static void newline (int *px, int *py)
     {
     hidecsr ();
-    if (++(*py) > textwb)
+    if (++(*py) > tvb)
         {
         if ((scroln & 0x80) && (--scroln == 0x7F))
             {
             unsigned char ch;
-            scroln = 0x80 + textwb - textwt + 1;
+            scroln = 0x80 + tvb - tvt + 1;
             do
                 {
                 usleep (5000);
@@ -466,7 +482,7 @@ static void newline (int *px, int *py)
             while ((getkey (&ch) == 0) && ((flags & (ESCFLG | KILL)) == 0));
             }
         scrlup ();
-        *py = textwb;
+        *py = tvb;
         }
 	if ( bPrint )
         {
@@ -480,23 +496,23 @@ static void wrap (void)
     {
     if ( bPrint ) printf ("\r");
     hidecsr ();
-    textx = textwl;
-    newline (&textx, &texty);
+    xcsr = tvl;
+    newline (&xcsr, &ycsr);
     showcsr ();
     }
 
 static void tabxy (int x, int y)
     {
 #if DEBUG > 0
-    printf ("tab: texty = %d, textx = %d\n", y, x);
+    printf ("tab: ycsr = %d, xcsr = %d\n", y, x);
 #endif
-    x += textwl;
-    y += textwt;
-    if (( x >= textwl ) && ( x <= textwr ) && ( y >= textwt ) && ( y <= textwb ))
+    x += tvl;
+    y += tvt;
+    if (( x >= tvl ) && ( x <= tvr ) && ( y >= tvt ) && ( y <= tvb ))
         {
         hidecsr ();
-        texty = y;
-        textx = x;
+        ycsr = y;
+        xcsr = x;
         showcsr ();
         }
     }
@@ -505,11 +521,15 @@ static void twind (int vl, int vb, int vr, int vt)
     {
     if (( vl < 0 ) || ( vl > vr ) || ( vr >= pmode->tcol )
         || ( vt < 0 ) || ( vt > vb ) || ( vb >= pmode->trow )) return;
-    textwl = vl;
-    textwr = vr;
-    textwt = vt;
-    textwb = vb;
-    if (( textx < textwl ) || ( textx > textwr ) || ( texty < textwt ) || ( texty > textwb ))
+    tvl = vl;
+    tvr = vr;
+    tvt = vt;
+    tvb = vb;
+    textwl = 8 * tvl;
+    textwr = 8 * tvr;
+    textwt = pmode->thgt * tvt;
+    textwb = pmode->thgt * tvb;
+    if (( xcsr < tvl ) || ( xcsr > tvr ) || ( ycsr < tvt ) || ( ycsr > tvb ))
         home ();
     }
 
@@ -563,18 +583,22 @@ static void clrreset (void)
         fg = 15;
         gfg = 15;
         }
+    txtfor = fg;
+    txtbak = bg;
+    forgnd = gfg;
+    bakgnd = gbg;
     genrb (curpal);
     }
 
 static void rstview (void)
     {
     hidecsr ();
-    textwt = 0;
-    textwb = pmode->trow - 1;
-    textwl = 0;
-    textwr = pmode->tcol - 1;
-    textx = 0;
-    texty = 0;
+    tvt = 0;
+    tvb = pmode->trow - 1;
+    tvl = 0;
+    tvr = pmode->tcol - 1;
+    xcsr = 0;
+    ycsr = 0;
     origx = 0;
     origy = 0;
     gvt = 0;
@@ -595,32 +619,35 @@ void modechg (int mode)
 #if DEBUG > 0
     printf ("modechg (%d)\n", mode);
 #endif
+    bPaletted = 1;
     hidecsr ();
     if ( setmode (mode, &framebuf, &pmode, &cdef) )
         {
 #if DEBUG > 0
         printf ("grow = %d, gcol = %d\n", pmode->grow, pmode->gcol);
 #endif
+        modeno = mode;
+        colmsk = cdef->clrmsk;
         int gunit = pmode->gcol;
-        xscale = 1;
+        pixelx = 1;
         xshift = 0;
         while ( gunit < 1280 )
             {
             ++xshift;
-            xscale <<= 1;
+            pixelx <<= 1;
             gunit <<= 1;
             }
         gunit = pmode->grow;
-        yscale = 1;
+        pixely = 1;
         yshift = 0;
         while ( gunit < 900 )
             {
             ++yshift;
-            yscale <<= 1;
+            pixely <<= 1;
             gunit <<= 1;
             }
 #if DEBUG > 0
-        printf ("xscale = %d, xshift = %d, yscale = %d, yshift = %d\n", xscale, xshift, yscale, yshift);
+        printf ("pixelx = %d, xshift = %d, pixely = %d, yshift = %d\n", pixelx, xshift, pixely, yshift);
 #endif
         clrreset ();
         rstview ();
@@ -1170,8 +1197,8 @@ static void gwind (int vl, int vb, int vr, int vt)
 // Get text cursor (caret) coordinates:
 void getcsr(int *px, int *py)
     {
-    if ( px ) *px = textx - textwl;
-    if ( py ) *py = texty - textwt;
+    if ( px ) *px = xcsr - tvl;
+    if ( py ) *py = ycsr - tvt;
     }
 
 static int8_t getpix (int xp, int yp)
@@ -1201,12 +1228,12 @@ int vtint (int xp, int yp)
 
 int vgetc (int x, int y)
     {
-    x += textwl;
-    y += textwt;
-    if (( x < textwl ) || ( x > textwr ) || ( y < textwt ) || ( y > textwb )) return -1;
+    x += tvl;
+    y += tvt;
+    if (( x < tvl ) || ( x > tvr ) || ( y < tvt ) || ( y > tvb )) return -1;
     if ( pmode->ncbt == 3 )
         {
-        int chr = framebuf[y * pmode->trow + textx];
+        int chr = framebuf[y * pmode->trow + xcsr];
         if ( chr < 0x20 ) chr += 0x80;
         return chr;
         }
@@ -1252,6 +1279,12 @@ int vgetc (int x, int y)
             }
         }
     return -1;
+    }
+
+// Get string width in graphics units:
+int widths (unsigned char *s, int l)
+    {
+	return ( 8 * l ) << xshift;
     }
 
 #define FT_LEFT     0x01
@@ -1481,7 +1514,7 @@ static void plotcir (bool bFill, int clrop)
 #endif
     if ( r2 < 4 ) clippoint (clrop, pltpt[1].x >> xshift, pltpt[1].y >> yshift);
     else ellipse (bFill, clrop, pltpt[1].x >> xshift, pltpt[1].y >> yshift,
-        xscale << xshift, yscale << yshift, r2);
+        pixelx << xshift, pixely << yshift, r2);
     }
 
 static void plotellipse (bool bFill, int clrop)
@@ -1492,11 +1525,11 @@ static void plotellipse (bool bFill, int clrop)
     int yb = pltpt[0].y - pltpt[2].y;
     if ( xa < 0 ) xa = - xa;
     if ( yb < 0 ) yb = - yb;
-    if (( xa < xscale ) && ( yb < yscale ))
+    if (( xa < pixelx ) && ( yb < pixely ))
         {
         clippoint (clrop, xc, xc);
         }
-    else if ( yb < yscale )
+    else if ( yb < pixely )
         {
         xa >>= xshift;
         hline (clrop, xc - xa, xc + xa, yc);
@@ -1754,7 +1787,7 @@ static void plot (uint8_t code, int xp, int yp)
     printf ("origin: (%d, %d)\n", origx, origy);
     printf ("pltpt: (%d, %d) (%d, %d) (%d, %d)\n", pltpt[0].x, pltpt[0].y,
         pltpt[1].x, pltpt[1].y, pltpt[2].x, pltpt[2].y);
-    printf ("xscale = %d, xshift = %d, yscale = %d, yshift = %d\n", xscale, xshift, yscale, yshift);
+    printf ("pixelx = %d, xshift = %d, pixely = %d, yshift = %d\n", pixelx, xshift, pixely, yshift);
 #endif
     int clrop;
     switch (code & 0x03)
@@ -1832,7 +1865,7 @@ static void plot (uint8_t code, int xp, int yp)
             plotellipse (code >= 0xC8, clrop);
             break;
         default:
-            error (255, "Sorry, not implemented");
+            error (255, "Sorry, PLOT function not implemented");
             break;
         }
     }
@@ -1927,9 +1960,9 @@ void showchr (int chr)
         }
     else
         {
-        if (textx > textwr) wrap ();
+        if (xcsr > tvr) wrap ();
         dispchr (chr);
-        if ((++textx > textwr) && ((cmcflg & 1) == 0)) wrap ();
+        if ((++xcsr > tvr) && ((cmcflg & 1) == 0)) wrap ();
         }
     if ( bPrint ) putchar (chr);
     showcsr ();
@@ -2005,23 +2038,23 @@ void xeqvdu (int code, int data1, int data2)
                 }
             else
                 {
-                if (textx == textwl)
+                if (xcsr == tvl)
                     {
-                    textx = textwr;
-                    if (texty == textwt)
+                    xcsr = tvr;
+                    if (ycsr == tvt)
                         {
                         scrldn ();
                         if ( bPrint ) printf ("\033M");
                         }
                     else
                         {
-                        texty--;
-                        if ( bPrint ) printf ("\033[%i;%iH", texty + 1, textx + 1);
+                        ycsr--;
+                        if ( bPrint ) printf ("\033[%i;%iH", ycsr + 1, xcsr + 1);
                         }
                     }
                 else
                     {
-                    textx--;
+                    xcsr--;
                     if ( bPrint ) putchar (vdu);
                     }
                 }
@@ -2035,13 +2068,13 @@ void xeqvdu (int code, int data1, int data2)
                 }
             else
                 {
-                if (textx > textwr)
+                if (xcsr > tvr)
                     {
                     wrap ();
                     }
                 else
                     {
-                    textx++;
+                    xcsr++;
                     }
                 }
             if ( bPrint ) printf ("\033[C");
@@ -2055,7 +2088,7 @@ void xeqvdu (int code, int data1, int data2)
                 }
             else
                 {
-                newline (&textx, &texty);
+                newline (&xcsr, &ycsr);
                 }
             break;
 
@@ -2067,8 +2100,8 @@ void xeqvdu (int code, int data1, int data2)
                 }
             else
                 {
-                if ( texty == textwt ) scrldn ();
-                else --texty;
+                if ( ycsr == tvt ) scrldn ();
+                else --ycsr;
                 }
             if ( bPrint ) printf ("\033M");
             break;
@@ -2085,13 +2118,13 @@ void xeqvdu (int code, int data1, int data2)
                 }
             else
                 {
-                textx = textwl;
+                xcsr = tvl;
                 }
             if ( bPrint ) putchar (vdu);
             break;
 
         case 14: // 0x0E - PAGING ON
-            scroln = 0x80 + textwb - texty + 1;
+            scroln = 0x80 + tvb - ycsr + 1;
             break;
 
         case 15: // 0x0F - PAGING OFF
@@ -2111,6 +2144,7 @@ void xeqvdu (int code, int data1, int data2)
                 {
                 bg = clrmsk (code);
                 bgfill = (uint8_t) cdef->cpx[bg];
+                txtbak = bg;
 #if DEBUG > 0
                 printf ("Background colour %d, bgfill = 0x%02X\n", bg, bgfill);
 #endif
@@ -2118,6 +2152,7 @@ void xeqvdu (int code, int data1, int data2)
             else
                 {
                 fg = clrmsk (code);
+                txtfor = fg;
 #if DEBUG > 0
                 printf ("Foreground colour %d\n", fg);
 #endif
@@ -2134,8 +2169,16 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 18: // 0x12 - GCOL m, n
-            if ( code & 0x80 ) gbg = clrmsk (code) | (( data1 >> 16 ) & 0x0700);
-            else    gfg = clrmsk (code) | (( data1 >> 16 ) & 0x0700);
+            if ( code & 0x80 )
+                {
+                gbg = clrmsk (code) | (( data1 >> 16 ) & 0x0700);
+                bakgnd = gbg;
+                }
+            else
+                {
+                gfg = clrmsk (code) | (( data1 >> 16 ) & 0x0700);
+                forgnd = gfg;
+                }
             if ( bPrint )
                 {
                 vdu = 30 + (data1 & 7);
@@ -2164,11 +2207,6 @@ void xeqvdu (int code, int data1, int data2)
 
         case 20: // 0x14 - RESET COLOURS
             clrreset ();
-            fg = clrmsk (15);
-            bg = 0;
-            bgfill = 0;
-            gfg = clrmsk (15);
-            gbg = 0;
             if ( bPrint ) printf ("\033[37m\033[40m");
             break;
 
@@ -2241,7 +2279,7 @@ void xeqvdu (int code, int data1, int data2)
 
         case 31: // 0x1F - TAB(X,Y)
             tabxy (data1 >> 24, code & 0xFF);
-            if ( bPrint ) printf ("\033[%i;%iH", texty + 1, textx + 1);
+            if ( bPrint ) printf ("\033[%i;%iH", ycsr + 1, xcsr + 1);
             break;
 
         case 127: // DEL
@@ -2265,5 +2303,7 @@ void xeqvdu (int code, int data1, int data2)
                 }
         }
     showcsr ();
+    textx = 8 * xcsr;
+    texty = pmode->thgt * ycsr;
     if ( bPrint ) fflush (stdout);
     }

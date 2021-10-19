@@ -1,4 +1,4 @@
-/*  picovdu.c - VGA Display and USB keyboard for BBC Basic on Pico */
+/*  picofbuf.c - Framebuffer VGA Display for BBC Basic on Pico */
 
 #define VID_CORE    1
 #define USE_INTERP  1
@@ -38,20 +38,22 @@ void modechg (int mode);
 #define VGA_FLAG    0x1234      // Used to syncronise cores
 
 // VDU variables declared in bbcdata_*.s:
-extern int lastx;   // Graphics cursor x-position (pixels)
-extern int lasty;   // Graphics cursor y-position (pixels)
-extern int textwl; 	// Text window left (characters)
-extern int textwr; 	// Text window right (characters)
-extern int textwt; 	// Text window top (characters)
-extern int textwb; 	// Text window bottom (characters)
-extern int textx; 	// Text caret x-position (pixels)
-extern int texty; 	// Text caret y-position (pixels)
+extern int lastx;                       // Graphics cursor x-position (pixels)
+extern int lasty;                       // Graphics cursor y-position (pixels)
+extern unsigned char cursa;             // Start (top) line of cursor
+extern unsigned char cursb;             // Finish (bottom) line of cursor
 
 // Variables defined in fbufvdu.c
-extern int gvt;     // Top of graphics viewport
-extern int gvb;		// Bottom of graphics viewport
-extern int gvl;		// Left edge of graphics viewport
-extern int gvr;		// Right edge of graphics viewport
+extern int xcsr;                        // Text cursor horizontal position
+extern int ycsr;                        // Text cursor vertical position
+extern int tvt;                         // Top of text viewport
+extern int tvb;	                        // Bottom of text viewport
+extern int tvl;	                        // Left edge of text viewport
+extern int tvr;	                        // Right edge of text viewport
+extern int gvt;                         // Top of graphics viewport
+extern int gvb;	                        // Bottom of graphics viewport
+extern int gvl;	                        // Left edge of graphics viewport
+extern int gvr;	                        // Right edge of graphics viewport
 
 static uint8_t  framebuf[SWIDTH * SHEIGHT / 8];
 static uint16_t renderbuf[256 * 8];
@@ -377,10 +379,10 @@ void __time_critical_func(render_mode7) (void)
             *twopix = COMPOSABLE_EOL_ALIGN << 16;   // Implicit zero (black) in low word
             ++twopix;
             buffer->data_used = twopix - buffer->data;
-            if (( iRow == texty ) && ( nCsrHide == 0 ) && ( nFrame & FLASH_BIT )
+            if (( iRow == ycsr ) && ( nCsrHide == 0 ) && ( nFrame & FLASH_BIT )
                 && ( iScan >= csrtop ) && ( iScan < csrtop + csrhgt ))
                 {
-                twopix = pxline + 8 * textx + 1;
+                twopix = pxline + 8 * xcsr + 1;
                 twopix[0] ^= ttcsr;
                 twopix[1] ^= ttcsr;
                 twopix[2] ^= ttcsr;
@@ -631,14 +633,14 @@ static void flipcsr (void)
         }
     else
         {
-        if (( texty < 0 ) || ( texty >= curmode.trow ) || ( textx < 0 ) || ( textx >= curmode.tcol ))
+        if (( ycsr < 0 ) || ( ycsr >= curmode.trow ) || ( xcsr < 0 ) || ( xcsr >= curmode.tcol ))
             {
             nCsrHide |= CSR_INV;
             bCsrVis = false;
             return;
             }
-        xp = 8 * textx;
-        yp = texty * curmode.thgt;
+        xp = 8 * xcsr;
+        yp = ycsr * curmode.thgt;
         }
     yp += csrtop;
     CLRDEF *cdef = &clrdef[curmode.ncbt];
@@ -659,16 +661,16 @@ static void flipcsr (void)
         }
     else
         {
-        if (( texty < 0 ) || ( texty >= curmode.trow ) || ( textx < 0 ) || ( textx >= curmode.tcol ))
+        if (( ycsr < 0 ) || ( ycsr >= curmode.trow ) || ( xcsr < 0 ) || ( xcsr >= curmode.tcol ))
             {
             nCsrHide |= CSR_INV;
             bCsrVis = false;
             return;
             }
-        uint8_t *pfb = framebuf + (texty * curmode.thgt + csrtop) * curmode.nbpl;
+        uint8_t *pfb = framebuf + (ycsr * curmode.thgt + csrtop) * curmode.nbpl;
         if ( curmode.ncbt == 1 )
             {
-            pfb += textx;
+            pfb += xcsr;
             for (int i = 0; i < csrhgt; ++i)
                 {
                 *pfb ^= 0xFF;
@@ -677,7 +679,7 @@ static void flipcsr (void)
             }
         else if ( curmode.ncbt == 2 )
             {
-            pfb += 2 * textx;
+            pfb += 2 * xcsr;
             for (int i = 0; i < csrhgt; ++i)
                 {
                 *((uint16_t *)pfb) ^= 0xFFFF;
@@ -686,7 +688,7 @@ static void flipcsr (void)
             }
         else if ( curmode.ncbt == 4 )
             {
-            pfb += 4 * textx;
+            pfb += 4 * xcsr;
             for (int i = 0; i < csrhgt; ++i)
                 {
                 *((uint32_t *)pfb) ^= 0xFFFFFFFF;
@@ -722,7 +724,7 @@ void showcsr (void)
         }
     else
         {
-        if ( ( texty >= textwt ) && ( texty <= textwb ) && ( textx >= textwl ) && ( textx <= textwr ))
+        if ( ( ycsr >= tvt ) && ( ycsr <= tvb ) && ( xcsr >= tvl ) && ( xcsr <= tvr ))
             nCsrHide &= ~CSR_INV;
         else
             nCsrHide |= CSR_INV;
@@ -776,11 +778,19 @@ void csrdef (int data2)
         {
         if ( p2 == 10 )
             {
-            if ( p3 < curmode.thgt ) csrtop = p3;
+            if ( p3 < curmode.thgt )
+                {
+                csrtop = p3;
+                cursa = p3;
+                }
             }
         else if ( p2 == 11 )
             {
-            if ( p3 < curmode.thgt ) csrhgt = p3 - csrtop + 1;
+            if ( p3 < curmode.thgt )
+                {
+                csrhgt = p3 - csrtop + 1;
+                cursb = p3;
+                }
             }
         }
     }
