@@ -1,6 +1,5 @@
 /*  picofbuf.c - Framebuffer VGA Display for BBC Basic on Pico */
 
-#define VID_CORE    1
 #define USE_INTERP  1
 #define HIRES       0   // CAUTION - Enabling HIRES requires extreme Pico overclock
 #define DEBUG       0
@@ -143,7 +142,7 @@ static const MODE modes[] = {
     { 1, 640, 225,  80, 25,  15,  0,  8,  80, 1,  9},  // Mode  3 - 20KB
     { 1, 320, 256,  40, 32, 112,  0, 16,  40, 0,  8},  // Mode  4 - 10KB
     { 2, 160, 256,  20, 32, 112,  0, 16,  40, 0,  8},  // Mode  5 - 10KB
-    { 1, 320, 240,  40, 25,  15,  0, 16,  40, 1,  9},  // Mode  6 - 10KB
+    { 1, 320, 225,  40, 25,  15,  0, 16,  40, 1,  9},  // Mode  6 - 10KB
     { 3, 320, 225,  40, 25,  15,  0,  4, 160, 1,TTH},  // Mode  7 - ~1KB - Teletext
     { 1, 640, 480,  80, 30,   0,  0,  8,  80, 0, 16},  // Mode  8 - 37.5KB
     { 2, 320, 480,  40, 30,   0,  0,  8,  80, 0, 16},  // Mode  9 - 37.5KB

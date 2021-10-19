@@ -1807,6 +1807,7 @@ int main (int argc, char* argv[])
 	    sleep_ms(500);
 	    }
     printf ("BBC Basic main build " __DATE__ " " __TIME__ "\n");
+    sleep_ms(500);
 #endif
 # ifdef FREE
 	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,sigbus);

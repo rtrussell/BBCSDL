@@ -154,12 +154,14 @@ Mode | Colours |   Text  | Graphics  | Letterbox
   14 |     2   | 40 x 25 | 320 x 450 |
   15 |    16   | 40 x 30 | 320 x 240 |
 
-Modes 0-6 reproduce those from the BBC Micro. They only have 256 rows of pixels
+Modes 0-7 reproduce those from the BBC Micro. Modes 0-2, 4 & 5 only have 256 rows of pixels
 which are displayed in the centre of the monitor so may appear squashed.
 
 Modes 3 & 6 can also display graphics.
 
 Except for Mode 7, colours 8-15 are high intensity rather than flashing.
+
+The default mode on startup is mode 8.
 
 ### Missing features & Qwerks
 
