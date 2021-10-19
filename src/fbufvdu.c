@@ -14,6 +14,10 @@
 
 */
 
+//  DEBUG = 0   No output
+//          1   VDU characters
+//          2   Principle primitives
+//          3   Details
 #define DEBUG 2
 
 #include <string.h>
@@ -403,16 +407,6 @@ static void dispchr (int chr)
             uint8_t bpx = (uint8_t) cdef->cpx[bg];
             for (int i = 0; i < fhgt; ++i)
                 {
-#if DEBUG > 2
-                printf ("0x%02X:", *pch);
-                for (int j = 0; j < 8; ++j)
-                    {
-                    uint16_t clr = renderbuf[8*(*pch)+j];
-                    if ( clr > 0 ) printf (" 0x%04X", clr);
-                    else printf ("       ");
-                    }
-                printf ("\n");
-#endif
                 uint8_t pix = ( (*pch) & fpx ) | ( (~ (*pch)) & bpx );
                 *pfb = pix;
                 pfb += pmode->nbpl;
@@ -743,6 +737,9 @@ static void hline (int clrop, int xp1, int xp2, int yp)
 
 static void point (int clrop, uint32_t xp, uint32_t yp)
     {
+#if DEBUG > 2
+    printf ("point (0x%04X, %d, %d)\n", clrop, xp, yp);
+#endif
     uint32_t *fb = (uint32_t *)(framebuf + yp * pmode->nbpl);
     xp <<= cdef->bitsh;
     fb += xp >> 5;
@@ -887,7 +884,7 @@ static void line (int clrop, uint32_t xp1, uint32_t yp1, uint32_t xp2, uint32_t 
                 dots >>= 1;
                 }
             ya += yd;
-            if ( ya >= yd )
+            if ( ya >= xd )
                 {
                 yp1 += ys;
                 ya -= xd;
@@ -911,7 +908,7 @@ static void line (int clrop, uint32_t xp1, uint32_t yp1, uint32_t xp2, uint32_t 
                 dots >>= 1;
                 }
             ya += yd;
-            if ( ya >= yd )
+            if ( ya >= xd )
                 {
                 yp1 += ys;
                 ya -= xd;
