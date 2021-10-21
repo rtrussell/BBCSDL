@@ -45,11 +45,7 @@ The following limitations are noted:
     to be related to the Pico port.  As always this is open source
     with expressly no warranty provided.
 
-4.  The *CD command has been modified to automatically change the
-    built-in variable @dir$ as the Pico doesn't have an operating
-    system from which the executable was launched.
-
-5.  There is are known buffer overflows in the wrappers appearing in
+4.  There is are known buffer overflows in the wrappers appearing in
     lfswrap.c which are triggered when a filename path grows to be
     greater than 256 characters.  Please don't do that.
 
@@ -161,7 +157,8 @@ Modes 3 & 6 can also display graphics.
 
 Except for Mode 7, colours 8-15 are high intensity rather than flashing.
 
-The default mode on startup is mode 8.
+The generally most useful modes are mode 8, which is a monochrome display with the highest resolution,
+and mode 15, which is a 16 colour mode with square pixels. The default mode on startup is mode 8.
 
 ### Missing features & Qwerks
 
@@ -171,9 +168,12 @@ on full operating systems. The limitations include:
 * High resolution text (VDU 5) is implemented, but it does not scroll, instead wraps
 around back to the top of the screen. New text overlays any existing rather than
 replacing it.
+* User defined characters are not implemented.
 * VDU 23 can only be used to control the appearance of the cursor and to select
 page or scroll mode.
-* PLOT modes 0-167 & 192-207 are implemented.
+* PLOT modes 168-191 & 208+ are not implemented.
+* Loading and saving bitmapped images is not implemented.
+* There is no double-buffering of the display. Any updates are visible immediately.
 
 ### TO DO
 
