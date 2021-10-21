@@ -52,6 +52,10 @@ extern unsigned char txtfor;            // Text foreground colour
 extern unsigned char txtbak;            // Text background colour
 extern unsigned char modeno;            // Mode number
 extern int bPaletted;                   // @ispal%
+extern int sizex;                       // Total width of client area
+extern int sizey;                       // Total height of client area
+extern int charx;                       // Average character width
+extern int chary;                       // Average character height
 
 int xcsr;                               // Text cursor horizontal position
 int ycsr;                               // Text cursor vertical position
@@ -520,9 +524,9 @@ static void twind (int vl, int vb, int vr, int vt)
     tvt = vt;
     tvb = vb;
     textwl = 8 * tvl;
-    textwr = 8 * tvr;
+    textwr = 8 * tvr + 7;
     textwt = pmode->thgt * tvt;
-    textwb = pmode->thgt * tvb;
+    textwb = pmode->thgt * (tvb + 1) - 1;
     if (( xcsr < tvl ) || ( xcsr > tvr ) || ( ycsr < tvt ) || ( ycsr > tvb ))
         home ();
     }
@@ -587,10 +591,7 @@ static void clrreset (void)
 static void rstview (void)
     {
     hidecsr ();
-    tvt = 0;
-    tvb = pmode->trow - 1;
-    tvl = 0;
-    tvr = pmode->tcol - 1;
+    twind (0, pmode->trow - 1, pmode->tcol - 1, 0);
     xcsr = 0;
     ycsr = 0;
     origx = 0;
@@ -613,7 +614,6 @@ void modechg (int mode)
 #if DEBUG > 1
     printf ("modechg (%d)\n", mode);
 #endif
-    bPaletted = 1;
     hidecsr ();
     if ( setmode (mode, &framebuf, &pmode, &cdef) )
         {
@@ -646,6 +646,11 @@ void modechg (int mode)
         clrreset ();
         rstview ();
         cls ();
+        bPaletted = 1;
+        sizex = pmode->gcol;
+        sizey = pmode->grow;
+        charx = 8;
+        chary = pmode->thgt;
 #if DEBUG > 1
         printf ("modechg: Completed cls\n");
 #endif
@@ -2196,14 +2201,21 @@ void xeqvdu (int code, int data1, int data2)
             int pal = data1 & 0x0F;
             int phy = ( data1 >> 8 ) & 0xFF;
             int r = ( data1 >> 16 ) & 0xFF;
-            int g = data1 >> 24;
+            int g = ( data1 >> 24 ) & 0xFF;;
             int b = code & 0xFF;
+#if DEBUG > 0
+            printf ("pal = %d, phy = %d, r = %d, g = %d, b = %d\n", pal, phy, r, g, b);
+#endif
             if ( pmode->ncbt == 3 ) pal *= 2;
             if ( phy < 16 ) curpal[pal] = defclr (phy);
             else if ( phy == 16 ) curpal[pal] = rgbclr (r, g, b);
             else if ( phy == 255 ) curpal[pal] = rgbclr (8*r, 8*g, 8*b);
+#if DEBUG > 0
+            printf ("curpal[%d] = 0x%04X\n", pal, curpal[pal]);
+#endif
             if ( pmode->ncbt == 3 ) curpal[pal+1] = curpal[pal];
             else genrb (curpal);
+            break;
         }
 
         case 20: // 0x14 - RESET COLOURS

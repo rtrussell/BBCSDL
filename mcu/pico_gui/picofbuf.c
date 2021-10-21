@@ -800,7 +800,6 @@ void genrb (uint16_t *curpal)
 #if DEBUG > 0
     printf ("genrb\n");
 #endif
-#if 1
     int nbuf = 256;
     int npix = 8 / curmode.ncbt;
     int nrpt = curmode.nppb / npix;
@@ -824,83 +823,6 @@ void genrb (uint16_t *curpal)
             ibuf >>= curmode.ncbt;
             }
         }
-#else
-    int npix = ( curmode.nppb == 16 ) ? 16 : 256;
-    if ( curmode.ncbt == 1 )
-        {
-        for (int i = 0; i < npix; ++i)
-            {
-            uint8_t pix = i;
-            for (int j = 0; j < 8; ++j)
-                {
-                uint16_t clr = curpal[pix & 0x01];
-                *prb = clr;
-                ++prb;
-                if ( curmode.nppb == 16 )
-                    {
-                    *prb = clr;
-                    ++prb;
-                    }
-                pix >>= 1;
-                }
-            }
-        }
-    else if ( curmode.ncbt == 2 )
-        {
-        for (int i = 0; i < npix; ++i)
-            {
-            uint8_t pix = i;
-            for (int j = 0; j < 4; ++j)
-                {
-                uint16_t clr = curpal[pix & 0x01];
-                *prb = clr;
-                ++prb;
-                if ( curmode.nppb >= 8 )
-                    {
-                    *prb = clr;
-                    ++prb;
-                    }
-                if ( curmode.nppb == 16 )
-                    {
-                    *prb = clr;
-                    ++prb;
-                    *prb = clr;
-                    ++prb;
-                    }
-                pix >>= 2;
-                }
-            }
-        }
-    else if ( curmode.ncbt == 3 )
-        {
-        for (int i = 0; i < 8; ++i)
-            {
-            renderbuf[2*i] = curpal[i];
-            renderbuf[2*i+1] = curpal[i];
-            }
-        }
-    else if ( curmode.ncbt == 4 )
-        {
-        for (int i = 0; i < npix; ++i)
-            {
-            uint16_t clr = curpal[i & 0x0F];
-            for (int j = 0; j < curmode.nppb / 2; ++j)
-                {
-                *prb = clr;
-                ++prb;
-                }
-            if ( curmode.nppb < 16 )
-                {
-                clr = curpal[i >> 4];
-                for (int j = 0; j < curmode.nppb / 2; ++j)
-                    {
-                    *prb = clr;
-                    ++prb;
-                    }
-                }
-            }
-        }
-#endif
 #if DEBUG > 0
     printf ("End genrb: prb - renderbuf = %p - %p = %d\n", prb, renderbuf, prb - renderbuf);
 #endif
