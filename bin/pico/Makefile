@@ -54,7 +54,8 @@ bbcbasic.uf2: build/CMakeCache.txt $(SOURCES)
 	cd ../../mcu/pico && ./sympico.sh
 
 filesystem.uf2:
-	cd ../../mcu/lfsutil && make
+	cd ../../mcu/lfsutil && make clean
+	cd ../../mcu/lfsutil && make EXTRA=../../bin/pico/examples
 	cp ../../mcu/lfsutil/filesystem.uf2 ../../bin/pico
 	cp ../../mcu/lfsutil/filesystem.elf ../../bin/pico
 

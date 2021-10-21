@@ -27,6 +27,9 @@ filesystem.lfs: ../../lib/* mklfsimage tree
 	rm -f filesystem.lfs
 	./mklfsimage tree ../../console/pico/examples
 	./mklfsimage -p tests ../../tests
+ifdef EXTRA
+	./mklfsimage $(EXTRA)
+endif
 
 mklfsimage: $(SOURCES)
 	gcc $(CFLAGS) -o mklfsimage $(SOURCES)
