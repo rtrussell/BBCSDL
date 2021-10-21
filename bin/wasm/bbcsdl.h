@@ -3,15 +3,15 @@
 *       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       BBCSDL.H constant definitions                              *
-*       Version 1.22w 15-May-2021                                  *
+*       Version 1.25a 08-Oct-2021                                  *
 \******************************************************************/
 
 // System constants :
 
-#define PAGE_OFFSET    0x31C00  // Must be the same in BBCEQUS.INC
-#define PALETTE_SIZE     16     // Must be the same in BBCEQUS.INC
-#define XSCREEN        2048     // Must be the same in BBCEQUS.INC
-#define YSCREEN        2048     // Must be the same in BBCEQUS.INC
+#define	ACCSLEN 65536		// Must be the same in BBC.h
+#define PAGE_OFFSET ACCSLEN + 0x21C00     // Offset of PAGE from memory base
+#define XSCREEN        2048     // Width of screen output texture
+#define YSCREEN        2048     // Height of screen output texture
 #define MAX_PORTS	4	// Maximum number of port channels
 #define MAX_FILES	8	// Maximum number of file channels
 #define MAX_LINE_LEN   2304     // At least 252*RECTANGLE + 4
@@ -30,11 +30,9 @@
 // User-defined message IDs:
 
 #define	WM_APP		0x8000
-#define WMU_BYE         WM_APP+3  // must be the same in BBCEQUS.INC
 #define WMU_REALLOC     WM_APP+4  // must be the same in BBCEQUS.INC
 #define WMU_WAVEOPEN    WM_APP+5  // must be the same in BBCEQUS.INC
 #define WMU_WAVECLOSE   WM_APP+6  // must be the same in BBCEQUS.INC
-#define WMU_PLAYMIDI    WM_APP+7  // must be the same in BBCEQUS.INC
 #define WMU_TIMER       WM_APP+26
 
 // Custom user-event IDs:

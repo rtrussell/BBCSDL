@@ -5,7 +5,7 @@ usb: buildusb/bbcbasic.uf2
 uart: builduart/bbcbasic.uf2
 filesystem:	../../mcu/lfsutil/filesystem.uf2
 
-buildusb/CMakeCache.txt: CMakeLists.txt ../../mcu/littlefs/.git
+buildusb/Makefile: CMakeLists.txt
 	rm -rf buildusb
 	mkdir -p buildusb
 	cd buildusb && PICO_SDK_PATH=$(PICO_SDK_PATH) \
@@ -43,18 +43,18 @@ FATFS_SOURCES= \
 	ln -s ../../mcu/fatfs/source/diskio.h ../../mcu/fatfs/diskio.h
 
 
-builduart/CMakeCache.txt: CMakeLists.txt $(FATFS_SOURCES) ../../mcu/littlefs/.git ../../mcu/fatfs/.git
+builduart/Makefile: CMakeLists.txt $(FATFS_SOURCES)
 	rm -rf builduart
 	mkdir -p builduart
 	cd builduart && PICO_SDK_PATH=$(PICO_SDK_PATH) \
 		cmake .. -DSTDIO=UART -DLFS=Y -DFAT=Y
 
-buildusb/bbcbasic.uf2: buildusb/CMakeCache.txt $(SOURCES)
+buildusb/bbcbasic.uf2: buildusb/Makefile $(SOURCES)
 	cd buildusb && make
 	cp buildusb/bbcbasic.uf2 bbcbasicusb.uf2
 	cp buildusb/bbcbasic.elf bbcbasicusb.elf
 
-builduart/bbcbasic.uf2: builduart/CMakeCache.txt $(SOURCES)
+builduart/bbcbasic.uf2: builduart/Makefile $(SOURCES)
 	cd builduart && make
 	cp builduart/bbcbasic.uf2 bbcbasicuart.uf2
 	cp builduart/bbcbasic.elf bbcbasicuart.elf

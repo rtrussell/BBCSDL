@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.25a, 11-Sep-2021                                *
+*       Version 1.26a, 14-Oct-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1119,7 +1119,7 @@ static void sendg (short ch)
 		short *sl ; // pointer to start of line in character map
 		int nc ;    // total number of (wide) characters per line
 		int oc ;    // (wide) character offset from start of line
-		p2c (textx, texty, &pc, &sl, &nc, &oc) ;
+		p2c (lastx, lasty, &pc, &sl, &nc, &oc) ;
 		*pc = ch ;
 	}
 
@@ -2318,9 +2318,11 @@ void vduchr_ (short ucs2)
 	{
 	  if (ucs2 == 127)
 	  {
-	    int tmp = lasty ;
-	    lasty += chary ;
-	    plotns (99, lastx - charx, tmp) ;
+		fmove (6) ;
+		BBC_RenderSetClipRect (memhdc, hrect) ;
+		charout(' ', 0xFF, bakgnd >> 8, lastx, lasty, charx) ;
+		SDL_RenderSetClipRect (memhdc, NULL) ;
+		bChanged = 1 ;
 	  }
 	  else
 	    sendg (ucs2) ;

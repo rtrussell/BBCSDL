@@ -226,6 +226,7 @@ extern "C" {
 	SDL2_GFXPRIMITIVES_SCOPE int bezierColor(SDL_Renderer * renderer, const Sint16 * vx, const Sint16 * vy, int n, int s, Uint32 color);
 	SDL2_GFXPRIMITIVES_SCOPE int bezierRGBA(SDL_Renderer * renderer, const Sint16 * vx, const Sint16 * vy,
 		int n, int s, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+	SDL2_GFXPRIMITIVES_SCOPE double _evaluateBezier(double *data, int ndata, double t);
 
 	/* Characters/Strings */
 

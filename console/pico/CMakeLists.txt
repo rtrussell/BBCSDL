@@ -18,7 +18,7 @@ pico_sdk_init()
 if (TARGET tinyusb_device)
   add_executable(bbcbasic 
     ../../src/bbmain.c ../../src/bbexec.c ../../src/bbeval.c
-	../../src/bbasmb_arm_32.c ../../src/bbccos.c ../../src/bbpico.c
+	../../src/bbasmb_arm_v6m.c ../../src/bbccos.c ../../src/bbpico.c
     ../../src/bbdata_arm_32.s
 	../../mcu/sympico.c ../../mcu/lfswrap.c 
     ../../mcu/m0FaultDispatch/m0FaultDispatch.c 
