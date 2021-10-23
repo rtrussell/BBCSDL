@@ -560,10 +560,18 @@ int widths (unsigned char *s, int l)
 #endif
 
 int osbyte (int al, int xy)
-{
-	error (255, "Sorry, OSBYTE not implemented") ;
+    {
+    switch (al)
+        {
+        case 129:
+            return (oskey (xy) << 8) + 129;
+        case 135:
+            return ((vgetc (0x80000000, 0x80000000) << 8) + 135);
+        default:
+            error (255, "Sorry, OSBYTE function not implemented") ;
+        }
 	return -1 ;
-}
+    }
 
 void osword (int al, void *xy)
 {

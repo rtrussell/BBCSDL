@@ -17,8 +17,9 @@
 //  DEBUG = 0   No output
 //          1   VDU characters
 //          2   Principle primitives
-//          3   Details
-#define DEBUG 2
+//          4   Details
+//          8   Filling
+#define DEBUG 1
 
 #include <string.h>
 #include <stdio.h>
@@ -83,10 +84,98 @@ typedef struct
     int x;
     int y;
     } GPOINT;
-static GPOINT pltpt[NPLT];              // History of plotted points (half pixels from top left)
+static GPOINT pltpt[NPLT];              // History of plotted points (graphics units from top left)
 
 static uint16_t curpal[16];
 
+#if REV_FONT
+static const uint8_t pmsk02[256] = {
+    0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0,
+    0x08, 0x88, 0x48, 0xC8, 0x28, 0xA8, 0x68, 0xE8, 0x18, 0x98, 0x58, 0xD8, 0x38, 0xB8, 0x78, 0xF8,
+    0x04, 0x84, 0x44, 0xC4, 0x24, 0xA4, 0x64, 0xE4, 0x14, 0x94, 0x54, 0xD4, 0x34, 0xB4, 0x74, 0xF4,
+    0x0C, 0x8C, 0x4C, 0xCC, 0x2C, 0xAC, 0x6C, 0xEC, 0x1C, 0x9C, 0x5C, 0xDC, 0x3C, 0xBC, 0x7C, 0xFC,
+    0x02, 0x82, 0x42, 0xC2, 0x22, 0xA2, 0x62, 0xE2, 0x12, 0x92, 0x52, 0xD2, 0x32, 0xB2, 0x72, 0xF2,
+    0x0A, 0x8A, 0x4A, 0xCA, 0x2A, 0xAA, 0x6A, 0xEA, 0x1A, 0x9A, 0x5A, 0xDA, 0x3A, 0xBA, 0x7A, 0xFA,
+    0x06, 0x86, 0x46, 0xC6, 0x26, 0xA6, 0x66, 0xE6, 0x16, 0x96, 0x56, 0xD6, 0x36, 0xB6, 0x76, 0xF6,
+    0x0E, 0x8E, 0x4E, 0xCE, 0x2E, 0xAE, 0x6E, 0xEE, 0x1E, 0x9E, 0x5E, 0xDE, 0x3E, 0xBE, 0x7E, 0xFE,
+    0x01, 0x81, 0x41, 0xC1, 0x21, 0xA1, 0x61, 0xE1, 0x11, 0x91, 0x51, 0xD1, 0x31, 0xB1, 0x71, 0xF1,
+    0x09, 0x89, 0x49, 0xC9, 0x29, 0xA9, 0x69, 0xE9, 0x19, 0x99, 0x59, 0xD9, 0x39, 0xB9, 0x79, 0xF9,
+    0x05, 0x85, 0x45, 0xC5, 0x25, 0xA5, 0x65, 0xE5, 0x15, 0x95, 0x55, 0xD5, 0x35, 0xB5, 0x75, 0xF5,
+    0x0D, 0x8D, 0x4D, 0xCD, 0x2D, 0xAD, 0x6D, 0xED, 0x1D, 0x9D, 0x5D, 0xDD, 0x3D, 0xBD, 0x7D, 0xFD,
+    0x03, 0x83, 0x43, 0xC3, 0x23, 0xA3, 0x63, 0xE3, 0x13, 0x93, 0x53, 0xD3, 0x33, 0xB3, 0x73, 0xF3,
+    0x0B, 0x8B, 0x4B, 0xCB, 0x2B, 0xAB, 0x6B, 0xEB, 0x1B, 0x9B, 0x5B, 0xDB, 0x3B, 0xBB, 0x7B, 0xFB,
+    0x07, 0x87, 0x47, 0xC7, 0x27, 0xA7, 0x67, 0xE7, 0x17, 0x97, 0x57, 0xD7, 0x37, 0xB7, 0x77, 0xF7,
+    0x0F, 0x8F, 0x4F, 0xCF, 0x2F, 0xAF, 0x6F, 0xEF, 0x1F, 0x9F, 0x5F, 0xDF, 0x3F, 0xBF, 0x7F, 0xFF};
+
+static const uint16_t pmsk04[256] = {
+    0x0000, 0xC000, 0x3000, 0xF000, 0x0C00, 0xCC00, 0x3C00, 0xFC00,
+    0x0300, 0xC300, 0x3300, 0xF300, 0x0F00, 0xCF00, 0x3F00, 0xFF00,
+    0x00C0, 0xC0C0, 0x30C0, 0xF0C0, 0x0CC0, 0xCCC0, 0x3CC0, 0xFCC0,
+    0x03C0, 0xC3C0, 0x33C0, 0xF3C0, 0x0FC0, 0xCFC0, 0x3FC0, 0xFFC0,
+    0x0030, 0xC030, 0x3030, 0xF030, 0x0C30, 0xCC30, 0x3C30, 0xFC30,
+    0x0330, 0xC330, 0x3330, 0xF330, 0x0F30, 0xCF30, 0x3F30, 0xFF30,
+    0x00F0, 0xC0F0, 0x30F0, 0xF0F0, 0x0CF0, 0xCCF0, 0x3CF0, 0xFCF0,
+    0x03F0, 0xC3F0, 0x33F0, 0xF3F0, 0x0FF0, 0xCFF0, 0x3FF0, 0xFFF0,
+    0x000C, 0xC00C, 0x300C, 0xF00C, 0x0C0C, 0xCC0C, 0x3C0C, 0xFC0C,
+    0x030C, 0xC30C, 0x330C, 0xF30C, 0x0F0C, 0xCF0C, 0x3F0C, 0xFF0C,
+    0x00CC, 0xC0CC, 0x30CC, 0xF0CC, 0x0CCC, 0xCCCC, 0x3CCC, 0xFCCC,
+    0x03CC, 0xC3CC, 0x33CC, 0xF3CC, 0x0FCC, 0xCFCC, 0x3FCC, 0xFFCC,
+    0x003C, 0xC03C, 0x303C, 0xF03C, 0x0C3C, 0xCC3C, 0x3C3C, 0xFC3C,
+    0x033C, 0xC33C, 0x333C, 0xF33C, 0x0F3C, 0xCF3C, 0x3F3C, 0xFF3C,
+    0x00FC, 0xC0FC, 0x30FC, 0xF0FC, 0x0CFC, 0xCCFC, 0x3CFC, 0xFCFC,
+    0x03FC, 0xC3FC, 0x33FC, 0xF3FC, 0x0FFC, 0xCFFC, 0x3FFC, 0xFFFC,
+    0x0003, 0xC003, 0x3003, 0xF003, 0x0C03, 0xCC03, 0x3C03, 0xFC03,
+    0x0303, 0xC303, 0x3303, 0xF303, 0x0F03, 0xCF03, 0x3F03, 0xFF03,
+    0x00C3, 0xC0C3, 0x30C3, 0xF0C3, 0x0CC3, 0xCCC3, 0x3CC3, 0xFCC3,
+    0x03C3, 0xC3C3, 0x33C3, 0xF3C3, 0x0FC3, 0xCFC3, 0x3FC3, 0xFFC3,
+    0x0033, 0xC033, 0x3033, 0xF033, 0x0C33, 0xCC33, 0x3C33, 0xFC33,
+    0x0333, 0xC333, 0x3333, 0xF333, 0x0F33, 0xCF33, 0x3F33, 0xFF33,
+    0x00F3, 0xC0F3, 0x30F3, 0xF0F3, 0x0CF3, 0xCCF3, 0x3CF3, 0xFCF3,
+    0x03F3, 0xC3F3, 0x33F3, 0xF3F3, 0x0FF3, 0xCFF3, 0x3FF3, 0xFFF3,
+    0x000F, 0xC00F, 0x300F, 0xF00F, 0x0C0F, 0xCC0F, 0x3C0F, 0xFC0F,
+    0x030F, 0xC30F, 0x330F, 0xF30F, 0x0F0F, 0xCF0F, 0x3F0F, 0xFF0F,
+    0x00CF, 0xC0CF, 0x30CF, 0xF0CF, 0x0CCF, 0xCCCF, 0x3CCF, 0xFCCF,
+    0x03CF, 0xC3CF, 0x33CF, 0xF3CF, 0x0FCF, 0xCFCF, 0x3FCF, 0xFFCF,
+    0x003F, 0xC03F, 0x303F, 0xF03F, 0x0C3F, 0xCC3F, 0x3C3F, 0xFC3F,
+    0x033F, 0xC33F, 0x333F, 0xF33F, 0x0F3F, 0xCF3F, 0x3F3F, 0xFF3F,
+    0x00FF, 0xC0FF, 0x30FF, 0xF0FF, 0x0CFF, 0xCCFF, 0x3CFF, 0xFCFF,
+    0x03FF, 0xC3FF, 0x33FF, 0xF3FF, 0x0FFF, 0xCFFF, 0x3FFF, 0xFFFF];
+
+static const uint32_t pmsk16[256] = {
+    0x00000000, 0xF0000000, 0x0F000000, 0xFF000000, 0x00F00000, 0xF0F00000, 0x0FF00000, 0xFFF00000,
+    0x000F0000, 0xF00F0000, 0x0F0F0000, 0xFF0F0000, 0x00FF0000, 0xF0FF0000, 0x0FFF0000, 0xFFFF0000,
+    0x0000F000, 0xF000F000, 0x0F00F000, 0xFF00F000, 0x00F0F000, 0xF0F0F000, 0x0FF0F000, 0xFFF0F000,
+    0x000FF000, 0xF00FF000, 0x0F0FF000, 0xFF0FF000, 0x00FFF000, 0xF0FFF000, 0x0FFFF000, 0xFFFFF000,
+    0x00000F00, 0xF0000F00, 0x0F000F00, 0xFF000F00, 0x00F00F00, 0xF0F00F00, 0x0FF00F00, 0xFFF00F00,
+    0x000F0F00, 0xF00F0F00, 0x0F0F0F00, 0xFF0F0F00, 0x00FF0F00, 0xF0FF0F00, 0x0FFF0F00, 0xFFFF0F00,
+    0x0000FF00, 0xF000FF00, 0x0F00FF00, 0xFF00FF00, 0x00F0FF00, 0xF0F0FF00, 0x0FF0FF00, 0xFFF0FF00,
+    0x000FFF00, 0xF00FFF00, 0x0F0FFF00, 0xFF0FFF00, 0x00FFFF00, 0xF0FFFF00, 0x0FFFFF00, 0xFFFFFF00,
+    0x000000F0, 0xF00000F0, 0x0F0000F0, 0xFF0000F0, 0x00F000F0, 0xF0F000F0, 0x0FF000F0, 0xFFF000F0,
+    0x000F00F0, 0xF00F00F0, 0x0F0F00F0, 0xFF0F00F0, 0x00FF00F0, 0xF0FF00F0, 0x0FFF00F0, 0xFFFF00F0,
+    0x0000F0F0, 0xF000F0F0, 0x0F00F0F0, 0xFF00F0F0, 0x00F0F0F0, 0xF0F0F0F0, 0x0FF0F0F0, 0xFFF0F0F0,
+    0x000FF0F0, 0xF00FF0F0, 0x0F0FF0F0, 0xFF0FF0F0, 0x00FFF0F0, 0xF0FFF0F0, 0x0FFFF0F0, 0xFFFFF0F0,
+    0x00000FF0, 0xF0000FF0, 0x0F000FF0, 0xFF000FF0, 0x00F00FF0, 0xF0F00FF0, 0x0FF00FF0, 0xFFF00FF0,
+    0x000F0FF0, 0xF00F0FF0, 0x0F0F0FF0, 0xFF0F0FF0, 0x00FF0FF0, 0xF0FF0FF0, 0x0FFF0FF0, 0xFFFF0FF0,
+    0x0000FFF0, 0xF000FFF0, 0x0F00FFF0, 0xFF00FFF0, 0x00F0FFF0, 0xF0F0FFF0, 0x0FF0FFF0, 0xFFF0FFF0,
+    0x000FFFF0, 0xF00FFFF0, 0x0F0FFFF0, 0xFF0FFFF0, 0x00FFFFF0, 0xF0FFFFF0, 0x0FFFFFF0, 0xFFFFFFF0,
+    0x0000000F, 0xF000000F, 0x0F00000F, 0xFF00000F, 0x00F0000F, 0xF0F0000F, 0x0FF0000F, 0xFFF0000F,
+    0x000F000F, 0xF00F000F, 0x0F0F000F, 0xFF0F000F, 0x00FF000F, 0xF0FF000F, 0x0FFF000F, 0xFFFF000F,
+    0x0000F00F, 0xF000F00F, 0x0F00F00F, 0xFF00F00F, 0x00F0F00F, 0xF0F0F00F, 0x0FF0F00F, 0xFFF0F00F,
+    0x000FF00F, 0xF00FF00F, 0x0F0FF00F, 0xFF0FF00F, 0x00FFF00F, 0xF0FFF00F, 0x0FFFF00F, 0xFFFFF00F,
+    0x00000F0F, 0xF0000F0F, 0x0F000F0F, 0xFF000F0F, 0x00F00F0F, 0xF0F00F0F, 0x0FF00F0F, 0xFFF00F0F,
+    0x000F0F0F, 0xF00F0F0F, 0x0F0F0F0F, 0xFF0F0F0F, 0x00FF0F0F, 0xF0FF0F0F, 0x0FFF0F0F, 0xFFFF0F0F,
+    0x0000FF0F, 0xF000FF0F, 0x0F00FF0F, 0xFF00FF0F, 0x00F0FF0F, 0xF0F0FF0F, 0x0FF0FF0F, 0xFFF0FF0F,
+    0x000FFF0F, 0xF00FFF0F, 0x0F0FFF0F, 0xFF0FFF0F, 0x00FFFF0F, 0xF0FFFF0F, 0x0FFFFF0F, 0xFFFFFF0F,
+    0x000000FF, 0xF00000FF, 0x0F0000FF, 0xFF0000FF, 0x00F000FF, 0xF0F000FF, 0x0FF000FF, 0xFFF000FF,
+    0x000F00FF, 0xF00F00FF, 0x0F0F00FF, 0xFF0F00FF, 0x00FF00FF, 0xF0FF00FF, 0x0FFF00FF, 0xFFFF00FF,
+    0x0000F0FF, 0xF000F0FF, 0x0F00F0FF, 0xFF00F0FF, 0x00F0F0FF, 0xF0F0F0FF, 0x0FF0F0FF, 0xFFF0F0FF,
+    0x000FF0FF, 0xF00FF0FF, 0x0F0FF0FF, 0xFF0FF0FF, 0x00FFF0FF, 0xF0FFF0FF, 0x0FFFF0FF, 0xFFFFF0FF,
+    0x00000FFF, 0xF0000FFF, 0x0F000FFF, 0xFF000FFF, 0x00F00FFF, 0xF0F00FFF, 0x0FF00FFF, 0xFFF00FFF,
+    0x000F0FFF, 0xF00F0FFF, 0x0F0F0FFF, 0xFF0F0FFF, 0x00FF0FFF, 0xF0FF0FFF, 0x0FFF0FFF, 0xFFFF0FFF,
+    0x0000FFFF, 0xF000FFFF, 0x0F00FFFF, 0xFF00FFFF, 0x00F0FFFF, 0xF0F0FFFF, 0x0FF0FFFF, 0xFFF0FFFF,
+    0x000FFFFF, 0xF00FFFFF, 0x0F0FFFFF, 0xFF0FFFFF, 0x00FFFFFF, 0xF0FFFFFF, 0x0FFFFFFF, 0xFFFFFFFF];
+    
+#else
 static const uint16_t pmsk04[256] = {
     0x0000, 0x0003, 0x000C, 0x000F, 0x0030, 0x0033, 0x003C, 0x003F,
     0x00C0, 0x00C3, 0x00CC, 0x00CF, 0x00F0, 0x00F3, 0x00FC, 0x00FF,
@@ -153,6 +242,7 @@ static const uint32_t pmsk16[256] = {
     0xFFF0F000, 0xFFF0F00F, 0xFFF0F0F0, 0xFFF0F0FF, 0xFFF0FF00, 0xFFF0FF0F, 0xFFF0FFF0, 0xFFF0FFFF,
     0xFFFF0000, 0xFFFF000F, 0xFFFF00F0, 0xFFFF00FF, 0xFFFF0F00, 0xFFFF0F0F, 0xFFFF0FF0, 0xFFFF0FFF,
     0xFFFFF000, 0xFFFFF00F, 0xFFFFF0F0, 0xFFFFF0FF, 0xFFFFFF00, 0xFFFFFF0F, 0xFFFFFFF0, 0xFFFFFFFF };
+#endif
 static const uint32_t fwdmsk[] = {
     0xFFFFFFFF, 0xFFFFFFFE, 0xFFFFFFFC, 0xFFFFFFF8, 0xFFFFFFF0, 0xFFFFFFE0, 0xFFFFFFC0, 0xFFFFFF80,
     0xFFFFFF00, 0xFFFFFE00, 0xFFFFFC00, 0xFFFFF800, 0xFFFFF000, 0xFFFFE000, 0xFFFFC000, 0xFFFF8000,
@@ -171,7 +261,7 @@ extern int getkey (unsigned char *pkey);
 
 static void newpt (int xp, int yp)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("newpt (%d, %d)\n", xp, yp);
 #endif
     memmove (&pltpt[1], &pltpt[0], (NPLT - 1) * sizeof (pltpt[0]));
@@ -321,7 +411,7 @@ static void scrlup (void)
 
 static void cls ()
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("cls: bgfill = 0x%02\n", bgfill);
     printf ("tvt = %d, tvb = %d, tvl = %d, tvr = %d\n", tvt, tvb, tvl, tvr);
     printf ("thgt = %d, nbpl = %d\n", pmode->thgt, pmode->nbpl);
@@ -347,7 +437,7 @@ static void cls ()
         }
     else if (( tvl == 0 ) && ( tvr == pmode->tcol - 1 ))
         {
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("cls: start = %d, length = %d\n", tvt * pmode->thgt * pmode->nbpl,
             ( tvb - tvt + 1 ) * pmode->thgt * pmode->nbpl);
 #endif
@@ -360,7 +450,7 @@ static void cls ()
             + ( tvl << cdef->bitsh );
         int nr = ( tvb - tvt + 1 ) * pmode->thgt;
         int nb = ( tvr - tvl + 1 ) << cdef->bitsh;
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("cls: start = %d, nr = %d, nb = \n", tvt * pmode->thgt * pmode->nbpl, nr, nb);
 #endif
         for (int ir = 0; ir < nr; ++ir)
@@ -377,13 +467,13 @@ static void dispchr (int chr)
     {
     if (( ycsr < 0 ) || ( ycsr >= pmode->trow ) || ( xcsr < 0 ) || ( xcsr >= pmode->tcol ))
         {
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("Cursor out of range: ycsr = %d, xcsr = %d, screen = %dx%d\n",
             ycsr, xcsr, pmode->trow, pmode->tcol);
 #endif
         return;
         }
-#if DEBUG > 2
+#if DEBUG & 4
     if ((chr >= 0x20) && (chr <= 0x7F)) printf ("dispchr ('%c')\n", chr);
     else printf ("dispchr (0x%02X)\n", chr);
 #endif
@@ -501,7 +591,7 @@ static void wrap (void)
 
 static void tabxy (int x, int y)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("tab: ycsr = %d, xcsr = %d\n", y, x);
 #endif
     x += tvl;
@@ -538,7 +628,7 @@ static void clrreset (void)
     gbg = 0;
     if ( pmode->ncbt == 1 )
         {
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("clrreset: nclr = 2\n");
 #endif
         curpal[0] = defclr (0);
@@ -548,7 +638,7 @@ static void clrreset (void)
         }
     else if ( pmode->ncbt == 2 )
         {
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("clrreset: nclr = 4\n");
 #endif
         curpal[0] = defclr (0);
@@ -560,7 +650,7 @@ static void clrreset (void)
         }
     else if ( pmode->ncbt == 3 )
         {
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("clrreset: nclr = 4\n");
 #endif
         curpal[0] = defclr (0);
@@ -571,7 +661,7 @@ static void clrreset (void)
         }
     else
         {
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("clrreset: nclr = 16\n");
 #endif
         for (int i = 0; i < 16; ++i)
@@ -611,13 +701,13 @@ static inline int clrmsk (int clr)
 
 void modechg (int mode)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("modechg (%d)\n", mode);
 #endif
     hidecsr ();
     if ( setmode (mode, &framebuf, &pmode, &cdef) )
         {
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("grow = %d, gcol = %d\n", pmode->grow, pmode->gcol);
 #endif
         modeno = mode;
@@ -640,7 +730,7 @@ void modechg (int mode)
             pixely <<= 1;
             gunit <<= 1;
             }
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("pixelx = %d, xshift = %d, pixely = %d, yshift = %d\n", pixelx, xshift, pixely, yshift);
 #endif
         clrreset ();
@@ -651,11 +741,11 @@ void modechg (int mode)
         sizey = pmode->grow;
         charx = 8;
         chary = pmode->thgt;
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("modechg: Completed cls\n");
 #endif
         dispmode ();
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("modechg: New mode set\n");
 #endif
         showcsr ();
@@ -669,7 +759,7 @@ void modechg (int mode)
 
 static inline void pixop (int op, uint32_t *fb, uint32_t msk, uint32_t cpx)
     {
-#if DEBUG > 2
+#if DEBUG & 4
     printf ("pixop (%d, %p, 0x%08X, 0x%08X)\n", op, fb, msk, cpx);
 #endif
     cpx &= msk;
@@ -707,7 +797,7 @@ static void hline (int clrop, int xp1, int xp2, int yp)
     if (( xp2 < gvl ) || ( xp1 > gvr )) return;
     if ( xp1 < gvl ) xp1 = gvl;
     if ( xp2 > gvr ) xp2 = gvr;
-#if DEBUG > 2
+#if DEBUG & 4
     printf ("hline (0x%04X, %d, %d, %d)\n", clrop, xp1, xp2, yp);
 #endif
     xp1 <<= cdef->bitsh;
@@ -718,7 +808,7 @@ static void hline (int clrop, int xp1, int xp2, int yp)
     uint32_t msk1 = fwdmsk[xp1 & 0x1F];
     uint32_t msk2 = bkwmsk[(xp2 & 0x1F) + pmode->ncbt - 1];
     uint32_t cpx = cdef->cpx[clrop & cdef->clrmsk];
-#if DEBUG > 2
+#if DEBUG & 4
     printf ("xp1 = %d, xp2 = %d, clrmsk = %d, fb1 = %p, fb2 = %p\n",
         xp1 & 0x1F, xp2 & 0x1F, cdef->clrmsk, fb1, fb2);
     printf ("msk1 = 0x%08X, msk2 = 0x%08X, cpx = 0x%08X\n", msk1, msk2, cpx);
@@ -742,7 +832,7 @@ static void hline (int clrop, int xp1, int xp2, int yp)
 
 static void point (int clrop, uint32_t xp, uint32_t yp)
     {
-#if DEBUG > 2
+#if DEBUG & 4
     printf ("point (0x%04X, %d, %d)\n", clrop, xp, yp);
 #endif
     uint32_t *fb = (uint32_t *)(framebuf + yp * pmode->nbpl);
@@ -752,6 +842,9 @@ static void point (int clrop, uint32_t xp, uint32_t yp)
     uint32_t msk = cdef->clrmsk << xp;
     uint32_t cpx = ( clrop & cdef->clrmsk ) << xp;
     pixop (clrop >> 8, fb, msk, cpx);
+#if DEBUG & 4
+    printf ("xp = %d, cpx = %08X, msk = %08X, fb = %p, *fb = %08X\n", xp, cpx, msk, fb, *fb);
+#endif
     }
 
 static void clippoint  (int clrop, int xp, int yp)
@@ -765,7 +858,7 @@ static void clippoint  (int clrop, int xp, int yp)
 
 static void line (int clrop, uint32_t xp1, uint32_t yp1, uint32_t xp2, uint32_t yp2, uint32_t dots, int skip)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("line (0x%02X, %d, %d, %d, %d, 0x%08X, %d)\n", clrop, xp1, yp1, xp2, yp2, dots, skip);
 #endif
     int xd = xp2 - xp1;
@@ -811,7 +904,7 @@ static void line (int clrop, uint32_t xp1, uint32_t yp1, uint32_t xp2, uint32_t 
         }
     if ( bVert )
         {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("vertical: %d, %d, %d, %d\n", xp1, yp1, xp2, yp2);
 #endif
         int xs = 1;
@@ -867,7 +960,7 @@ static void line (int clrop, uint32_t xp1, uint32_t yp1, uint32_t xp2, uint32_t 
         }
     else
         {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("horizontal: %d, %d, %d, %d\n", xp1, yp1, xp2, yp2);
 #endif
         int ys = 1;
@@ -925,7 +1018,7 @@ static void line (int clrop, uint32_t xp1, uint32_t yp1, uint32_t xp2, uint32_t 
 
 static void clipline (int clrop, int xp1, int yp1, int xp2, int yp2, uint32_t dots, int skip)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("clipline (0x%02X, %d, %d, %d, %d, 0x%08X, %d)\n", clrop, xp1, yp1, xp2, yp2, dots, skip);
 #endif
     if ( xp2 < xp1 )
@@ -988,7 +1081,7 @@ static void clrgraph (void)
 
 static void triangle (int clrop, int xp1, int yp1, int xp2, int yp2, int xp3, int yp3)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("triangle (0x%02X, (%d, %d), (%d, %d), (%d, %d))\n", clrop, xp1, yp1, xp2, yp2, xp3, yp3);
 #endif
     if (( xp1 < gvl ) && ( xp2 < gvl ) && ( xp3 < gvl )) return;
@@ -1061,7 +1154,7 @@ static void triangle (int clrop, int xp1, int yp1, int xp2, int yp2, int xp3, in
 
 static void rectangle (int clrop, int xp1, int yp1, int xp2, int yp2)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("rectangle (0x%02X, (%d, %d), (%d, %d))\n", clrop, xp1, yp1, xp2, yp2);
 #endif
     if ( xp2 < xp1 )
@@ -1086,7 +1179,7 @@ static void rectangle (int clrop, int xp1, int yp1, int xp2, int yp2)
 
 static void trapizoid (int clrop, int xp1, int yp1, int xp2, int yp2, int xp3, int yp3)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("trapizoid (0x%02X, (%d, %d), (%d, %d), (%d, %d))\n", clrop, xp1, yp1, xp2, yp2, xp3, yp3);
 #endif
     GPOINT pts[4] = {{xp1, yp1}, {xp2, yp2}, {xp3, yp3}, {xp1 - xp2 + xp3, yp1 - yp2 + yp3}};
@@ -1205,12 +1298,19 @@ void getcsr(int *px, int *py)
 
 static int8_t getpix (int xp, int yp)
     {
+#if DEBUG & 4
+    printf ("getpix (%d, %d): ", xp, yp);
+#endif
     uint32_t *fb = (uint32_t *)(framebuf + yp * pmode->nbpl);
     xp <<= cdef->bitsh;
     fb += xp >> 5;
     xp &= 0x1F;
     uint8_t pix = (*fb) >> xp;
-    return ( pix & cdef->clrmsk );
+    pix &= cdef->clrmsk;
+#if DEBUG & 4
+    printf ("fb = %p, *fb = %08X, xp = %d, clrmsk = %02X, pix = %02X\n", fb, *fb, xp, cdef->clrmsk, pix);
+#endif
+    return pix;
     }
 
 int vpoint (int xp, int yp)
@@ -1230,9 +1330,17 @@ int vtint (int xp, int yp)
 
 int vgetc (int x, int y)
     {
-    x += tvl;
-    y += tvt;
-    if (( x < tvl ) || ( x > tvr ) || ( y < tvt ) || ( y > tvb )) return -1;
+    if (( x == 0x80000000 ) && ( y == 0x80000000 ))
+        {
+        x = xcsr;
+        y = ycsr;
+        }
+    else
+        {
+        x += tvl;
+        y += tvt;
+        if (( x < tvl ) || ( x > tvr ) || ( y < tvt ) || ( y > tvb )) return -1;
+        }
     if ( pmode->ncbt == 3 )
         {
         int chr = framebuf[y * pmode->trow + xcsr];
@@ -1295,7 +1403,7 @@ int widths (unsigned char *s, int l)
 
 static void linefill (int clrop, int xp, int yp, int ft, uint8_t clr)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("linefill (0x%02X, %d, %d, %d, 0x%02X)\n", clrop, xp,yp, ft, clr);
 #endif
     if (( xp < gvl ) || ( xp > gvr ) || ( yp < gvt ) || ( yp > gvb )) return;
@@ -1332,42 +1440,360 @@ static void linefill (int clrop, int xp, int yp, int ft, uint8_t clr)
     hline (clrop, xp1, xp2, yp);
     }
 
-static inline bool doflood (bool bEq, uint8_t tclr, int xp, int yp)
+typedef struct
+    {
+    int     clrop;
+    bool    bEq;
+    uint8_t tclr;
+    } FILLINFO;
+
+static inline bool doflood (FILLINFO *pfi, int xp, int yp)
     {
     if (( xp < gvl ) || ( xp > gvr ) || ( yp < gvt ) || ( yp > gvb )) return false;
     uint8_t pclr = getpix (xp, yp);
-    if ( bEq ) return ( pclr == tclr );
-    else return ( pclr != tclr );
+    bool bRes = ( pclr == pfi->tclr );
+    if ( ! pfi->bEq ) bRes = ! bRes;
+    if ( bRes )
+        {
+        uint8_t fclr = pfi->clrop & cdef->clrmsk;
+        switch (pfi->clrop >> 8)
+            {
+            case 1:
+                if ( ( pclr & fclr ) == fclr ) bRes = false;
+                break;
+            case 2:
+                if ( ( pclr & (~ fclr) ) == 0 ) bRes = false;
+                break;
+            default:
+                if ( pclr == fclr ) bRes = false;
+                break;
+            }
+        }
+#if DEBUG & 8
+    printf ("doflood (%d, %d) pclr = 0x%02X, bRes = %s\n", xp, yp, pclr, bRes ? "True": "False");
+#endif
+    return bRes;
+    }
+
+#if 1
+// Fill a region without overflowing stack. Based upon:
+// "Space-efficient Region Filling in Raster Graphics", Dominik Henrich
+// "The Visual Computer: An International Journal of Computer Graphics", vol 10, no 4, pp 205-215, 1994.
+
+#define MFILLCSR    0
+
+static void FCurMove (FILLINFO *pfi, int iDir, int *pX, int *pY, int *pW)
+    {
+    int iX = *pX;
+    int iY = *pY;
+    int iW = *pW;
+#if DEBUG & 8
+    printf ("FCurMove iX = %d, iY = %d, iDir = %d, iW = 0x%03X\n", iX, iY, iDir, iW);
+#endif
+    switch (iDir)
+        {
+        case 0:
+            ++iX;
+            *pX = iX;
+            ++iX;
+            iW &= 0x1B6;
+            iW >>= 1;
+            if ( ! doflood (pfi, iX, iY-1) ) iW |= 0x004;
+            if ( ! doflood (pfi, iX, iY) )   iW |= 0x020;
+            if ( ! doflood (pfi, iX, iY+1) ) iW |= 0x100;
+            break;
+        case 1:
+            ++iY;
+            *pY = iY;
+            ++iY;
+            iW &= 0x1F8;
+            iW >>= 3;
+            if ( ! doflood (pfi, iX-1, iY) ) iW |= 0x040;
+            if ( ! doflood (pfi, iX, iY) )   iW |= 0x080;
+            if ( ! doflood (pfi, iX+1, iY) ) iW |= 0x100;
+            break;
+        case 2:
+            --iX;
+            *pX = iX;
+            --iX;
+            iW &= 0x0DB;
+            iW <<= 1;
+            if ( ! doflood (pfi, iX, iY-1) ) iW |= 0x001;
+            if ( ! doflood (pfi, iX, iY) )   iW |= 0x008;
+            if ( ! doflood (pfi, iX, iY+1) ) iW |= 0x040;
+            break;
+        case 3:
+            --iY;
+            *pY = iY;
+            --iY;
+            iW &= 0x03F;
+            iW <<= 3;
+            if ( ! doflood (pfi, iX-1, iY) ) iW |= 0x001;
+            if ( ! doflood (pfi, iX, iY) )   iW |= 0x002;
+            if ( ! doflood (pfi, iX+1, iY) ) iW |= 0x004;
+            break;
+        }
+    *pW = iW;
+#if DEBUG & 8
+    printf ("   iX = %d, iY = %d, iW = 0x%03X\n", *pX, *pY, iW);
+#endif
+    }
+
+static const int iDirMask[4] = { 0x020, 0x080, 0x008, 0x002};
+
+static int FCurRight (int iDir, int iW)
+    {
+#if DEBUG & 8
+    printf ("FCurRight (%d, 0x%03X)", iDir, iW);
+#endif
+    if ( ( iW & 0x0AA ) == 0x0AA ) error (255, "Fill stuck");
+    iDir = ( iDir + 1 ) & 3;
+    while ( iW & iDirMask[iDir] ) iDir = ( iDir + 3 ) & 3;
+#if DEBUG & 8
+    printf (" = %d\n", iDir);
+#endif
+    return iDir;
+    }
+
+static int FCurLeft (int iDir, int iW)
+    {
+#if DEBUG & 8
+    printf ("FCurLeft (%d, 0x%03X)", iDir, iW);
+#endif
+    if ( ( iW & 0x0AA ) == 0x0AA ) error (255, "Fill stuck");
+    iDir = ( iDir + 3 ) & 3;
+    while ( iW & iDirMask[iDir] ) iDir = ( iDir + 1 ) & 3;
+#if DEBUG & 8
+    printf (" = %d\n", iDir);
+#endif
+    return iDir;
+    }
+
+static int FCurSet (FILLINFO *pfi, int iX, int iY, int iW)
+    {
+#if DEBUG & 8
+    printf ("FCurSet (%d, %d)\n", iX, iY);
+#endif
+    point (pfi->clrop, iX, iY);
+    return iW | 0x010;
+    }
+
+static uint16_t iCritMap[] = {
+    0x3020,	// 0x000
+    0x3322,	// 0x020
+    0x30FE,	// 0x040
+    0x33FF,	// 0x060
+    0x30FE,	// 0x080
+    0x0022,	// 0x0A0
+    0x30FE,	// 0x0C0
+    0x0022,	// 0x0E0
+    0xFFFE,	// 0x100
+    0x3322,	// 0x120
+    0xFFFF,	// 0x140
+    0x33FF,	// 0x160
+    0x30FE,	// 0x180
+    0x0022,	// 0x1A0
+    0x30FE,	// 0x1C0
+    0x0022,	// 0x1E0
+};
+
+static bool FCurCrit (int iW)
+    {
+    uint16_t map = iCritMap[iW >> 5];
+    uint16_t bit = 1 << ( iW & 0x0F );
+    bool bCrit = (( map & bit ) != 0 );
+#if DEBUG & 8
+    printf ("FCurCrit (0x%03X) = 0x%04X, 0x%04X, %s\n", iW, map, bit, bCrit ? "Yes" : "No");
+#endif
+    return bCrit;
+    }
+
+static bool LeftCycle (FILLINFO *pfi, int iXC, int iYC, int iDC, int iW)
+    {
+#if DEBUG & 8
+    printf ("LeftCycle (%d, %d, %d, 0x%03X)\n", iXC, iYC, iDC, iW);
+#endif
+    iDC = FCurLeft (iDC, iW);
+    int iX = iXC;
+    int iY = iYC;
+    int iDir = iDC;
+    FCurMove (pfi, iDir, &iX, &iY, &iW);
+    while (( iX != iXC ) || ( iY != iYC ))
+        {
+        if ( ! FCurCrit (iW) ) iW = FCurSet (pfi, iX, iY, iW);
+        iDir = FCurLeft (iDir, iW);
+        FCurMove (pfi, iDir, &iX, &iY, &iW);
+        }
+    iDir = FCurLeft (iDir, iW);
+#if DEBUG & 8
+    printf ("Completed LeftCycle: iDir = %d, iDC = %d, %s\n", iDir, iDC, (iDir == iDC ) ? "True" : "False");
+#endif
+    return ( iDir == iDC );
+    }
+
+static void FillInit (FILLINFO *pfi, int *pX, int *pY, int *pW)
+    {
+    int iX = *pX;
+    int iY = *pY;
+#if DEBUG & 8
+    printf ("FillInit (%d, %d)\n", iX, iY);
+#endif
+    while ( doflood (pfi, iX+1, iY) ) ++iX;
+#if DEBUG & 8
+    printf ("Found boundary: iX = %d\n", iX);
+#endif
+    *pX = iX;
+    int iW = 0x020;
+    if ( ! doflood (pfi, iX-1, iY-1) ) iW |= 0x001;
+    if ( ! doflood (pfi, iX,   iY-1) ) iW |= 0x002;
+    if ( ! doflood (pfi, iX+1, iY-1) ) iW |= 0x004;
+    if ( ! doflood (pfi, iX-1, iY) )   iW |= 0x008;
+    if ( ! doflood (pfi, iX-1, iY+1) ) iW |= 0x040;
+    if ( ! doflood (pfi, iX,   iY+1) ) iW |= 0x080;
+    if ( ! doflood (pfi, iX+1, iY+1) ) iW |= 0x100;
+    *pW = iW;
+#if DEBUG & 8
+    printf ("Completed FillInit: iX = %d, iY = %d, iW = 0x%03X\n", iX, iY, iW);
+#endif
+    }
+
+#if MFILLCSR > 0
+static int nfcur = 0;
+
+static struct
+    {
+    int iX;
+    int iY;
+    int iDir;
+    } fcurstk[MFILLCSR];
+
+static void FCurPush (int iX, int iY, int iDir)
+    {
+    fcurstk[nfcur].iX = iX;
+    fcurstk[nfcur].iY = iY;
+    fcurstk[nfcur].iDir = iDir;
+    ++nfcur;
+    }
+
+static bool FCurPop (FILLINFO *pfi, int *pX, int *pY, int *pDir, int *pW)
+    {
+    while ( nfcur > 0 )
+        {
+        --nfcur;
+        int iX = fcurstk[nfcur].iX;
+        int iY = fcurstk[nfcur].iY;
+        int iDir = fcurstk[nfcur].iDir;
+        int iW = 0;
+        if ( ! doflood (pfi, iX-1, iY-1) ) iW |= 0x001;
+        if ( ! doflood (pfi, iX  , iY-1) ) iW |= 0x002;
+        if ( ! doflood (pfi, iX+1, iY-1) ) iW |= 0x004;
+        if ( ! doflood (pfi, iX-1, iY  ) ) iW |= 0x008;
+        if ( ! doflood (pfi, iX  , iY  ) ) iW |= 0x010;
+        if ( ! doflood (pfi, iX+1, iY  ) ) iW |= 0x020;
+        if ( ! doflood (pfi, iX-1, iY+1) ) iW |= 0x040;
+        if ( ! doflood (pfi, iX  , iY+1) ) iW |= 0x080;
+        if ( ! doflood (pfi, iX+1, iY+1) ) iW |= 0x100;
+        if ( ( iW & 0x1EF ) != 0x1EF )
+            {
+            *pX = iX;
+            *pY = iY;
+            *pDir = iDir;
+            *pW = iW;
+            return true;
+            }
+        if ( iW == 0x1EF ) point (pf->clrop, iX, iY);
+        }
+    return false;
+    }
+#endif
+
+static void flood (bool bEq, uint8_t tclr, int clrop, int iX, int iY)
+    {
+#if DEBUG & 2
+    printf ("flood (%d, 0x%02X, 0x%02X, %d, %d)\n", bEq, tclr, clrop, iX, iY);
+#endif
+    FILLINFO fi;
+    fi.clrop = clrop;
+    fi.bEq = bEq;
+    fi.tclr = tclr;
+    int iDir = 0;
+    int iW;
+    FillInit (&fi, &iX, &iY, &iW);
+    while (true)
+        {
+        if ( ( iW & 0x1EF ) == 0x1EF )
+            {
+            iW = FCurSet (&fi, iX, iY, iW);
+#if MFILLCSR > 0
+            if ( ! FCurPop (&fi, &iX, &iY, &iDir, &iW) ) return;
+#else
+            return;
+#endif
+            }
+        if ( FCurCrit (iW) )
+            {
+#if MFILLCSR > 0
+            if ( nfcur <= MFILLCSR )
+                {
+                FCurPush (iX, iY, iDir);
+                iW |= 0x010;
+                }
+            else if ( LeftCycle (&fi, iX, iY, iDir, iW) ) iW |= 0x010;
+#else
+            if ( LeftCycle (&fi, iX, iY, iDir, iW) ) iW |= 0x010;
+#endif
+            }
+        else
+            {
+            iW = FCurSet (&fi, iX, iY, iW);
+            }
+        iDir = FCurRight (iDir, iW);
+        FCurMove (&fi, iDir, &iX, &iY, &iW);
+        }
+    }
+
+#else
+static void flood2 (FILLINFO *pfi, int xp, int yp)
+    {
+#if DEBUG & 2
+    printf ("flood2 (%d, %d)\n", xp, yp);
+#endif
+    if ( ! doflood (&fi, xp, yp) ) return;
+    int xl = xp;
+    int xr = xp;
+    while ( doflood (&fi, xl-1, yp) ) --xl;
+    while ( doflood (&fi, xr+1, yp) ) ++xr;
+    hline (clrop, xl, xr, yp);
+    int xc = ( xl + xr ) / 2;
+    int yt = yp;
+    while ( doflood (&fi, xc, yt-1) ) --yt;
+    if ( yt < yp - 1 ) flood2 (pfi, xc, (yp + yt) / 2);
+    int yb = yp;
+    while ( doflood (&fi, xc, yb+1) ) ++yb;
+    if ( yb > yp + 1 ) flood2 (pfi, xc, (yp + yb) / 2);
+    for (int xx = xl; xx <= xr; ++xx)
+        {
+        if ( doflood (pfi, xx, yp-1) ) flood2 (pfi, xx, yp-1);
+        if ( doflood (pfi, xx, yp+1) ) flood2 (pfi, xx, yp+1);
+        }
     }
 
 static void flood (bool bEq, uint8_t tclr, int clrop, int xp, int yp)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("flood (%d, 0x%02X, 0x%02X, %d, %d)\n", bEq, tclr, clrop, xp, yp);
 #endif
-    if ( ! doflood (bEq, tclr, xp, yp) ) return;
-    int xl = xp;
-    int xr = xp;
-    while ( doflood (bEq, tclr, xl-1, yp) ) --xl;
-    while ( doflood (bEq, tclr, xr+1, yp) ) ++xr;
-    hline (clrop, xl, xr, yp);
-    int xc = ( xl + xr ) / 2;
-    int yt = yp;
-    while ( doflood (bEq, tclr, xc, yt-1) ) --yt;
-    if ( yt < yp - 1 ) flood (bEq, tclr, clrop, xc, (yp + yt) / 2);
-    int yb = yp;
-    while ( doflood (bEq, tclr, xc, yb+1) ) ++yb;
-    if ( yb > yp + 1 ) flood (bEq, tclr, clrop, xc, (yp + yb) / 2);
-    for (int xx = xl; xx <= xr; ++xx)
-        {
-        if ( doflood (bEq, tclr, xx, yp-1) ) flood (bEq, tclr, clrop, xx, yp-1);
-        if ( doflood (bEq, tclr, xx, yp+1) ) flood (bEq, tclr, clrop, xx, yp+1);
-        }
+    FILLINFO fi;
+    fi.clrop = clrop;
+    fi.bEq = bEq;
+    fi.tclr = tclr;
+    flood2 (&fi, xp, yp);
     }
+#endif
 
 static int iroot (int s)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("iroot (%d)\n", s);
 #endif
     int r1 = 0;
@@ -1378,14 +1804,14 @@ static int iroot (int s)
         {
         int r3 = ( r1 + r2 ) / 2;
         int st = r3 * r3;
-#if DEBUG > 2
+#if DEBUG & 4
         printf ("r1 = %d, r2 = %d, r3 = %d, st = %d\n", r1, r2, r3, st);
 #endif
         if ( st == s ) { r1 = r3; break; }
         else if ( st < s ) r1 = r3;
         else r2 = r3;
         }
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("iroot (%d) = %d\n", s, r1);
 #endif
     return r1;
@@ -1393,7 +1819,7 @@ static int iroot (int s)
 
 static void ellipse (bool bFill, int clrop, int xc, int yc, uint32_t aa, uint32_t bb, uint64_t dd)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("ellipse (%d, 0x%02X, (%d, %d), %d, %d, %lld)\n", bFill, clrop, xc, yc, aa, bb, dd);
 #endif
     uint32_t xp = pmode->gcol;
@@ -1457,7 +1883,7 @@ static void ellipse (bool bFill, int clrop, int xc, int yc, uint32_t aa, uint32_
             }
         else if ( bFill )
             {
-#if DEBUG > 2
+#if DEBUG & 4
             printf ("yp = %d: fill %d\n", yp, xp);
 #endif
             hline (clrop, xc - xp, xc + xp, yc + yp);
@@ -1465,7 +1891,7 @@ static void ellipse (bool bFill, int clrop, int xc, int yc, uint32_t aa, uint32_
             }
         else if ( xp == xl )
             {
-#if DEBUG > 2
+#if DEBUG & 4
             printf ("yp = %d: dot %d\n", yp, xp);
 #endif
             clippoint (clrop, xc + xl, yc + yp - 1);
@@ -1478,7 +1904,7 @@ static void ellipse (bool bFill, int clrop, int xc, int yc, uint32_t aa, uint32_
             }
         else
             {
-#if DEBUG > 2
+#if DEBUG & 4
             printf ("yp = %d: dash %d - %d\n", yp, xp, xl);
 #endif
             hline (clrop, xc + xp + 1, xc + xl, yc + yp - 1);
@@ -1496,7 +1922,7 @@ static void ellipse (bool bFill, int clrop, int xc, int yc, uint32_t aa, uint32_
         }
     if ( ! bFill )
         {
-#if DEBUG > 2
+#if DEBUG & 4
         printf ("yp = %d: final dash 0 - %d\n", yp, xl);
 #endif
         hline (clrop, xc - xl, xc + xl, yc + yp - 1);
@@ -1510,7 +1936,7 @@ static void plotcir (bool bFill, int clrop)
     int xd = pltpt[0].x - pltpt[1].x;
     int yd = pltpt[0].y - pltpt[1].y;
     int r2 = xd * xd + yd * yd;
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("plotcir: (%d, %d) (%d, %d), r2 = %d\n", pltpt[1].x, pltpt[1].y, pltpt[0].x,
         pltpt[0].y, r2);
 #endif
@@ -1554,12 +1980,12 @@ static void plotellipse (bool bFill, int clrop)
 
 static int octant (int xp, int yp)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("octant (%d, %d)\n", xp, yp);
 #endif
     xp <<= xshift;
     yp <<= yshift;
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("scaled: xp = %d, yp = %d\n", xp, yp);
 #endif
     int iOct;
@@ -1589,7 +2015,7 @@ static int octant (int xp, int yp)
             else iOct = 7;
             }
         }
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("octant = %d\n", iOct);
 #endif
     return iOct;
@@ -1597,7 +2023,7 @@ static int octant (int xp, int yp)
 
 static void arc (int clrop)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("arc ((%d, %d), (%d, %d), (%d, %d))\n", pltpt[0].x, pltpt[0].y, pltpt[1].x, pltpt[1].y,
         pltpt[2].x, pltpt[2].y);
 #endif
@@ -1644,7 +2070,7 @@ static void arc (int clrop)
                 break;
             }
         }
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("Arc from: %d: (%d, %d), to: %d: (%d, %d)\n", iOct, xp, yp, iEnd, xe, ye);
 #endif
     bool bDone = false;
@@ -1654,7 +2080,7 @@ static void arc (int clrop)
     ye >>= yshift;
     int xs = 2 * xshift;
     int ys = 2 * yshift;
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("Octant %d\n", iOct);
 #endif
     while (! bDone)
@@ -1668,7 +2094,7 @@ static void arc (int clrop)
                 if ( (yp << ys) >= (xp << xs) )
                     {
                     ++iOct;
-#if DEBUG > 1
+#if DEBUG & 2
                     printf ("Octant %d\n", iOct);
 #endif
                     }
@@ -1681,7 +2107,7 @@ static void arc (int clrop)
                 if ( xp <= 0 )
                     {
                     ++iOct;
-#if DEBUG > 1
+#if DEBUG & 2
                     printf ("Octant %d\n", iOct);
 #endif
                     }
@@ -1693,7 +2119,7 @@ static void arc (int clrop)
                 if ( (yp << ys) <= ((-xp) << xs) )
                     {
                     ++iOct;
-#if DEBUG > 1
+#if DEBUG & 2
                     printf ("Octant %d\n", iOct);
 #endif
                     }
@@ -1706,7 +2132,7 @@ static void arc (int clrop)
                 if ( yp <= 0 )
                     {
                     ++iOct;
-#if DEBUG > 1
+#if DEBUG & 2
                     printf ("Octant %d\n", iOct);
 #endif
                     }
@@ -1718,7 +2144,7 @@ static void arc (int clrop)
                 if ( (yp << ys) <= (xp << xs) )
                     {
                     ++iOct;
-#if DEBUG > 1
+#if DEBUG & 2
                     printf ("Octant %d\n", iOct);
 #endif
                     }
@@ -1731,7 +2157,7 @@ static void arc (int clrop)
                 if ( xp >= 0 )
                     {
                     ++iOct;
-#if DEBUG > 1
+#if DEBUG & 2
                     printf ("Octant %d\n", iOct);
 #endif
                     }
@@ -1743,7 +2169,7 @@ static void arc (int clrop)
                 if ( (xp << xs) >= ((-yp) << ys) )
                     {
                     ++iOct;
-#if DEBUG > 1
+#if DEBUG & 2
                     printf ("Octant %d\n", iOct);
 #endif
                     }
@@ -1756,7 +2182,7 @@ static void arc (int clrop)
                 if ( yp >= 0 )
                     {
                     ++iOct;
-#if DEBUG > 1
+#if DEBUG & 2
                     printf ("Octant %d\n", iOct);
 #endif
                     }
@@ -1768,24 +2194,24 @@ static void arc (int clrop)
 
 static void plot (uint8_t code, int16_t xp, int16_t yp)
     {
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("plot (0x%02X, %d, %d)\n", code, xp, yp);
 #endif
     if ( ( code & 0x04 ) == 0 )
         {
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("Relative position\n");
 #endif
         newpt (pltpt[0].x + xp, pltpt[0].y - yp);
         }
     else
         {
-#if DEBUG > 1
+#if DEBUG & 2
         printf ("Absolute position\n");
 #endif
         newpt (xp + origx, (pmode->grow << yshift) - 1 - ( yp + origy ));
         }
-#if DEBUG > 1
+#if DEBUG & 2
     printf ("origin: (%d, %d)\n", origx, origy);
     printf ("pltpt: (%d, %d) (%d, %d) (%d, %d)\n", pltpt[0].x, pltpt[0].y,
         pltpt[1].x, pltpt[1].y, pltpt[2].x, pltpt[2].y);
@@ -1990,7 +2416,7 @@ void xeqvdu (int code, int data1, int data2)
     {
     int vdu = code >> 8;
 
-#if DEBUG > 0
+#if DEBUG & 1
     if ((vdu > 32) && (vdu < 127)) printf ("%c", vdu);
     else if ((vdu == 10) || (vdu == 13)) printf ("%c", vdu);
     else if (vdu == 32) printf ("_");
@@ -2151,7 +2577,7 @@ void xeqvdu (int code, int data1, int data2)
                 bg = clrmsk (code);
                 bgfill = (uint8_t) cdef->cpx[bg];
                 txtbak = bg;
-#if DEBUG > 1
+#if DEBUG & 2
                 printf ("Background colour %d, bgfill = 0x%02X\n", bg, bgfill);
 #endif
                 }
@@ -2159,7 +2585,7 @@ void xeqvdu (int code, int data1, int data2)
                 {
                 fg = clrmsk (code);
                 txtfor = fg;
-#if DEBUG > 1
+#if DEBUG & 2
                 printf ("Foreground colour %d\n", fg);
 #endif
                 }
@@ -2203,14 +2629,14 @@ void xeqvdu (int code, int data1, int data2)
             int r = ( data1 >> 16 ) & 0xFF;
             int g = ( data1 >> 24 ) & 0xFF;;
             int b = code & 0xFF;
-#if DEBUG > 0
+#if DEBUG & 2
             printf ("pal = %d, phy = %d, r = %d, g = %d, b = %d\n", pal, phy, r, g, b);
 #endif
             if ( pmode->ncbt == 3 ) pal *= 2;
             if ( phy < 16 ) curpal[pal] = defclr (phy);
             else if ( phy == 16 ) curpal[pal] = rgbclr (r, g, b);
             else if ( phy == 255 ) curpal[pal] = rgbclr (8*r, 8*g, 8*b);
-#if DEBUG > 0
+#if DEBUG & 2
             printf ("curpal[%d] = 0x%04X\n", pal, curpal[pal]);
 #endif
             if ( pmode->ncbt == 3 ) curpal[pal+1] = curpal[pal];
@@ -2237,7 +2663,7 @@ void xeqvdu (int code, int data1, int data2)
                 (data2 >> 24) & 0xFF, data1 & 0xFF, (data1 >> 8) & 0xFF,
                 (data1 >> 16) & 0xFF, (data1 >> 24) & 0xFF, code & 0xFF);
             */
-#if DEBUG > 1
+#if DEBUG & 2
             printf ("VDU 0x17: code = 0x%04X, data1 = 0x%08X, data2 = 0x%08X\n",
                 code, data1, data2);
 #endif
