@@ -38,5 +38,9 @@ uint16_t defclr (int clr);
 uint16_t rgbclr (int r, int g, int b);
 int clrrgb (uint16_t clr);
 void genrb (uint16_t *curpal);
+uint8_t *swapbuf (void);
+uint8_t *singlebuf (void);
+uint8_t *doublebuf (void);
+const char *checkbuf (void);
 
 #endif

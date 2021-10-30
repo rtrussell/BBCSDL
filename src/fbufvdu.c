@@ -19,7 +19,17 @@
 //          2   Principle primitives
 //          4   Details
 //          8   Filling
-#define DEBUG 1
+#define DEBUG 3
+
+//  REF_MODE =  0   Not implemented
+//              1   Using double buffering
+//              2   Using VDU queue
+//              3   User configurable
+#define REF_MODE    3
+#define REFQ_DEF    1024        // Default length for VDU queue
+
+#define NPLT        3           // Length of plot history
+#define BBC_FONT    1           // Use BBC font
 
 #include <string.h>
 #include <stdio.h>
@@ -28,9 +38,38 @@
 #include "mcu/fbufvdu.h"
 #include "bbccon.h"
 
+#if BBC_FONT == 0
 #include "mcu/font_10.h"
+#endif
 
-#define NPLT        3           // Length of plot history
+// Defined in bbmain.c:
+void error (int, const char *);
+
+// Defined in bbpico.c:
+extern int getkey (unsigned char *pkey);
+// void *gethwm (void);
+
+#if REF_MODE > 0
+static void refresh_now (void);
+static void refresh_on (void);
+static void refresh_off (void);
+#endif
+#if REF_MODE & 2
+extern void *himem;
+extern void *libase;
+extern void *libtop;
+static int *vduque = NULL;
+static int *vduqbot = NULL;
+static int *vduqtop = NULL;
+static int nRefQue;
+static void vduqueue (int code, int data1, int data2);
+static void vduflush (void);
+static void vduqinit (void);
+static void vduqterm (void);
+#endif
+#if REF_MODE == 3
+enum { rfmNone, rfmBuffer, rfmQueue } rfm;
+#endif
 
 // VDU variables declared in bbcdata_*.s:
 extern int origx;                       // Graphics x-origin (BASIC units)
@@ -88,7 +127,7 @@ static GPOINT pltpt[NPLT];              // History of plotted points (graphics u
 
 static uint16_t curpal[16];
 
-#if REV_FONT
+#if BBC_FONT
 static const uint8_t pmsk02[256] = {
     0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0,
     0x08, 0x88, 0x48, 0xC8, 0x28, 0xA8, 0x68, 0xE8, 0x18, 0x98, 0x58, 0xD8, 0x38, 0xB8, 0x78, 0xF8,
@@ -139,7 +178,7 @@ static const uint16_t pmsk04[256] = {
     0x003F, 0xC03F, 0x303F, 0xF03F, 0x0C3F, 0xCC3F, 0x3C3F, 0xFC3F,
     0x033F, 0xC33F, 0x333F, 0xF33F, 0x0F3F, 0xCF3F, 0x3F3F, 0xFF3F,
     0x00FF, 0xC0FF, 0x30FF, 0xF0FF, 0x0CFF, 0xCCFF, 0x3CFF, 0xFCFF,
-    0x03FF, 0xC3FF, 0x33FF, 0xF3FF, 0x0FFF, 0xCFFF, 0x3FFF, 0xFFFF];
+    0x03FF, 0xC3FF, 0x33FF, 0xF3FF, 0x0FFF, 0xCFFF, 0x3FFF, 0xFFFF};
 
 static const uint32_t pmsk16[256] = {
     0x00000000, 0xF0000000, 0x0F000000, 0xFF000000, 0x00F00000, 0xF0F00000, 0x0FF00000, 0xFFF00000,
@@ -173,7 +212,7 @@ static const uint32_t pmsk16[256] = {
     0x00000FFF, 0xF0000FFF, 0x0F000FFF, 0xFF000FFF, 0x00F00FFF, 0xF0F00FFF, 0x0FF00FFF, 0xFFF00FFF,
     0x000F0FFF, 0xF00F0FFF, 0x0F0F0FFF, 0xFF0F0FFF, 0x00FF0FFF, 0xF0FF0FFF, 0x0FFF0FFF, 0xFFFF0FFF,
     0x0000FFFF, 0xF000FFFF, 0x0F00FFFF, 0xFF00FFFF, 0x00F0FFFF, 0xF0F0FFFF, 0x0FF0FFFF, 0xFFF0FFFF,
-    0x000FFFFF, 0xF00FFFFF, 0x0F0FFFFF, 0xFF0FFFFF, 0x00FFFFFF, 0xF0FFFFFF, 0x0FFFFFFF, 0xFFFFFFFF];
+    0x000FFFFF, 0xF00FFFFF, 0x0F0FFFFF, 0xFF0FFFFF, 0x00FFFFFF, 0xF0FFFFFF, 0x0FFFFFFF, 0xFFFFFFFF};
     
 #else
 static const uint16_t pmsk04[256] = {
@@ -253,11 +292,6 @@ static const uint32_t bkwmsk[] = {
     0x000001FF, 0x000003FF, 0x000007FF, 0x00000FFF, 0x00001FFF, 0x00003FFF, 0x00007FFF, 0x0000FFFF,
     0x0001FFFF, 0x0003FFFF, 0x0007FFFF, 0x000FFFFF, 0x001FFFFF, 0x003FFFFF, 0x007FFFFF, 0x00FFFFFF,
     0x01FFFFFF, 0x03FFFFFF, 0x07FFFFFF, 0x0FFFFFFF, 0x1FFFFFFF, 0x3FFFFFFF, 0x7FFFFFFF, 0xFFFFFFFF };
-
-// Declared in bbmain.c:
-void error (int, const char *);
-
-extern int getkey (unsigned char *pkey);
 
 static void newpt (int xp, int yp)
     {
@@ -491,9 +525,14 @@ static void dispchr (int chr)
             fhgt /= 2;
             bDbl = true;
             }
+#if BBC_FONT
+        fhgt = 8;
+        const uint8_t *pch = &bbcfont[8 * chr];
+#else
         const uint8_t *pch = font_10[chr];
-        uint8_t *pfb = framebuf + ycsr * pmode->thgt * pmode->nbpl;
         if ( fhgt == 8 ) ++pch;
+#endif
+        uint8_t *pfb = framebuf + ycsr * pmode->thgt * pmode->nbpl;
         if ( pmode->ncbt == 1 )
             {
             pfb += xcsr;
@@ -501,7 +540,12 @@ static void dispchr (int chr)
             uint8_t bpx = (uint8_t) cdef->cpx[bg];
             for (int i = 0; i < fhgt; ++i)
                 {
+#if BBC_FONT
+                uint8_t mask = pmsk02[*pch];
+                uint8_t pix = ( mask & fpx ) | ( (~ mask ) & bpx );
+#else
                 uint8_t pix = ( (*pch) & fpx ) | ( (~ (*pch)) & bpx );
+#endif
                 *pfb = pix;
                 pfb += pmode->nbpl;
                 if ( bDbl )
@@ -745,6 +789,9 @@ void modechg (int mode)
         printf ("modechg: Completed cls\n");
 #endif
         dispmode ();
+#if REF_MODE > 0
+        if ( reflag == 1 ) refresh_off ();
+#endif
 #if DEBUG & 2
         printf ("modechg: New mode set\n");
 #endif
@@ -1360,15 +1407,25 @@ int vgetc (int x, int y)
             fhgt /= 2;
             bDbl = true;
             }
-        if ( fhgt == 8 ) ++prow;
+#if BBC_FONT
+        fhgt = 8;
+#else
+        int skip = 0;
+        if ( fhgt == 8 ) skip = 1;
+#endif
         x *= 8;
         y *= pmode->thgt;
         for (int j = 0; j < fhgt; ++j)
             {
             for (int i = 0; i < 8; ++i)
                 {
+#if BBC_FONT
+                *prow <<= 1;
+                if ( getpix (x+i, y) != bgclr ) *prow |= 0x01;
+#else
                 *prow >>= 1;
                 if ( getpix (x+i, y) != bgclr ) *prow |= 0x80;
+#endif
                 }
             ++y;
             if ( bDbl ) ++y;
@@ -1377,9 +1434,13 @@ int vgetc (int x, int y)
         for (int i = 0; i < 256; ++i)
             {
             bool bMatch = true;
-            for (int j = 0; j < 10; ++j)
+            for (int j = 0; j < fhgt; ++j)
                 {
-                if ( chrow[j] != font_10[i][j] )
+#if BBC_FONT
+                if ( chrow[j] != bbcfont[8*i+j] )
+#else
+                if ( chrow[j] != font_10[i][j+skip] )
+#endif
                     {
                     bMatch = false;
                     break;
@@ -1480,6 +1541,7 @@ static inline bool doflood (FILLINFO *pfi, int xp, int yp)
 // "Space-efficient Region Filling in Raster Graphics", Dominik Henrich
 // "The Visual Computer: An International Journal of Computer Graphics", vol 10, no 4, pp 205-215, 1994.
 
+// Number of additional cursors. In theory non zero values should speed complex fills.
 #define MFILLCSR    0
 
 static void FCurMove (FILLINFO *pfi, int iDir, int *pX, int *pY, int *pW)
@@ -1753,6 +1815,7 @@ static void flood (bool bEq, uint8_t tclr, int clrop, int iX, int iY)
     }
 
 #else
+// Traditional recursive fill. Fast but has excessive stack use for complex fills.
 static void flood2 (FILLINFO *pfi, int xp, int yp)
     {
 #if DEBUG & 2
@@ -2308,7 +2371,12 @@ static void plotchr (int clrop, int xp, int yp, int chr)
         fhgt /= 2;
         bDbl = true;
         }
+#if BBC_FONT
+    fhgt = 8;
+    const uint8_t *pch = &bbcfont[8*chr];
+#else
     const uint8_t *pch = font_10[chr];
+#endif
     if ( fhgt == 8 ) ++pch;
     for (int i = 0; i < fhgt; ++i)
         {
@@ -2316,8 +2384,13 @@ static void plotchr (int clrop, int xp, int yp, int chr)
         int pix = *pch;
         while ( pix )
             {
+#if BBC_FONT
+            if ( pix & 0x80 ) clippoint (clrop, xx, yp);
+            pix <<= 1;
+#else
             if ( pix & 1 ) clippoint (clrop, xx, yp);
             pix >>= 1;
+#endif
             ++xx;
             }
         ++yp;
@@ -2327,8 +2400,13 @@ static void plotchr (int clrop, int xp, int yp, int chr)
             pix = *pch;
             while ( pix )
                 {
+#if BBC_FONT
+                if ( pix & 0x80 ) clippoint (clrop, xx, yp);
+                pix <<= 1;
+#else
                 if ( pix & 1 ) clippoint (clrop, xx, yp);
                 pix >>= 1;
+#endif
                 ++xx;
                 }
             ++yp;
@@ -2423,6 +2501,38 @@ void xeqvdu (int code, int data1, int data2)
     else printf (" 0x%02X ", vdu);
     fflush (stdout);
 #endif
+
+#if REF_MODE > 0
+    if ( reflag == 0 )
+        {
+#if DEBUG & 2
+        printf ("reflag = 0\n");
+#endif
+        refresh_on ();
+        }
+#endif
+    if ( reflag == 1 )
+        {
+#if REF_MODE == 1
+        const char *psErr = checkbuf ();
+        if ( psErr ) error (255, psErr);
+#elif REF_MODE == 2
+        vduqueue (code, data1, data2);
+        return;
+#elif REF_MODE == 3
+        if ( rfm == rfmQueue )
+            {
+            vduqueue (code, data1, data2);
+            return;
+            }
+        else if ( rfm = rfmBuffer )
+            {
+            const char *psErr = checkbuf ();
+            printf ("psErr = %p\n", psErr);
+            if ( psErr ) error (255, psErr);
+            }
+#endif
+        }
 
     if ((vflags & VDUDIS) && (vdu != 6))
         return;
@@ -2743,4 +2853,227 @@ void xeqvdu (int code, int data1, int data2)
     textx = 8 * xcsr;
     texty = pmode->thgt * ycsr;
     if ( bPrint ) fflush (stdout);
+    }
+
+#if REF_MODE & 2
+void vduflush (void)
+    {
+    char resave = reflag;
+    reflag = 2;
+    int *queptr = vduqbot;
+#if DEBUG & 4
+    printf ("vduflush: libtop = %p, queptr = %p, vduque = %p\n", libtop, queptr, vduque);
+#endif
+    while ( queptr < vduque )
+        {
+        int code = *(queptr);
+        int data1 = *(++queptr);
+        int data2 = *(++queptr);
+        ++queptr;
+        xeqvdu (code, data1, data2);
+        }
+#if DEBUG & 4
+    printf ("vduflush: completed\n");
+#endif
+    vduque = vduqbot;
+    reflag = resave;
+    }
+
+static void vduqueue (int code, int data1, int data2)
+    {
+    if ( vduque >= vduqtop )
+        {
+#if DEBUG & 4
+        printf ("Flush due to queue full\n");
+#endif
+        vduflush ();
+        }
+    *vduque = code;
+    *(++vduque) = data1;
+    *(++vduque) = data2;
+    ++vduque;
+    }
+
+static void vduqinit (void)
+    {
+    if (( libase > 0 ) && ( (himem - libase) >= 12 * nRefQue + 4))
+        {
+        vduqbot = (int *)(((int)himem + 3) & 0xFFFFFFFC);
+        vduqtop = vduqbot + nRefQue;
+        }
+    else
+        {
+        vduqbot = (int *)(((int)libtop + 3) & 0xFFFFFFFC);
+        vduqtop = vduqbot + nRefQue;
+        libtop = vduqtop;
+        }
+    }
+
+static void vduqterm (void)
+    {
+    vduflush ();
+    libtop = vduqbot;
+    }
+#endif
+
+#if REF_MODE == 1
+static void refresh_now (void)
+    {
+#if DEBUG & 4
+    printf ("refresh now\n");
+#endif
+    framebuf = swapbuf ();
+    }
+
+static void refresh_on (void)
+    {
+#if DEBUG & 2
+    printf ("refresh on\n");
+#endif
+    framebuf = singlebuf ();
+    reflag = 2;
+    }
+
+static void refresh_off (void)
+    {
+#if DEBUG & 2
+    printf ("refresh off\n");
+#endif
+    framebuf = doublebuf ();
+    reflag = 1;
+    }
+
+#elif REF_MODE == 2
+static void refresh_now (void)
+    {
+#if DEBUG & 4
+    printf ("refresh now\n");
+#endif
+    vduflush ();
+    }
+
+static void refresh_on (void)
+    {
+#if DEBUG & 2
+    printf ("refresh on\n");
+#endif
+    vduqinit ();
+    reflag = 2;
+    }
+
+static void refresh_off (void)
+    {
+#if DEBUG & 2
+    printf ("refresh off\n");
+#endif
+    vduqterm ();
+    reflag = 1;
+    }
+
+#elif REF_MODE == 3
+static void refresh_now (void)
+    {
+#if DEBUG & 4
+    printf ("refresh now\n");
+#endif
+    if ( rfm == rfmBuffer )
+        {
+        framebuf = swapbuf ();
+        }
+    else if ( rfm == rfmQueue )
+        {
+        vduflush ();
+        }
+    }
+
+static void refresh_on (void)
+    {
+#if DEBUG & 2
+    printf ("refresh on\n");
+#endif
+    if ( rfm == rfmBuffer )
+        {
+        framebuf = singlebuf ();
+        }
+    else if ( rfm == rfmQueue )
+        {
+        vduqterm ();
+        }
+    reflag = 2;
+    }
+
+static void refresh_off (void)
+    {
+#if DEBUG & 2
+    printf ("refresh off\n");
+#endif
+    if ( rfm == rfmBuffer )
+        {
+        framebuf = doublebuf ();
+        }
+    else if ( rfm == rfmQueue )
+        {
+        vduqinit ();
+        }
+    reflag = 1;
+    }
+#endif
+
+void refresh (const char *p)
+    {
+#if REF_MODE > 0
+    while ( *p == ' ' ) ++p;
+    if ( *p == 0x0D )
+        {
+        refresh_now ();
+        }
+    else if ( ! strncasecmp (p, "on", 2) )
+        {
+        refresh_on ();
+        }
+    else if ( ! strncasecmp (p, "off", 3) )
+        {
+        refresh_off ();
+        }
+#endif
+#if REF_MODE == 3
+    else if ( ! strncasecmp (p, "none", 4) )
+        {
+#if DEBUG & 2
+        printf ("refresh none\n");
+#endif
+        refresh_on ();
+        rfm = rfmNone;
+        }
+    else if ( ! strncasecmp (p, "buffer", 6) )
+        {
+#if DEBUG & 2
+        printf ("refresh buffer\n");
+#endif
+        refresh_on ();
+        rfm = rfmBuffer;
+        }
+    else if ( ! strncasecmp (p, "queue", 6) )
+        {
+#if DEBUG & 2
+        printf ("refresh queue\n");
+#endif
+        refresh_on ();
+        rfm = rfmQueue;
+        while ( *p == ' ' ) ++p;
+        if ((*p >= '0') && (*p <= '9'))
+            {
+            nRefQue = 0;
+            while ((*p >= '0') && (*p <= '9'))
+                {
+                nRefQue = 10 * nRefQue + *p - '0';
+                ++p;
+                }
+            }
+        else
+            {
+            nRefQue = REFQ_DEF;
+            }
+        }
+#endif
     }

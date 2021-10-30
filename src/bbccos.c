@@ -64,6 +64,9 @@ void StopTimer (timer_t) ;
 void SystemIO (int) ;
 int stdin_handler (int*, int*) ;
 int getkey (unsigned char *) ;
+#ifdef PICO_GUI
+void refresh (const char *p);
+#endif
 
 // Global variables:
 extern timer_t UserTimerID ;
@@ -958,6 +961,9 @@ void oscli (char *cmd)
 			return ;
 
 		case REFRESH:
+#ifdef PICO_GUI
+            refresh (p);
+#endif
 			return ;
 
 		case REN:

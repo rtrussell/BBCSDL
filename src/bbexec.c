@@ -1909,11 +1909,15 @@ VAR xeq (void)
 				if ((libase != 0) && (himem > libase))
 				    {
 					libase = 0 ;
-#ifdef PICO
-					libtop = n ;
-#endif
 					proptr[0] = 0 ;
 					fnptr[0] = 0 ;
+#ifdef PICO
+					libtop = n ;
+                    }
+                else if (libase == 0)
+                    {
+                    libtop = n;
+#endif
 				    }
 				}
 				break ;
