@@ -1791,9 +1791,11 @@ void waitconsole(void){
 		sleep_ms(1000);
 	}
     printf ("\r\n");
+    if ( tud_cdc_connected() ) stdio_filter_driver (stdio_usb);
+    else stdio_filter_driver (stdio_uart);
 # endif
 	waitdone=1;
-	printf("\n");
+	printf("\r\n");
 }
 #endif
 
