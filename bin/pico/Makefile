@@ -33,19 +33,19 @@ SOURCES= \
 	../../mcu/fatfs/diskio.h \
 	../../mcu/pico/sd_spi.pio \
 	../../mcu/pico/sound.pio \
-	../../mcu/pico_gui/gui_pico.ld \
+	../../mcu/pico_gui/gui_pico.ld
 
 all: bbcbasic filesystem
 bbcbasic: bbcbasic.uf2
 filesystem:	filesystem.uf2
 
-build/CMakeCache.txt: ../../mcu/pico/CMakeLists.txt
+build/Makefile: ../../mcu/pico/CMakeLists.txt
 	rm -rf build
 	mkdir -p build
 	cd build && PICO_SDK_PATH=$(PICO_SDK_PATH) \
 		cmake -DPICO_BOARD=$(BOARD) -DSTDIO=PICO -DLFS=Y -DFAT=Y -DSOUND=Y -S ../../../mcu/pico -B .
 
-bbcbasic.uf2: build/CMakeCache.txt $(SOURCES)
+bbcbasic.uf2: build/Makefile $(SOURCES)
 	cd build && make
 	cp build/bbcbasic.uf2 bbcbasic.uf2
 	cp build/bbcbasic.elf bbcbasic.elf
