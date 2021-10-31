@@ -34,7 +34,7 @@ bbeval.o: bbeval.c BBC.h
 	$(CXX) -Wno-array-bounds -c -O2 $< -o $@
 
 # TODO: Need bbasmb_x86_32 assembler!!
-bbasmb.o: bbasmb_arm_32.c BBC.h
+bbasmb.o: bbasmb_arm_v6m.c BBC.h
 	$(CXX) -c -Os $< -o $@
 
 bbcmos.o: bbcmos.c bbcsdl.h

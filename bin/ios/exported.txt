@@ -570,6 +570,7 @@ _GFX_aaFilledPieColor
 _GFX_aaArcColor
 _GFX_aaBezierColor
 _GFX_aaFilledPolyBezierColor
+_GFX_EvaluateBezier
 _b2NewWorld
 _b2CreateBody
 _b2DestroyBody

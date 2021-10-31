@@ -68,6 +68,9 @@ SDL_STBIMG_DEF int GFX_aaBezierColor(SDL_Renderer * renderer, double *x, double 
 SDL_STBIMG_DEF int GFX_aaFilledPolyBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, Uint32 color)
 {	return aaFilledPolyBezierColor(renderer, x, y, n, s, color) ; }
 
+SDL_STBIMG_DEF double GFX_EvaluateBezier(double *data, int ndata, double t)
+{	return _evaluateBezier (data, ndata, t) ; }
+
 /* ---- Internally used structures */
 
 /*!
