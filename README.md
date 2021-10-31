@@ -32,8 +32,8 @@ There are two somewhat divergent lines of development:
 
 The following limitations are noted:
 
-1.  HIMEM-PAGE=65K with an additional 32K has reserved for CALL and
-    INSTALL libraries.
+1.  HIMEM-PAGE=128K with an additional 41K has reserved for CALL and
+    INSTALL libraries and the CPU stack.
 
 2.  m0FaultDispatch is linked in by default.  This license for this
     library is free for hobby and other non-commercial products.  If
@@ -129,6 +129,8 @@ It is currently also used for diagnostic output.
 If required an amplified speaker or amplified headphones should be connected
 to the DAC socket on the VGA demo board, not to the PWM socket.
 
+#### Video Modes
+
 The implementation currently supports 16 video modes:
 
 Mode | Colours |   Text  | Graphics  | Letterbox
@@ -160,16 +162,48 @@ Except for Mode 7, colours 8-15 are high intensity rather than flashing.
 The generally most useful modes are mode 8, which is a monochrome display with the highest resolution,
 and mode 15, which is a 16 colour mode with square pixels. The default mode on startup is mode 8.
 
+#### Screen Refresh
+
+By default the commands "*refresh [off|on]" do nothing. However one of two different implementations
+may be enabled.
+
+"*refresh buffer" enables double buffering of the display. In this mode turning refresh off hides any
+screen changes until a "*refresh" or "*refresh on" command. For low resolution modes 4-7 or 12-14
+both buffers fit within the statically allocated video storage. However for the higher resolution modes
+a second buffer is allocated above HIMEM and above any INSTALLed libraries. It will probably be
+necessary to lower HIMEM to make sufficient room for this second buffer.
+
+"*refresh queue" enables an alternate mode in which, while refreshing is turned off, all VDU
+requests are stored in a queue and then processed as quickly as possible when refreshing is enabled.
+The VDU queue is stored above HIMEM and any INSTALLed libraries. However the size of the queue is
+typically smaller than a second frame buffer. The size of the queue may be specified by a decimal
+number following "queue".
+
+"*refresh none" disables "refresh [off|on]".
+
+#### User defined characters
+
+Command **VDU 23,...** may be used to define user character shapes. The following points should be
+noted:
+
+* Character codes are divided into blocks of 32 characters.
+* The first user defined character in a block allocates memory for all the characters in the block.
+* The first character block overwrites szCmdLine, which has minimal utility for the Pico.
+* PAGE has to be raised (by 256 bytes per block) if more than block of user defined characters is required.
+
 ### Missing features & Qwerks
 
 The Pico implementation is missing features compared to the BBCSDL implementation
 on full operating systems. The limitations include:
 
+* Memory is limited. Complex expressions or deeply nested routines may result in the CPU stack
+reaching HIMEM or any INSTALLed libraries or refresh buffers. Usually this will result in either
+"Expression evaluation too deep!" or "Recursion too deep!" error message. It may be possible to
+resolve this by lowering HIMEM. It may, however, be possible for the situation to go unnoticed
+in which case the Pico may crash and have to be reset.
 * High resolution text (VDU 5) is implemented, but it does not scroll, instead wraps
 around back to the top of the screen. New text overlays any existing rather than
 replacing it.
-* User defined characters are not implemented.
-* VDU 23 can only be used to control the appearance of the cursor and to select
 page or scroll mode.
 * PLOT modes 168-191 & 208+ are not implemented.
 * Loading and saving bitmapped images is not implemented.
@@ -186,9 +220,10 @@ page or scroll mode.
 * Implement GET(X,Y) - DONE
 * Plotting: fill, circle, ellipse - DONE
 * Plotting: arc - DONE
+* Sound - DONE
+* User defined characters - DONE
 * Plotting: segment & sector - Probaby will not do, too many cases. Can sometimes be achieved with arc & fill.
 * 800x600 VGA output (currently only 640x480)?
-* Sound - DONE
 * Testing - Lots of it
 * Documentation
 
@@ -210,7 +245,7 @@ The following options may be specified with the cmake command:
   * -DSTDIO=USB+UART for the console on both USB and UART.
   * -DSTDIO=USB for the basic console on USB.
   * -DSTDIO=UART for the basic console on UART.
-  * -DSTDIO=PICO for input via USB keyboard and output via VGA monitor.
+  * -DSTDIO=PICO for the GUI version with input via USB keyboard and output via VGA monitor.
 * -DLFS=Y to include storage on Pico flash or -DLFS=N to exclude it.
 * -DFAT=Y to include storage on SD card or -DFAT=N to exclude it.
 * -DSOUND=Y to include sound support or -DSOUND=N to exclude it.
