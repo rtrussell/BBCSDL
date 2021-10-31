@@ -165,6 +165,7 @@ int basic (void *, void *, void *) ;
 
 // Forward references:
 unsigned char osbget (void*, int*) ;
+int oskey (int wait);
 void osbput (void*, unsigned char) ;
 void quiet (void) ;
 

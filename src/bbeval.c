@@ -986,7 +986,9 @@ VAR item (void)
 	signed char al = nxt () ;
 #ifdef PICO
     if((&al < (signed char *)libtop + 0x800) && (&al >= (signed char *)userRAM))
+        {
         error(61, "Expression evaluation too deep!");
+        }
 #endif
 	errno = 0 ;
 	esi++ ;

@@ -19,7 +19,7 @@
 //          2   Principle primitives
 //          4   Details
 //          8   Filling
-#define DEBUG 3
+#define DEBUG 1
 
 //  REF_MODE =  0   Not implemented
 //              1   Using double buffering
@@ -68,7 +68,7 @@ static void vduqinit (void);
 static void vduqterm (void);
 #endif
 #if REF_MODE == 3
-enum { rfmNone, rfmBuffer, rfmQueue } rfm;
+enum { rfmNone, rfmBuffer, rfmQueue } rfm = rfmNone;
 #endif
 
 // VDU variables declared in bbcdata_*.s:
@@ -2515,7 +2515,11 @@ void xeqvdu (int code, int data1, int data2)
         {
 #if REF_MODE == 1
         const char *psErr = checkbuf ();
-        if ( psErr ) error (255, psErr);
+        if ( psErr )
+            {
+            refresh_on ();
+            error (63, psErr);
+            }
 #elif REF_MODE == 2
         vduqueue (code, data1, data2);
         return;
@@ -2525,11 +2529,14 @@ void xeqvdu (int code, int data1, int data2)
             vduqueue (code, data1, data2);
             return;
             }
-        else if ( rfm = rfmBuffer )
+        else if ( rfm == rfmBuffer )
             {
             const char *psErr = checkbuf ();
-            printf ("psErr = %p\n", psErr);
-            if ( psErr ) error (255, psErr);
+            if ( psErr )
+                {
+                refresh_on ();
+                error (63, psErr);
+                }
             }
 #endif
         }

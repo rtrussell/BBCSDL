@@ -8,7 +8,7 @@
 //          2   Interpolator test
 //          4   Double buffering
 //          8   Buffer swap
-#define DEBUG       12
+#define DEBUG       0
 
 // DBUF_MODE =  0 No double buffer
 //              1 One fixed buffer and second buffer above himem
@@ -1096,26 +1096,19 @@ uint8_t *doublebuf (void)
 const char *checkbuf (void)
     {
 #if DBUF_MODE == 1
-    static const char sErr1[] = "Library loaded over refresh buffer";
     static const char sErr2[] = "Stack collided with refresh buffer";
     if ( shadowbuf == vbuffer[1] )
         {
-        /*
-        printf ("libtop = %p, shadowbuf = %p\n", libtop, shadowbuf);
-        if ( libtop > (void *)shadowbuf )
-            {
-            shadowbuf = vbuffer[0];
-            printf ("checkbuf: sErr1\n");
-            return sErr1;
-            }
-        */
         int nbyt = bufsize ();
         int nfree = (uint8_t *)(&nbyt) - vbuffer[1];
+#if DEBUG & 4
         printf ("nbyt = 0x%04X, nfree = 0x%04X\n", nbyt, nfree);
+#endif
         if ( nfree < nbyt )
             {
+#if DEBUG & 4
             printf ("checkbuf: sErr2\n");
-            shadowbuf = vbuffer[0];
+#endif
             return sErr2;
             }
         }
@@ -1123,12 +1116,15 @@ const char *checkbuf (void)
     static const char sErr3[] = "PAGE below refresh buffer";
     if (( vpage != NULL ) && ( vpage < (void *)vidtop ))
         {
-        printf ("checkbuf: sErr2\n");
-        shadowbuf = vbuffer[0];
+#if DEBUG & 4
+        printf ("checkbuf: sErr3\n");
+#endif
         return sErr3;
         }
 #endif
+#if DEBUG & 4
     printf ("checkbuf: NULL\n");
+#endif
     return NULL;
     }
 #endif
