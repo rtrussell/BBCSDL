@@ -72,6 +72,7 @@ enum { rfmNone, rfmBuffer, rfmQueue } rfm = rfmNone;
 #endif
 
 // VDU variables declared in bbcdata_*.s:
+extern void *vpage;                     // Location of PAGE (bottom of program)
 extern int origx;                       // Graphics x-origin (BASIC units)
 extern int origy;                       // Graphics y-origin (BASIC units)
 extern int lastx;                       // Graphics cursor x-position (pixels)
@@ -118,6 +119,10 @@ static int gfg;                         // Graphics foreground colour & mode
 static int gbg;                         // Graphics background colour & mode
 static int xshift;                      // Shift to convert X graphics units to pixels
 static int yshift;                      // Shift to convert Y graphics units to pixels
+static bool bFontExp = false;           // Exploded font flag
+static uint8_t *fontmap[8] = {          // Pointer to glyph for each block of characters
+    bbcfont, bbcfont + 0x100, bbcfont + 0x200, bbcfont + 0x300,
+    bbcfont + 0x400, bbcfont + 0x500, bbcfont + 0x600, bbcfont + 0x700};
 typedef struct
     {
     int x;
@@ -527,7 +532,7 @@ static void dispchr (int chr)
             }
 #if BBC_FONT
         fhgt = 8;
-        const uint8_t *pch = &bbcfont[8 * chr];
+        const uint8_t *pch = &fontmap[chr >> 5][8 * (chr & 0x1F)];
 #else
         const uint8_t *pch = font_10[chr];
         if ( fhgt == 8 ) ++pch;
@@ -1437,7 +1442,7 @@ int vgetc (int x, int y)
             for (int j = 0; j < fhgt; ++j)
                 {
 #if BBC_FONT
-                if ( chrow[j] != bbcfont[8*i+j] )
+                if ( chrow[j] != fontmap[i >> 5][8 * (i & 0x1F) + j] )
 #else
                 if ( chrow[j] != font_10[i][j+skip] )
 #endif
@@ -2373,7 +2378,7 @@ static void plotchr (int clrop, int xp, int yp, int chr)
         }
 #if BBC_FONT
     fhgt = 8;
-    const uint8_t *pch = &bbcfont[8*chr];
+    const uint8_t *pch = &fontmap[chr >> 5][8 * (chr & 0x1F)];
 #else
     const uint8_t *pch = font_10[chr];
 #endif
@@ -2416,7 +2421,7 @@ static void plotchr (int clrop, int xp, int yp, int chr)
     showcsr ();
     }
 
-void hrwrap (int *pxp, int *pyp)
+static void hrwrap (int *pxp, int *pyp)
     {
     int xp = pltpt[0].x >> xshift;
     int yp = pltpt[0].y >> yshift;
@@ -2434,7 +2439,7 @@ void hrwrap (int *pxp, int *pyp)
     if ( pyp != NULL ) *pyp = yp;
     }
 
-void hrback (void)
+static void hrback (void)
     {
     int xp = pltpt[0].x >> xshift;
     int yp = pltpt[0].y >> yshift;
@@ -2452,7 +2457,7 @@ void hrback (void)
     newpix (xp, yp);
     }
 
-void showchr (int chr)
+static void showchr (int chr)
     {
     hidecsr ();
     if ( vflags & HRGFLG )
@@ -2472,6 +2477,31 @@ void showchr (int chr)
         }
     if ( bPrint ) putchar (chr);
     showcsr ();
+    }
+
+static void defchr (uint8_t chr, uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3,
+    uint8_t b4, uint8_t b5, uint8_t b6, uint8_t b7)
+    {
+    int iBlk = chr >> 5;
+    uint8_t *pblk = fontmap[iBlk];
+    if ( pblk < (uint8_t *) userRAM )
+        {
+        if ( usrchr + 0x100 > (char *) vpage )
+            error (255, "Insufficient room below PAGE");
+        pblk = (uint8_t *) usrchr;
+        usrchr += 0x100;
+        memcpy (pblk, fontmap[iBlk], 0x100);
+        fontmap[iBlk] = pblk;
+        }
+    pblk += 8 * (chr & 0x1F);
+    *pblk = b0;
+    *(++pblk) = b1;
+    *(++pblk) = b2;
+    *(++pblk) = b3;
+    *(++pblk) = b4;
+    *(++pblk) = b5;
+    *(++pblk) = b6;
+    *(++pblk) = b7;
     }
 
 /* Process character sequences:
@@ -2775,11 +2805,6 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 23: // 0x17 - DEFINE CHARACTER ETC.
-            /*
-            defchr (data2 & 0xFF, (data2 >> 8) & 0xFF, (data2 >> 16) & 0xFF,
-                (data2 >> 24) & 0xFF, data1 & 0xFF, (data1 >> 8) & 0xFF,
-                (data1 >> 16) & 0xFF, (data1 >> 24) & 0xFF, code & 0xFF);
-            */
 #if DEBUG & 2
             printf ("VDU 0x17: code = 0x%04X, data1 = 0x%08X, data2 = 0x%08X\n",
                 code, data1, data2);
@@ -2794,6 +2819,12 @@ void xeqvdu (int code, int data1, int data2)
                 uint8_t a = (data2 >> 8) & 0xFF;
                 uint8_t b = (data2 >> 16) & 0xFF;
                 cmcflg = (cmcflg & b) ^ a;
+                }
+            else if ( vdu >= 32 )
+                {
+                defchr (vdu, (data2 >> 8) & 0xFF, (data2 >> 16) & 0xFF,
+                    (data2 >> 24) & 0xFF, data1 & 0xFF, (data1 >> 8) & 0xFF,
+                    (data1 >> 16) & 0xFF, (data1 >> 24) & 0xFF, code & 0xFF);
                 }
             break;
 

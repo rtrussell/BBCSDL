@@ -1551,10 +1551,33 @@ void osshut (void *chan)
 		error (189, "Couldn't close file") ;
 }
 
+#ifdef PICO_GUI
+void allocbuf (void)
+    {
+    void *memptr = userRAM;
+	accs = (char*) memptr; memptr += ACCSLEN;		// String accumulator
+	buff = (char*) memptr; memptr += 0x100;		    // Temporary string buffer
+	path = (char*) memptr; memptr += 0x100;		    // File path
+	keystr = (char**) memptr; memptr += 0x100;	    // *KEY strings
+	keybdq = (char*) memptr; memptr += 0x100;	    // Keyboard queue
+	eventq = (int*) memptr; memptr += 0x200;	    // Event queue
+	filbuf[0] = (int*) memptr; memptr += 0x100 * MAX_FILES;	// File buffers
+	szLoadDir = (char*) memptr; memptr += 0x100;
+	szLibrary = (char*) memptr; memptr += 0x100;
+	szUserDir = (char*) memptr; memptr += 0x100;
+	szTempDir = (char*) memptr; memptr += 0x100;    // Strings must be allocated on BASIC's heap
+    usrchr = (char*) memptr;                        // User-defined characters (indirect)
+	szCmdLine = (char*) memptr; memptr += 0x100;    // Must be immediately below default progRAM
+	progRAM = memptr;                               // Will be raised if @cmd$ exceeds 255 bytes
+    }
+#endif
+
 // Start interpreter:
 int entry (void *immediate)
 {
-
+#ifdef PICO_GUI
+    allocbuf ();
+#else
 	accs = (char*) userRAM ;		// String accumulator
 	buff = (char*) accs + ACCSLEN ;		// Temporary string buffer
 	path = (char*) buff + 0x100 ;		// File path
@@ -1562,6 +1585,7 @@ int entry (void *immediate)
 	keybdq = (char*) keystr + 0x100 ;	// Keyboard queue
 	eventq = (void*) keybdq + 0x100 ;	// Event queue
 	filbuf[0] = (eventq + 0x200 / 4) ;	// File buffers n.b. pointer arithmetic!!
+#endif
 
 	farray = 1 ;				// @hfile%() number of dimensions
 	fasize = MAX_PORTS + MAX_FILES + 4 ;	// @hfile%() number of elements
@@ -1935,12 +1959,16 @@ pthread_t hThread = NULL ;
 		userTOP = userRAM + DEFAULT_RAM ;
 	else
 		userTOP = userRAM + MaximumRAM ;
+#ifdef PICO_GUI
+    allocbuf ();
+#else
 	progRAM = userRAM + PAGE_OFFSET ; // Will be raised if @cmd$ exceeds 255 bytes
 	szCmdLine = progRAM - 0x100 ;     // Must be immediately below default progRAM
 	szTempDir = szCmdLine - 0x100 ;   // Strings must be allocated on BASIC's heap
 	szUserDir = szTempDir - 0x100 ;
 	szLibrary = szUserDir - 0x100 ;
 	szLoadDir = szLibrary - 0x100 ;
+#endif
 
 // Get path to executable:
 
