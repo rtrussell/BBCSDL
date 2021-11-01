@@ -1812,20 +1812,35 @@ void sigbus(void){
 static int waitdone=0;
 void waitconsole(void){
 	if(waitdone) return;
-# ifdef STDIO_USB
+#ifndef PICO_GUI
 	printf("Waiting for connection\r\n");
-	while (!tud_cdc_connected()) {
+	const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+	gpio_init(LED_PIN);
+	gpio_set_dir(LED_PIN, GPIO_OUT);
+    int iLED = 0;
+	while (true)
+        {
+        iLED ^= 1;
+	    gpio_put(LED_PIN, iLED);
+#ifdef STDIO_USB
+        if ( tud_cdc_connected() ) break;
+#endif
+#ifdef STDIO_UART       
         unsigned char ch;
         getinp (&ch);
         if ( ch == 0x0D ) break;
+#endif
 		printf(".");
         myPoll ();
 		sleep_ms(1000);
 	}
     printf ("\r\n");
-    if ( tud_cdc_connected() ) stdio_filter_driver (stdio_usb);
-    else stdio_filter_driver (stdio_uart);
-# endif
+    gpio_put(LED_PIN, 0);
+#if defined (STDIO_USB) && defined (STDIO_UART)
+    if ( tud_cdc_connected() ) stdio_filter_driver (&stdio_usb);
+    else stdio_filter_driver (&stdio_uart);
+#endif
+#endif
 	waitdone=1;
 	printf("\r\n");
 }
@@ -1835,7 +1850,7 @@ int main (int argc, char* argv[])
 {
 #ifdef PICO
     stdio_init_all();
-#ifndef DEBUG
+#ifdef DEBUG
 	// Wait for UART connection
 	const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 	gpio_init(LED_PIN);
@@ -1862,6 +1877,7 @@ int main (int argc, char* argv[])
 #ifdef PICO_GUI
     setup_vdu ();
     setup_keyboard ();
+    waitdone = 1;
 #endif
 	mount ();
 #endif

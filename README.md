@@ -85,9 +85,11 @@ Or if using Raspberry Pi serial port, connect as
 
       $ picocom -b 115200 /dev/ttyS0
 
-to use the interpreter.  Note that you may use minicom as well, however,
-minicom will not display color correctly or resize the terminal window
-for the different MODE settings in BBC Basic.
+to use the interpreter. If using a serial connection tap the <Enter> key one or two times
+to initiate the connection. The onboard LED will flash while awaiting connection.
+
+Note that you may use minicom as well, however, minicom will not display color correctly
+or resize the terminal window for the different MODE settings in BBC Basic.
 
 ## Build Instructions - GUI Version
 
@@ -190,6 +192,23 @@ noted:
 * The first user defined character in a block allocates memory for all the characters in the block.
 * The first character block overwrites szCmdLine, which has minimal utility for the Pico.
 * PAGE has to be raised (by 256 bytes per block) if more than block of user defined characters is required.
+
+#### Thumb Assembler
+
+There is a built-in assembler for the ARM v6M instruction set as supported by the Pico.
+By default the assembler uses "Unified" syntax. However including the following pseudo-op
+
+   syntax d
+
+enables the following extensions to the allowed syntax:
+
+* If an opcode takes three arguments and the first and second are the same, then the first may be omitted.
+* If the 's' suffix (indicating affects status flags) is omitted from the opcode, but the parameters are
+  only valid for a status affecting instruction, then that is assumed.
+
+The extensions may be disabled again by specifying:
+
+    syntax u
 
 ### Missing features & Qwerks
 
