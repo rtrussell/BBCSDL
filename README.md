@@ -85,7 +85,7 @@ Or if using Raspberry Pi serial port, connect as
 
       $ picocom -b 115200 /dev/ttyS0
 
-to use the interpreter. If using a serial connection tap the <Enter> key one or two times
+to use the interpreter. If using a serial connection tap the Enter key one or two times
 to initiate the connection. The onboard LED will flash while awaiting connection.
 
 Note that you may use minicom as well, however, minicom will not display color correctly
