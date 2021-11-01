@@ -102,7 +102,7 @@ and PICO_EXTRAS_PATH points to where these are installed. Then type:
 To build for hardware other than a Pico on a VGA Demo Board (assuming the hardware is supported by
 the SDK) use:
 
-     $ cd console/pico
+     $ cd bin/pico
      $ make BOARD=...
 
 Plug a Pico into the USB port while holding the boot button and then assuming developing
