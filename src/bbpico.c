@@ -575,10 +575,17 @@ int osbyte (int al, int xy)
     }
 
 void osword (int al, void *xy)
-{
-	error (255, "Sorry, OSWORD not implemented") ;
-	return ;
-}
+    {
+    if ( al == 4 )
+        {
+		memcpy (xy + 1, &bbcfont[*(unsigned char*)(xy) << 3], 8);
+        }
+    else
+        {
+        error (255, "Sorry, OSWORD function not implemented");
+        }
+	return;
+    }
 
 // ADVAL(n)
 int adval (int n)
