@@ -926,11 +926,13 @@ int setup_vdu (void)
     multicore_launch_core1 (setup_video);
 
     // Do not return until Core 1 has claimed DMA channels
-    uint32_t test =- multicore_fifo_pop_blocking ();
+    uint32_t test = multicore_fifo_pop_blocking ();
+#if DEBUG & 1
     if ( test != VGA_FLAG )
         {
         printf ("Unexpected value 0x%04X from multicore FIFO\n", test);
         }
+#endif
     }
 
 #include <unistd.h>

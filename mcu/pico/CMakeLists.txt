@@ -104,6 +104,7 @@ if (TARGET tinyusb_device)
       )
     target_compile_definitions(bbcbasic PRIVATE -DSTDIO_PICO)
     target_compile_definitions(bbcbasic PRIVATE -DPICO_GUI)
+    target_compile_definitions(bbcbasic PUBLIC -DPICO_PANIC_FUNCTION=message)
     target_compile_definitions(bbcbasic PUBLIC
       -DPICO_SCANVIDEO_MAX_SCANLINE_BUFFER_WORDS=402
       -DPICO_SCANVIDEO_SCANLINE_BUFFER_COUNT=8

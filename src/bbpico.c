@@ -9,6 +9,14 @@
 *       Version 0.36a, 22-Aug-2021                                 *
 \******************************************************************/
 
+#ifndef KBD_STDIN
+#ifdef PICO_GUI
+#define KBD_STDIN   0
+#else
+#define KBD_STDIN   1
+#endif
+#endif
+
 #define _GNU_SOURCE
 #define __USE_GNU
 #include <stdlib.h>
@@ -122,16 +130,18 @@ void *libtop;
 #endif
 
 // Array of VDU command lengths:
-static int vdulen[] = {
+static const int vdulen[] = {
    0,   1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
    0,   1,   2,   5,   0,   0,   1,   9,   8,   5,   0,   1,   4,   4,   0,   2 } ;
 
 // Keycode translation table:
-static unsigned char xkey[64] = {
+#if KBD_STDIN
+static const unsigned char xkey[64] = {
    0, 139, 138, 137, 136,   0, 131,   0, 130,   0,   0,   0,   0,   0,   0,   0,
  145, 146, 147, 148,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
    0,   0, 134, 135,   0, 132, 133,   0,   0,   0,   0,   0,   0,   0,   0, 149,
    0, 150, 151, 152, 153, 154,   0, 155, 156,   0,   0,   0,   0,   0,   0,   0 } ;
+#endif
 
 // Declared in bbcans.c:
 void oscli (char *) ;
@@ -174,6 +184,7 @@ void gfxPrimitivesSetFont(void) { } ;
 void gfxPrimitivesGetFont(void) { } ;
 
 // File scope variables:
+#if KBD_STDIN
 static unsigned char inputq[QSIZE] ;
 static volatile int inpqr = 0, inpqw = 0 ;
 
@@ -227,6 +238,7 @@ static int getinp (unsigned char *pinp)
 	    }
 	return 0 ;
 }
+#endif
 
 #ifdef _WIN32
 #define RTLD_DEFAULT (void *)(-1)
@@ -260,7 +272,7 @@ static DWORD WINAPI myThread (void *parm)
 	return 0 ;
 }
 
-#else
+#elif ! defined(PICO)
 
 void *myThread (void *parm)
 {
@@ -366,7 +378,7 @@ int putkey (char key)
 // Get keycode (if any) from keyboard queue:
 int getkey (unsigned char *pkey)
 {
-#ifdef PICO
+#if defined (PICO) && KBD_STDIN
 	myPoll();
 #endif
 	unsigned char bl = kbdqr ;
@@ -397,6 +409,7 @@ unsigned int GetTicks (void)
 #endif
 }
 
+#if KBD_STDIN
 static int kbchk (void)
 {
 #ifdef PICO
@@ -420,11 +433,13 @@ static int kwait (unsigned int timeout)
 		usleep (1) ;
 	return ready ;
 }
+#endif
 
 // Returns 1 if the cursor position was read successfully or 0 if it was aborted
 // (in which case *px and *py will be unchanged) or if px and py are both NULL.
 int stdin_handler (int *px, int *py)
 {
+#if KBD_STDIN
 	int wait = (px != NULL) || (py != NULL) ;
 	static char report[16] ;
 	static char *p = report, *q = report ;
@@ -499,6 +514,7 @@ int stdin_handler (int *px, int *py)
 		    }
 	    }
 	while (wait || (p != report)) ;
+#endif
 	return 0 ;
 }
 
@@ -681,7 +697,9 @@ size_t guicall (void *func, PARM *parm)
 // Check for Escape (if enabled) and kill:
 void trap (void)
 {
+#if KBD_STDIN
 	stdin_handler (NULL, NULL) ;
+#endif
 
 	if (flags & KILL)
 		error (-1, NULL) ; // Quit
@@ -706,19 +724,6 @@ heapptr xtrap (void)
 	if (flags & ALERT)
 		return getevt () ;
 	return 0 ;
-}
-
-// Report a 'fatal' error:
-void faterr (const char *msg)
-{
-#ifdef PICO
-	extern void waitconsole();
-	waitconsole() ;
-	fprintf (stdout, "%s\r\n", msg) ;
-#else
-	fprintf (stderr, "%s\r\n", msg) ;
-#endif
-	error (256, "") ;
 }
 
 // Read keyboard or F-key expansion:
@@ -1846,6 +1851,24 @@ void waitconsole(void){
 }
 #endif
 
+void syserror (const char *psMsg)
+    {
+#ifdef PICO
+    waitconsole ();
+    text (psMsg);
+    text ("\r\n");
+#else
+	fprintf (stderr, "%s\r\n", msg) ;
+#endif
+    }
+
+// Report a 'fatal' error:
+void faterr (const char *msg)
+{
+    syserror (msg);
+	error (256, "") ;
+}
+
 int main (int argc, char* argv[])
 {
 #ifdef PICO
@@ -1964,13 +1987,7 @@ pthread_t hThread = NULL ;
 
 	if ((userRAM == NULL) || (userRAM == (void *)-1))
 	    {
-#ifdef PICO
-		waitconsole();
-		fprintf(stdout, "Couldn't allocate memory\r\n") ;
-		sleep(5);
-#else
-		fprintf(stderr, "Couldn't allocate memory\r\n") ;
-#endif
+        syserror ("Couldn't allocate memory\r\n");
 		return 9 ;
 	    }
 

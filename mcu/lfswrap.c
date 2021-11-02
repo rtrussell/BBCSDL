@@ -319,7 +319,6 @@ int mymkdir(const char *p, mode_t m)
 #ifdef HAVE_FAT
     if ( isfat (fswpath) )
 	{
-	printf ("mkdir (%s)\n", fswpath);
 	if ( f_mkdir (fat_path (fswpath)) != FR_OK ) return -1;
 	return 0;
 	}
@@ -695,7 +694,7 @@ static struct lfs_config lfs_root_cfg = {
 };
 #endif
 
-extern void waitconsole();
+extern void syserror (const char *psMsg);
 int mount (void)
     {
     int istat = 0;
@@ -716,8 +715,7 @@ int mount (void)
 	lfs_err = lfs_mount(&lfs_root, &lfs_root_cfg);
 	if (lfs_err)
 	    {
-	    waitconsole();
-	    printf("unable to format littlefs\n");
+	    syserror ("Unable to format littlefs.");
 	    istat |= 2;
 	    }
 	}
@@ -727,8 +725,7 @@ int mount (void)
     FRESULT fr = f_mount (&vol, "0:", 1);
     if ( fr != FR_OK )
 	{
-	waitconsole();
-	printf ("Failed to mount SD card.\n");
+	syserror ("Failed to mount SD card.");
 	istat |= 1;
 	}
 #endif

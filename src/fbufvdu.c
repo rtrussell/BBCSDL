@@ -14,19 +14,23 @@
 
 */
 
-//  DEBUG = 0   No output
-//          1   VDU characters
-//          2   Principle primitives
-//          4   Details
-//          8   Filling
-#define DEBUG 1
+//  DEBUG =     0   No diagnostic output
+//              1   VDU characters
+//              2   Principle primitives
+//              4   Details
+//              8   Filling
+#define DEBUG   0
 
-//  REF_MODE =  0   Not implemented
-//              1   Using double buffering
-//              2   Using VDU queue
-//              3   User configurable
+//  REF_MODE =      0   Not implemented
+//                  1   Using double buffering
+//                  2   Using VDU queue
+//                  3   User configurable
 #define REF_MODE    3
 #define REFQ_DEF    1024        // Default length for VDU queue
+
+//  VT100_PRT =     0   No VT100 codes to serial port (printer)
+//                  1   Send VT100 codes to printer
+#define VT100_PRT   0
 
 #define NPLT        3           // Length of plot history
 #define BBC_FONT    1           // Use BBC font
@@ -624,7 +628,9 @@ static void newline (int *px, int *py)
 	if ( bPrint )
         {
         printf ("\n");
+#if VT100_PRT
         if (*px) printf ("\033[%i;%iH", *py + 1, *px + 1);
+#endif
         }
     showcsr ();
     }
@@ -2613,7 +2619,9 @@ void xeqvdu (int code, int data1, int data2)
                 {
                 pltpt[0].x -= 16;
                 hrback ();
+#if VT100_PRT
                 if ( bPrint ) putchar (vdu);
+#endif
                 }
             else
                 {
@@ -2623,20 +2631,29 @@ void xeqvdu (int code, int data1, int data2)
                     if (ycsr == tvt)
                         {
                         scrldn ();
+#if VT100_PRT
                         if ( bPrint ) printf ("\033M");
+#endif
                         }
                     else
                         {
                         ycsr--;
+#if VT100_PRT
                         if ( bPrint ) printf ("\033[%i;%iH", ycsr + 1, xcsr + 1);
+#endif
                         }
                     }
                 else
                     {
                     xcsr--;
+#if VT100_PRT
                     if ( bPrint ) putchar (vdu);
+#endif
                     }
                 }
+#if ! VT100_PRT
+            if ( bPrint ) putchar (vdu);
+#endif
             break;
 
         case 9: // 0x09 - RIGHT
@@ -2656,7 +2673,11 @@ void xeqvdu (int code, int data1, int data2)
                     xcsr++;
                     }
                 }
+#if VT100_PRT
             if ( bPrint ) printf ("\033[C");
+#else
+            if ( bPrint ) putchar (vdu);
+#endif
             break;
 
         case 10: // 0x0A - LINE FEED
@@ -2664,6 +2685,7 @@ void xeqvdu (int code, int data1, int data2)
                 {
                 pltpt[0].y += 2 * pmode->thgt;
                 hrwrap (NULL, NULL);
+                if ( bPrint ) putchar (vdu);
                 }
             else
                 {
@@ -2682,12 +2704,18 @@ void xeqvdu (int code, int data1, int data2)
                 if ( ycsr == tvt ) scrldn ();
                 else --ycsr;
                 }
+#if VT100_PRT
             if ( bPrint ) printf ("\033M");
+#endif
             break;
 
         case 12: // 0x0C - CLEAR SCREEN
             cls ();
+#if VT100_PRT
             if ( bPrint ) printf ("\033[H\033[J");
+#else
+            if ( bPrint ) putchar (vdu);
+#endif
             break;
 
         case 13: // 0x0D - RETURN
@@ -2714,7 +2742,9 @@ void xeqvdu (int code, int data1, int data2)
             if ( pmode->ncbt != 3 )
                 {
                 clrgraph ();
+#if VT100_PRT
                 if ( bPrint ) printf ("\033[H\033[J");
+#endif
                 break;
                 }
 
@@ -2736,6 +2766,7 @@ void xeqvdu (int code, int data1, int data2)
                 printf ("Foreground colour %d\n", fg);
 #endif
                 }
+#if VT100_PRT
             if ( bPrint )
                 {
                 vdu = 30 + (code & 7);
@@ -2745,6 +2776,7 @@ void xeqvdu (int code, int data1, int data2)
                     vdu += 10;
                 printf ("\033[%im", vdu);
                 }
+#endif
             break;
 
         case 18: // 0x12 - GCOL m, n
@@ -2758,6 +2790,7 @@ void xeqvdu (int code, int data1, int data2)
                 gfg = clrmsk (code) | (( data1 >> 16 ) & 0x0700);
                 forgnd = gfg;
                 }
+#if VT100_PRT
             if ( bPrint )
                 {
                 vdu = 30 + (data1 & 7);
@@ -2767,6 +2800,7 @@ void xeqvdu (int code, int data1, int data2)
                     vdu += 10;
                 printf ("\033[%im", vdu);
                 }
+#endif
             break;
 
         case 19: // 0x13 - SET CURPAL
@@ -2793,7 +2827,9 @@ void xeqvdu (int code, int data1, int data2)
 
         case 20: // 0x14 - RESET COLOURS
             clrreset ();
+#if VT100_PRT
             if ( bPrint ) printf ("\033[37m\033[40m");
+#endif
             break;
 
         case 21: // 0x15 - DISABLE VDU DRIVERS
@@ -2860,13 +2896,17 @@ void xeqvdu (int code, int data1, int data2)
             break;
 
         case 30: // 0x1E - CURSOR HOME
+#if VT100_PRT
             if ( bPrint ) printf ("\033[H");
+#endif
             home ();
             break;
 
         case 31: // 0x1F - TAB(X,Y)
             tabxy (data1 >> 24, code & 0xFF);
+#if VT100_PRT
             if ( bPrint ) printf ("\033[%i;%iH", ycsr + 1, xcsr + 1);
+#endif
             break;
 
         case 127: // DEL
@@ -2894,7 +2934,7 @@ void xeqvdu (int code, int data1, int data2)
     }
 
 #if REF_MODE & 2
-void vduflush (void)
+static void vduflush (void)
     {
     char resave = reflag;
     reflag = 2;
