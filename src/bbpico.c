@@ -1873,22 +1873,20 @@ int main (int argc, char* argv[])
 {
 #ifdef PICO
     stdio_init_all();
-#ifdef DEBUG
 	// Wait for UART connection
 	const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 	gpio_init(LED_PIN);
 	gpio_set_dir(LED_PIN, GPIO_OUT);
-	for (int i = 10; i > 0; --i )
+	for (int i = 3; i > 0; --i )
 	    {
-	    printf ("%d seconds to start\n", i);
+	    // printf ("%d seconds to start\n", i);
 	    gpio_put(LED_PIN, 1);
 	    sleep_ms(500);
 	    gpio_put(LED_PIN, 0);
 	    sleep_ms(500);
 	    }
-    printf ("BBC Basic main build " __DATE__ " " __TIME__ "\n");
-    sleep_ms(500);
-#endif
+    // printf ("BBC Basic main build " __DATE__ " " __TIME__ "\n");
+    // sleep_ms(500);
 # ifdef FREE
 	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,sigbus);
 # else
