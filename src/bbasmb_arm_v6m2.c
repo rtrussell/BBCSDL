@@ -193,7 +193,11 @@ static void asmerr (int ierr)
     if ( liston & 0x20 )
         {
         const char *pserr = NULL;
-        if ( ierr > 100 ) pserr = asmmsg[ierr - 101];
+        if ( ierr > 100 )
+            {
+            pserr = asmmsg[ierr - 101];
+            ierr = 16;
+            }
         error (ierr, pserr);
         }
     }

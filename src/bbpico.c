@@ -1864,10 +1864,11 @@ void syserror (const char *psMsg)
 
 // Report a 'fatal' error:
 void faterr (const char *msg)
-{
+    {
+    reset ();
     syserror (msg);
 	error (256, "") ;
-}
+    }
 
 int main (int argc, char* argv[])
 {
