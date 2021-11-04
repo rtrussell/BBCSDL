@@ -26,7 +26,7 @@ if (TARGET tinyusb_device)
     ../../src/bbeval.c
     ../../src/bbccos.c
     ../../src/bbpico.c
-    ../../src/bbasmb_arm_v6m2.c 
+    ../../src/bbasmb_arm_v6m.c 
     ../../mcu/lfswrap.c 
     ../../mcu/m0FaultDispatch/m0FaultDispatch.c
     ../../mcu/fault.c

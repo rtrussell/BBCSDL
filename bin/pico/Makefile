@@ -6,7 +6,7 @@ SOURCES= \
     ../../src/bbccos.c \
     ../../src/bbdata_arm_32.s \
     ../../src/bbpico.c \
-    ../../src/bbasmb_arm_v6m2.c \
+    ../../src/bbasmb_arm_v6m.c \
 	../../src/fbufvdu.c \
 	../../src/sn76489.c \
     ../../mcu/lfswrap.c \
