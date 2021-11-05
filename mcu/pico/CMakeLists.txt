@@ -18,6 +18,10 @@ endif()
 project(bbcbasic C CXX ASM)
 pico_sdk_init()
 
+if ( NOT STDIO )
+  set(STDIO "USB+UART")
+endif()
+
 if (TARGET tinyusb_device)
   add_executable(bbcbasic 
     ../../src/bbdata_arm_32.s
@@ -85,9 +89,13 @@ if (TARGET tinyusb_device)
     target_link_libraries(bbcbasic hardware_dma hardware_pio)
   endif()
 
-  if ( NOT STDIO )
-    set(STDIO "USB+UART")
+  if ( ${LFS} OR ${FAT} )
+    target_compile_definitions(bbcbasic PRIVATE -DHAVE_DEV)
+    if ( NOT ( ${STDIO} STREQUAL "PICO" ))
+      target_sources(bbcbasic PRIVATE ../../mcu/pico/picoser.c)
+    endif()
   endif()
+  
   if ( ${STDIO} STREQUAL "PICO" )
     message(STATUS "BBC Basic console I/O will be on USB keyboard and VGA screen")
     pico_enable_stdio_usb(bbcbasic 0)
@@ -104,9 +112,6 @@ if (TARGET tinyusb_device)
       )
     target_compile_definitions(bbcbasic PRIVATE -DSTDIO_PICO)
     target_compile_definitions(bbcbasic PRIVATE -DPICO_GUI)
-    if ( ${LFS} OR ${FAT})
-      target_compile_definitions(bbcbasic PRIVATE -DHAVE_DEV)
-    endif ()
     
     target_compile_definitions(bbcbasic PUBLIC -DPICO_PANIC_FUNCTION=message)
     target_compile_definitions(bbcbasic PUBLIC

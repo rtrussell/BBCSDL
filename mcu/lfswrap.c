@@ -5,6 +5,16 @@
     This is free software released under the exact same terms as
     stated in license.txt for the Basic interpreter.  */
 
+#define DEBUG   0
+#if DEBUG
+#ifdef PICO_GUI
+#define dbgmsg message
+void message (const char *psFmt, ...);
+#else
+#define dbgmsg printf
+#endif
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,16 +31,32 @@ lfs_bbc_t lfs_root_context;
 #define SDMLEN	( strlen (SDMOUNT) + 1 )
 #endif
 #if defined(HAVE_DEV)
+#include "sconfig.h"
+#ifndef PICO_GUI
+#include "bbuart.h"
+#endif
 #define DEVMOUNT "dev"      // Device mount point
 #define DEVMLEN ( strlen (DEVMOUNT) + 1 )
 
+static bool parse_sconfig (const char *ps, SERIAL_CONFIG *sc);
+
 typedef enum {
+#if defined(PICO_GUI)
     didStdio,
+#elif defined(PICO)
+    didUart0,
+    didUart1,
+#endif
     didCount
     } DEVID;
 
 static const char *psDevName[] = {
+#if defined(PICO_GUI)
     "serial",       // didStdio
+#elif defined(PICO)
+    "uart0",        // didUart0
+    "uart1",        // didUart1
+#endif
     };
 #endif
 
@@ -422,6 +448,9 @@ FILE *myfopen (char *p, char *mode)
     FILE *fp = (FILE *) malloc (sizeof (multi_file));
     if ( fp == NULL ) return NULL;
     myrealpath (p, fswpath);
+#if DEBUG
+    dbgmsg ("fopen (%s, %s)\r\n", fswpath, mode);
+#endif
     FSTYPE fst = pathtype (fswpath);
     set_filetype (fp, fst);
 #ifdef HAVE_DEV
@@ -430,10 +459,30 @@ FILE *myfopen (char *p, char *mode)
         const char *psDev = dev_path (fswpath) + 1;
         for (int did = 0; did < didCount; ++did)
             {
-            if ( ! strcmp (psDev, psDevName[did]) )
+            if ( ! strncmp (psDev, psDevName[did], strlen (psDevName[did])) )
                 {
                 set_devid (fp, did);
-                return fp;
+                SERIAL_CONFIG sc;
+                if ( parse_sconfig (psDev + strlen (psDevName[did]), &sc) )
+                    {
+                    switch (did)
+                        {
+#if defined(PICO_GUI)
+                        case didStdio:
+                            if ( sc.baud > 0 ) uart_set_baudrate (uart_default, sc.baud);
+                            uart_set_format (uart_default, sc.data, sc.stop, sc.parity);
+                            return fp;
+#elif defined(PICO)
+                        case didUart0:
+                            if ( uopen (0, &sc) ) return fp;
+                            break;
+                        case didUart1:
+                            if ( uopen (1, &sc) ) return fp;
+                            break;
+#endif
+                        }
+                    }
+                break;
                 }
             }
         }
@@ -489,28 +538,53 @@ FILE *myfopen (char *p, char *mode)
 
 int myfclose (FILE *fp)
     {
+#if DEBUG
+    dbgmsg ("fclose (%p)\r\n", fp);
+#endif
+    int err = 0;
     FSTYPE fst = get_filetype (fp);
+#ifdef HAVE_DEV
+    if ( fst == fstDEV )
+        {
+        switch (get_devid (fp))
+            {
+#if defined(PICO_GUI)
+            case didStdio:
+                break;
+#elif defined(PICO)
+            case didUart0:
+                uclose (0);
+                break;
+            case didUart1:
+                uclose (1);
+                break;
+#endif
+            }
+        }
+#endif
 #ifdef HAVE_FAT
     if ( fst == fstFAT )
         {
         FRESULT fr = f_close (fatptr (fp));
-        free (fp);
-        return ( fr != FR_OK ) ? -1 : 0;
+        err = ( fr != FR_OK ) ? -1 : 0;
         }
 #endif
 #ifdef HAVE_LFS
     if ( fst == fstLFS )
         {
         int r = lfs_file_close (&lfs_root, lfsptr (fp));
-        free (fp);
-        return ( r < 0 ) ? -1 : 0;
+        err = ( r < 0 ) ? -1 : 0;
         }
 #endif
-    return 0;
+    free (fp);
+    return err;
     }
 
 size_t myfread (void *ptr, size_t size, size_t nmemb, FILE *fp)
     {
+#if DEBUG
+    dbgmsg ("fread (%p, %d, %d, %p)\r\n", ptr, size, nmemb, fp);
+#endif
     if (fp == stdin)
         {
 #undef fread
@@ -523,8 +597,15 @@ size_t myfread (void *ptr, size_t size, size_t nmemb, FILE *fp)
         {
         switch (get_devid (fp))
             {
+#if defined(PICO_GUI)
             case didStdio:
                 return fread (ptr, size, nmemb, stdin);
+#elif defined(PICO)
+            case didUart0:
+                return uread (ptr, size, nmemb, 0);
+            case didUart1:
+                return uread (ptr, size, nmemb, 1);
+#endif
             default:
                 return 0;
             }
@@ -573,6 +654,9 @@ size_t myfread (void *ptr, size_t size, size_t nmemb, FILE *fp)
 
 size_t myfwrite (void *ptr, size_t size, size_t nmemb, FILE *fp)
     {
+#if DEBUG
+    dbgmsg ("fwrite (%p, %d, %d, %p)\r\n", ptr, size, nmemb, fp);
+#endif
     if (fp == stdout || fp == stderr)
         {
 #undef fwrite
@@ -585,8 +669,15 @@ size_t myfwrite (void *ptr, size_t size, size_t nmemb, FILE *fp)
         {
         switch (get_devid (fp))
             {
+#if defined(PICO_GUI)
             case didStdio:
                 return fwrite (ptr, size, nmemb, stdout);
+#elif defined(PICO)
+            case didUart0:
+                return uwrite (ptr, size, nmemb, 0);
+            case didUart1:
+                return uwrite (ptr, size, nmemb, 1);
+#endif
             default:
                 return 0;
             }
@@ -842,3 +933,88 @@ int mount (void)
 #endif
     return istat;
     }
+
+#ifdef HAVE_DEV
+static bool parse_sconfig (const char *ps, SERIAL_CONFIG *sc)
+    {
+    static const char *psPar[] = { "baud", "parity", "data", "stop", "tx", "rx", "cts", "rts"};
+    int iPar = 0;
+    memset (sc, -1, sizeof (SERIAL_CONFIG));
+#if DEBUG
+    dbgmsg ("parse_config (%s)\r\n", ps);
+#endif
+    if ( *ps == '.' ) ++ps;
+    while (*ps)
+        {
+        while (*ps == ' ') ++ps;
+        if (( *ps == '\0' ) || ( *ps == '.' )) break;
+#if DEBUG
+        dbgmsg ("ps = %s\r\n", ps);
+#endif
+        const char *ps1 = ps;
+        while (true)
+            {
+            if (*ps == '=')
+                {
+                int n = ps - ps1;
+#if DEBUG
+                dbgmsg ("n = %d\r\n", n);
+#endif
+                iPar = -1;
+                for (int i = 0; i < sizeof (psPar) / sizeof (psPar[0]); ++i)
+                    {
+                    if (( n == strlen (psPar[i]) ) && ( ! strncasecmp (ps1, psPar[i], n) ))
+                        {
+                        iPar = i;
+                        break;
+                        }
+                    }
+#if DEBUG
+                dbgmsg ("keyword = %d\r\n", iPar);
+#endif
+                if ( iPar < 0 ) return false;
+                ps1 = ps + 1;
+                }
+            else if ((*ps == '\0' ) || (*ps == ' ') || (*ps == '.'))
+                {
+#if DEBUG
+                dbgmsg ("parameter = %d\r\n", iPar);
+#endif
+                if ( iPar == 1 )
+                    {
+                    if (( *ps1 == 'N' ) || ( *ps1 == 'n' )) sc->parity = UART_PARITY_NONE;
+                    else if (( *ps1 == 'E' ) || ( *ps1 == 'e' )) sc->parity = UART_PARITY_EVEN;
+                    else if (( *ps1 == 'O' ) || ( *ps1 == 'o' )) sc->parity = UART_PARITY_ODD;
+                    else return false;
+                    }
+                else
+                    {
+                    int n = 0;
+                    while (ps1 < ps)
+                        {
+                        if ((*ps1 < '0') || (*ps1 > '9')) return false;
+                        n = 10 * n + *ps1 - '0';
+                        ++ps1;
+                        }
+                    ((int *)(&sc->baud))[iPar] = n;
+#if DEBUG
+                    dbgmsg ("iPar = %d, n = %d\r\n", iPar, n);
+#endif
+                    }
+                ++iPar;
+                ++ps;
+                break;
+                }
+            ++ps;
+            }
+        }
+    if ( sc->data < 0 ) sc->data = 8;
+    if ( sc->stop < 0 ) sc->stop = 1;
+    if ( sc->parity < 0 ) sc->parity = UART_PARITY_NONE;
+#if DEBUG
+    dbgmsg ("sconfig (%d, %d, %d, %d, %d, %d, %d, %d)\r\n", sc->baud, sc->parity, sc->data, sc->stop,
+        sc->tx, sc->rx, sc->cts, sc->rts);
+#endif
+    return true;
+    }
+#endif

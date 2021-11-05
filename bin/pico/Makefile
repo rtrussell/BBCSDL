@@ -25,10 +25,12 @@ SOURCES= \
 	../../mcu/pico_gui/framebuffer.S \
 	../../include/BBC.h \
 	../../include/version.h \
+	../../include/bbccon.h \
 	../../include/mcu/lfsmcu.h \
 	../../include/mcu/ffconf.h \
 	../../include/mcu/lfswrap.h \
-	../../include/bbccon.h \
+	../../include/mcu/sconfig.h \
+	../../include/mcu/bbuart.h \
 	../../mcu/fatfs/ff.h \
 	../../mcu/fatfs/diskio.h \
 	../../mcu/pico/sd_spi.pio \

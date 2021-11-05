@@ -77,6 +77,8 @@ on a Raspberry Pi with Raspberry Pi OS:
 
 Repeat the process for filesystem.uf2
 
+### Usage Notes
+
 If using USB, connect as
 
       $ picocom /dev/ttyACM0
@@ -90,6 +92,57 @@ to initiate the connection. The onboard LED will flash while awaiting connection
 
 Note that you may use minicom as well, however, minicom will not display color correctly
 or resize the terminal window for the different MODE settings in BBC Basic.
+
+#### File system
+
+Files are loaded from and saved to the Pico Flash memory. The standard BBC Basic commands may
+be used to navigate the folder structure.
+
+If SD card support has been included (which requires a custom build using cmake) then the
+contents of the SD card appear under the /sdcard folder. A SD or SDHC card may be used and
+it should be FAT formatted.
+
+#### Thumb Assembler
+
+There is a built-in assembler for the ARM v6M instruction set as supported by the Pico.
+By default the assembler uses "Unified" syntax. However including the following pseudo-op
+
+   syntax d
+
+enables the following extensions to the allowed syntax:
+
+* If an opcode takes three arguments and the first and second are the same, then the first may be omitted.
+* If the 's' suffix (indicating affects status flags) is omitted from the opcode, but the parameters are
+  only valid for a status affecting instruction, then that is assumed.
+
+The extensions may be disabled again by specifying:
+
+    syntax u
+
+#### Serial Input and Output
+
+The two Pico inbuilt serial devices appear in the filesystem as /dev/uart0 and /dev/uart1.
+A serial port may be opened using a command of the form:
+
+   port% = OPENUP("/dev/uart0.baud=9600 parity=N data=8 stop=1 tx=0 rx=1 cts=2 rts=3")
+
+Any of the pin numbers (tx, rx, cts, rts) may be omitted in which case that pin will not
+be connected. This enables transmit only, or receive only connections, and connections
+without flow control.
+
+If not specified, the following defaults are assumed: parity=N data=8 stop=1.
+
+The baud rate must be specified.
+
+If keyword=value format is used then the parameters may be given in any order. Alternately
+the keyword and equals sign may be omitted in which case the parameters must be in the order
+shown above.
+
+Note: Contrary to the BBC Basic documentation commas must not be used between the parameters.
+
+If the BBC Basic user interface is connected via USB, then either serial interface may be used.
+If the user interface is connected via a serial connection, then do not open that interface
+(/dev/uart0 for a bare Pico, /dev/uart1 for a Pico on VGA Demo board).
 
 ## Build Instructions - GUI Version
 
@@ -193,22 +246,34 @@ noted:
 * The first character block overwrites szCmdLine, which has minimal utility for the Pico.
 * PAGE has to be raised (by 256 bytes per block) if more than block of user defined characters is required.
 
+#### Serial Input and Output
+
+The only option for connecting the VGA demo board to other devices is the serial port. There are
+two ways of using this:
+
+* The VDU driver uses the serial port for printer output.
+* The serial port is available as /dev/serial.
+
+The serial port may be opened for input or output as:
+
+   port% = OPENUP ("/dev/serial.")
+
+It defaults to the standard 115200 baud, no parity, 8 data bits, 1 stop bit. Other formats may
+be specified by using a statement of the form:
+
+   port% = OPENUP("/dev/serial.baud=9600 parity=N data=8 stop=1")
+
+If any of the parameters are omitted then the default values will be used.
+
+If keyword=value format is used then the parameters may be given in any order. Alternately
+the keyword and equals sign may be omitted in which case the parameters must be in the order
+shown above.
+
+Note: Contrary to the BBC Basic documentation commas must not be used between the parameters.
+
 #### Thumb Assembler
 
-There is a built-in assembler for the ARM v6M instruction set as supported by the Pico.
-By default the assembler uses "Unified" syntax. However including the following pseudo-op
-
-   syntax d
-
-enables the following extensions to the allowed syntax:
-
-* If an opcode takes three arguments and the first and second are the same, then the first may be omitted.
-* If the 's' suffix (indicating affects status flags) is omitted from the opcode, but the parameters are
-  only valid for a status affecting instruction, then that is assumed.
-
-The extensions may be disabled again by specifying:
-
-    syntax u
+As per the console version above.
 
 ### Missing features & Qwerks
 

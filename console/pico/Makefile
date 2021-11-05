@@ -12,12 +12,15 @@ SOURCES= \
     ../../mcu/fault.c \
     ../../mcu/pico/sympico.c \
 	../../mcu/pico/sympico.i \
+    ../../mcu/pico/picoser.c \
 	../../include/BBC.h \
 	../../include/version.h \
+	../../include/bbccon.h \
 	../../include/mcu/lfsmcu.h \
 	../../include/mcu/ffconf.h \
 	../../include/mcu/lfswrap.h \
-	../../include/bbccon.h \
+	../../include/mcu/sconfig.h \
+	../../include/mcu/bbuart.h \
 	../../mcu/pico/bbc_pico.ld
 
 all: bbcbasic filesystem

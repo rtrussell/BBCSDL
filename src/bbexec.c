@@ -1237,7 +1237,7 @@ VAR xeq (void)
 	    {
 #ifdef PICO
 		if((&al < (signed char *)libtop + 0x800) && (&al >= (signed char *)userRAM))
-			error(0, "Recursion too deep!");
+			error(0, "Processor stack too deep!");
 #endif
 	 	if (flags & (KILL + PAUSE + ALERT + ESCFLG))
 		    {
