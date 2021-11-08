@@ -4857,6 +4857,7 @@ void assemble (void)
                         instruction = 0xd503201f;       // C6.2.81
                         instruction |= (17 << 5) ;       // C6.2.196
                         }
+			break;
 
                     case XPACD:
                         {
