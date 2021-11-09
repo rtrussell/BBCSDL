@@ -984,7 +984,7 @@ VAR item (void)
 {
 	VAR v ;
 	signed char al = nxt () ;
-#ifdef PICO
+#if PICO_STACK_CHECK & 0x02
     if((&al < (signed char *)libtop + 0x800) && (&al >= (signed char *)userRAM))
         {
         error(0, "Processor stack too deep!");

@@ -1028,7 +1028,11 @@ uint8_t *singlebuf (void)
     printf ("singlebuf\n");
 #endif
     if ( shadowbuf != vbuffer[0] ) swapbuf ();
-    if ( libtop == (void *)vidtop ) libtop = vbuffer[1];
+    if ( libtop == (void *)vidtop )
+        {
+        libtop = vbuffer[1];
+        oshwm (libtop, 0);
+        }
     shadowbuf = vbuffer[0];
     vidtop = shadowbuf + bufsize ();
     return shadowbuf;
@@ -1053,30 +1057,30 @@ uint8_t *doublebuf (void)
             printf ("doublebuf: Using buffer 1\n");
 #endif
 #if DBUF_MODE == 1
-            int nfree = (int)(libase - himem);
-            if ( nfree >= nbyt )
+            vbuffer[1] = (uint8_t *)(((int)himem + 3) & 0xFFFFFFFC);
+            int nfree = (uint8_t *)libase - vbuffer[1];
+            if ( nfree < nbyt )
                 {
-#if DEBUG & 4
-                printf ("doublebuf: buffer 1 between himem and libase\n");
-#endif
-                vbuffer[1] = (uint8_t *)himem;
-                }
-            else
-                {
-                vbuffer[1] = (uint8_t *)(((int)libtop + 3) & 0xFFFFFFFC);
+                if ( libase > 0 )
+                    vbuffer[1] = (uint8_t *)(((int)libtop + 3) & 0xFFFFFFFC);
                 nfree = (uint8_t *)(&nbyt) - vbuffer[1] - 0x800;
 #if DEBUG & 4
-                printf ("doublebuf: nbyt = 0x%04X, nfree = 0x%04X, vbuffer[1] = %p\n",
-                    nbyt, nfree, vbuffer[1]);
+                printf ("doublebuf: nbyt = 0x%04X, nfree = 0x%04X, vbuffer[1] = %p, stack = %p\n",
+                    nbyt, nfree, vbuffer[1], &nbyt);
 #endif
-                if ( nbyt > nfree )
+                if ( nbyt + 0x280 > nfree )
                     {
                     error (255, "No room for refresh buffer");
                     }
                 libtop = (void *)(vbuffer[1] + nbyt);
-                // if ( oshwm ((void *)(vbuffer[1] + nbyt), 2) == 0 )
-                //    error (255, "oshwm failed");
+                oshwm (libtop, 0);
                 }
+#if DEBUG & 4
+            else
+                {
+                printf ("doublebuf: buffer 1 between himem and libase\n");
+                }
+#endif
 #endif
             hidecsr ();
             shadowbuf = vbuffer[1];
@@ -1097,6 +1101,7 @@ uint8_t *doublebuf (void)
 
 const char *checkbuf (void)
     {
+#if STACK_CHECK & 3
 #if DBUF_MODE == 1
     static const char sErr2[] = "Stack collided with refresh buffer";
     if ( shadowbuf == vbuffer[1] )
@@ -1126,6 +1131,7 @@ const char *checkbuf (void)
 #endif
 #if DEBUG & 4
     printf ("checkbuf: NULL\n");
+#endif
 #endif
     return NULL;
     }

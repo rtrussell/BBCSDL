@@ -70,6 +70,7 @@ static void vduqueue (int code, int data1, int data2);
 static void vduflush (void);
 static void vduqinit (void);
 static void vduqterm (void);
+heapptr oshwm (void *addr, int settop);
 #endif
 #if REF_MODE == 3
 enum { rfmNone, rfmBuffer, rfmQueue } rfm = rfmNone;
@@ -2974,23 +2975,38 @@ static void vduqueue (int code, int data1, int data2)
 
 static void vduqinit (void)
     {
-    if (( libase > 0 ) && ( (himem - libase) >= 12 * nRefQue + 4))
+    void *sp = &sp;
+    if ( libase - himem >= 12 * nRefQue + 4)
         {
         vduqbot = (int *)(((int)himem + 3) & 0xFFFFFFFC);
         vduqtop = vduqbot + nRefQue;
         }
     else
         {
-        vduqbot = (int *)(((int)libtop + 3) & 0xFFFFFFFC);
+        if ( libase == 0 ) vduqbot = himem;
+        else vduqbot = libtop;
+        vduqbot = (int *)(((int)vduqbot + 3) & 0xFFFFFFFC);
         vduqtop = vduqbot + nRefQue;
-        libtop = vduqtop;
+        if ( (void *)vduqtop + 0x280 < sp )
+            {
+            libtop = vduqtop;
+            oshwm (libtop, 0);
+            }
+        else
+            {
+            error (255, "No room for refresh buffer");
+            }
         }
     }
 
 static void vduqterm (void)
     {
     vduflush ();
-    libtop = vduqbot;
+    if ( libtop == vduqtop )
+        {
+        libtop = vduqbot;
+        oshwm (libtop, 0);
+        }
     }
 #endif
 

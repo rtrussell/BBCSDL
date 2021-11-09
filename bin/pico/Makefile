@@ -3,6 +3,7 @@ SOURCES= \
     ../../src/bbmain.c \
     ../../src/bbexec.c \
     ../../src/bbeval.c \
+    ../../src/bbeval2.c \
     ../../src/bbccos.c \
     ../../src/bbdata_arm_32.s \
     ../../src/bbpico.c \
@@ -15,6 +16,7 @@ SOURCES= \
     ../../mcu/pico/sympico.c \
 	../../mcu/pico/sympico.i \
 	../../mcu/pico/pico_snd.c \
+	../../mcu/pico/stack_trap.c \
 	../../mcu/fatfs/ff.c \
 	../../mcu/fatfs/ffsystem.c \
 	../../mcu/fatfs/ffunicode.c \
@@ -45,7 +47,8 @@ build/Makefile: ../../mcu/pico/CMakeLists.txt
 	rm -rf build
 	mkdir -p build
 	cd build && PICO_SDK_PATH=$(PICO_SDK_PATH) \
-		cmake -DPICO_BOARD=$(BOARD) -DSTDIO=PICO -DLFS=Y -DFAT=Y -DSOUND=Y -S ../../../mcu/pico -B .
+		cmake -DPICO_BOARD=$(BOARD) -DSTDIO=PICO -DLFS=Y -DFAT=Y -DSOUND=Y -DSTACK_CHECK=4 \
+			-S ../../../mcu/pico -B .
 
 bbcbasic.uf2: build/Makefile $(SOURCES)
 	cd build && make

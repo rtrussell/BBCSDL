@@ -62,6 +62,9 @@ BOOL WINAPI K32EnumProcessModules (HANDLE, HMODULE*, DWORD, LPDWORD) ;
 #include <pico/bootrom.h>
 #include <pico/stdlib.h>
 #include <pico/time.h>
+#if PICO_STACK_CHECK & 0x04
+#include <hardware/structs/mpu.h>
+#endif
 #ifdef STDIO_USB
 #include "tusb.h"
 #endif
@@ -1243,19 +1246,79 @@ int oscall (int addr)
 	return 0 ;
 }
 
+#if PICO_STACK_CHECK & 0x04
+uintptr_t   stk_guard = 0;
+
+static void install_stack_guard (void *stack_bottom)
+    {
+    if ( stack_bottom == NULL )
+        {
+        mpu_hw->ctrl = 0; // Disable mpu
+        stk_guard = 0;
+        }
+    else
+        {
+        // the minimum we can protect is 32 bytes on a 32 byte boundary, so round up which will
+        // just shorten the valid stack range a tad
+        stk_guard = ((uintptr_t) stack_bottom + 95u) & ~31u;
+        printf ("stk_guard = %p\n", stk_guard);
+
+        // mask is 1 bit per 32 bytes of the 256 byte range... clear the bit for the segment we want
+        uint32_t subregion_select = 0xff0000ffu << ((stk_guard >> 5u) & 7u);
+        mpu_hw->ctrl = 5; // enable mpu with background default map
+        mpu_hw->rbar = (stk_guard & (uint)~0xff) | 0x10 | 0; // region 0
+        mpu_hw->rasr = 1 // enable region
+            | (0x7 << 1) // size 2^(7 + 1) = 256
+            | (subregion_select & 0xff00)
+            | 0x10000000; // XN = disable instruction fetch; no other bits means no permissions
+        mpu_hw->rbar = (stk_guard & (uint)~0xff) + 0x100 | 0x10 | 1; // region 1
+        mpu_hw->rasr = 1 // enable region
+            | (0x7 << 1) // size 2^(7 + 1) = 256
+            | 0x10000000; // XN = disable instruction fetch; no other bits means no permissions
+        mpu_hw->rbar = (stk_guard & (uint)~0xff) + 0x200 | 0x10 | 2; // region 2 - 512 bytes higher
+        if ( stk_guard & 0xE0 )
+            {
+            mpu_hw->rasr = 1 // enable region
+                | (0x7 << 1) // size 2^(7 + 1) = 256
+                | ((subregion_select >> 16 ) & 0xff00)
+                | 0x10000000; // XN = disable instruction fetch; no other bits means no permissions
+            }
+        else
+            {
+            mpu_hw->rasr = 0; // disable region
+            }
+        }
+    uint32_t nrgn = mpu_hw->type;
+    printf ("type = 0x%08X, ctrl = 0x%08X\n", nrgn, mpu_hw->ctrl);
+    nrgn = ( nrgn >> 8 ) & 0xFF;
+    for (int i = 0; i < nrgn; ++i)
+        {
+        mpu_hw->rnr = i;
+        printf ("rbar = 0x%08X, rasr = 0x%08X\n", mpu_hw->rbar, mpu_hw->rasr);
+        }
+    }
+#endif
+
 // Request memory allocation above HIMEM:
 heapptr oshwm (void *addr, int settop)
-{
+    {
+#if PICO_STACK_CHECK & 0x04
+    printf ("oshwm (%p, %d)\n", addr, settop);
+    install_stack_guard (addr);
+#endif
 #ifdef _WIN32
 	if ((addr < userRAM) ||
 	    (addr > (userRAM + MaximumRAM)) ||
-	    (NULL == VirtualAlloc (userRAM, addr - userRAM,
-			MEM_COMMIT, PAGE_EXECUTE_READWRITE)))
+            (NULL == VirtualAlloc (userRAM, addr - userRAM,
+                MEM_COMMIT, PAGE_EXECUTE_READWRITE)))
 		return 0 ;
 #else
 	if ((addr < userRAM) ||
 	    (addr > (userRAM + MaximumRAM)))
+        {
+        printf ("Above MaximumRAM = %p\n", userRAM + MaximumRAM);
 		return 0 ;
+        }
 #endif
 	else
 	    {
@@ -1263,7 +1326,7 @@ heapptr oshwm (void *addr, int settop)
 			userTOP = addr ;
 		return (size_t) addr ;
 	    }
-}
+    }
 
 // Get a file context from a channel number:
 static FILE *lookup (void *chan)
@@ -1623,6 +1686,7 @@ int entry (void *immediate)
 		crlf () ;
 	    }
 
+    oshwm (userTOP, 0);
 	return basic (progRAM, userTOP, immediate) ;
 }
 
@@ -1847,7 +1911,6 @@ void waitconsole(void){
 #endif
 #endif
 	waitdone=1;
-	printf("\r\n");
 }
 #endif
 
@@ -1888,12 +1951,15 @@ int main (int argc, char* argv[])
 	    }
     // printf ("BBC Basic main build " __DATE__ " " __TIME__ "\n");
     // sleep_ms(500);
-# ifdef FREE
+#if PICO_STACK_CHECK & 0x04
+	extern void __attribute__((used,naked)) stack_trap(void);
+	exception_set_exclusive_handler(HARDFAULT_EXCEPTION, stack_trap);
+#elif defined(FREE)
 	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,sigbus);
-# else
+#else
 	extern void __attribute__((used,naked)) HardFault_Handler(void);
 	exception_set_exclusive_handler(HARDFAULT_EXCEPTION,HardFault_Handler);
-# endif
+#endif
 	char *cmdline[]={"/autorun.bbc",0};
 	argc=1; argv=cmdline;
 #ifdef PICO_GUI
@@ -2177,9 +2243,11 @@ pthread_t hThread = NULL ;
 		SetConsoleMode (GetStdHandle(STD_INPUT_HANDLE), orig_stdin) ;
 #else
 # ifdef PICO
+#ifndef PICO_GUI
 	printf ("\033[0m\033[!p") ;
 	printf ("\nExiting with code %d...rebooting...\n",
 		exitcode);
+#endif
 	watchdog_reboot(0,0,50);
     for(;;) sleep(5);
 # else

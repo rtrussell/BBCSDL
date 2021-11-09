@@ -27,15 +27,24 @@ if (TARGET tinyusb_device)
     ../../src/bbdata_arm_32.s
     ../../src/bbmain.c
     ../../src/bbexec.c
-    ../../src/bbeval.c
     ../../src/bbccos.c
     ../../src/bbpico.c
     ../../src/bbasmb_arm_v6m.c 
     ../../mcu/lfswrap.c 
-    ../../mcu/m0FaultDispatch/m0FaultDispatch.c
     ../../mcu/fault.c
     ../../mcu/pico/sympico.c
     )
+  if (${MIN_STACK})
+    target_sources(bbcbasic PRIVATE ../../src/bbeval2.c)
+  else()
+    target_sources(bbcbasic PRIVATE ../../src/bbeval.c)
+  endif()
+  if (${STACK_CHECK} GREATER_EQUAL 4)
+    target_sources(bbcbasic PRIVATE ../../mcu/pico/stack_trap.c)
+  else()
+    target_sources(bbcbasic PRIVATE ../../mcu/m0FaultDispatch/m0FaultDispatch.c)
+  endif()
+      
   pico_set_printf_implementation(bbcbasic compiler)
   target_compile_options(bbcbasic PRIVATE -O1 -g)
   target_link_options(bbcbasic PRIVATE -g)
@@ -46,6 +55,7 @@ if (TARGET tinyusb_device)
     pico_printf_headers
     )
   target_compile_definitions(bbcbasic PUBLIC PICO)
+  target_compile_definitions(bbcbasic PUBLIC PICO_STACK_CHECK=${STACK_CHECK})
   target_include_directories(bbcbasic PRIVATE
     ../../include
     ../../include/mcu

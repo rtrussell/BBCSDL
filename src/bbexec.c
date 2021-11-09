@@ -1235,7 +1235,7 @@ VAR xeq (void)
 	void *tmpesi ;
 	while (1) // for each statement
 	    {
-#ifdef PICO
+#if PICO_STACK_CHECK & 0x01
 		if((&al < (signed char *)libtop + 0x800) && (&al >= (signed char *)userRAM))
 			error(0, "Processor stack too deep!");
 #endif
@@ -1913,10 +1913,6 @@ VAR xeq (void)
 					fnptr[0] = 0 ;
 #ifdef PICO
 					libtop = n ;
-                    }
-                else if (libase == 0)
-                    {
-                    libtop = n;
 #endif
 				    }
 				}
