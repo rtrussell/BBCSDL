@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.25a, 21-Aug-2021                                *
+*       Version 1.26a, 08-Nov-2021                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -44,6 +44,10 @@ jmp_buf env ;
 #ifdef __llvm__
 signed char *esi ;		// Program pointer
 heapptr *esp ;			// Stack pointer
+#endif
+
+#ifdef PICO
+void *libtop ;			// For stack overflow checking
 #endif
 
 // List of immediate mode commands:

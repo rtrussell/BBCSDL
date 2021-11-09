@@ -6,6 +6,7 @@
 *       bbasmb_arm_64.c: Simple ARM 4 assembler                   *
 *       Version 0.01, 27 May 2021                                 *
 *       Version 0.02, 12 Jul 2021                                 *
+*       Version 0.03, 08 Nov 2021                                 *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -4857,6 +4858,7 @@ void assemble (void)
                         instruction = 0xd503201f;       // C6.2.81
                         instruction |= (17 << 5) ;       // C6.2.196
                         }
+                        break;
 
                     case XPACD:
                         {
