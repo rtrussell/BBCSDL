@@ -2527,6 +2527,485 @@ static void defchr (uint8_t chr, uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3,
    Successive parameter bytes then effectively push earlier
    parameters further down the above list.
 */
+
+void xeqvdu (int code, int data1, int data2);
+
+// 0x00 - NULL
+static void vdu_0 (int code, int data1, int data2)
+    {
+    return;
+    }
+            
+// 0x01 - Next character to printer only
+static void vdu_1 (int code, int data1, int data2)
+    {
+    putchar (code & 0xFF);
+    return;
+    }
+            
+// 0x02 - PRINTER ON
+static void vdu_2 (int code, int data1, int data2)
+    {
+    bPrint = true;
+    return;
+    }
+
+// 0x03 - PRINTER OFF
+static void vdu_3 (int code, int data1, int data2)
+    {
+    bPrint = false;
+    return;
+    }
+
+// 0x04 - LO-RES TEXT
+static void vdu_4 (int code, int data1, int data2)
+    {
+    vflags &= ~HRGFLG;
+    return;
+    }
+
+// 0x05 - HI-RES TEXT
+static void vdu_5 (int code, int data1, int data2)
+    {
+    vflags |= HRGFLG;
+    return;
+    }
+
+// 0x06 - ENABLE VDU DRIVERS
+static void vdu_6 (int code, int data1, int data2)
+    {
+    vflags &= ~VDUDIS;
+    return;
+    }
+
+// 0x07 - BELL
+static void vdu_7 (int code, int data1, int data2)
+    {
+    if ( bPrint ) putchar (0x07);
+    return;
+    }
+
+// 0x08 - LEFT
+static void vdu_8 (int code, int data1, int data2)
+    {
+    if ( vflags & HRGFLG )
+        {
+        pltpt[0].x -= 16;
+        hrback ();
+#if VT100_PRT
+        if ( bPrint ) putchar (0x08);
+#endif
+        }
+    else
+        {
+        if (xcsr == tvl)
+            {
+            xcsr = tvr;
+            if (ycsr == tvt)
+                {
+                scrldn ();
+#if VT100_PRT
+                if ( bPrint ) printf ("\033M");
+#endif
+                }
+            else
+                {
+                ycsr--;
+#if VT100_PRT
+                if ( bPrint ) printf ("\033[%i;%iH", ycsr + 1, xcsr + 1);
+#endif
+                }
+            }
+        else
+            {
+            xcsr--;
+#if VT100_PRT
+            if ( bPrint ) putchar (0x08);
+#endif
+            }
+        }
+#if ! VT100_PRT
+    if ( bPrint ) putchar (0x08);
+#endif
+    return;
+    }
+
+// 0x09 - RIGHT
+static void vdu_9 (int code, int data1, int data2)
+    {
+    if ( vflags & HRGFLG )
+        {
+        pltpt[0].x += 16;
+        hrwrap (NULL, NULL);
+        }
+    else
+        {
+        if (xcsr > tvr)
+            {
+            wrap ();
+            }
+        else
+            {
+            xcsr++;
+            }
+        }
+#if VT100_PRT
+    if ( bPrint ) printf ("\033[C");
+#else
+    if ( bPrint ) putchar (0x09);
+#endif
+    return;
+    }
+
+// 0x0A - LINE FEED
+static void vdu_10 (int code, int data1, int data2)
+    {
+    if ( vflags & HRGFLG )
+        {
+        pltpt[0].y += 2 * pmode->thgt;
+        hrwrap (NULL, NULL);
+        if ( bPrint ) putchar (0x0A);
+        }
+    else
+        {
+        newline (&xcsr, &ycsr);
+        }
+    return;
+    }
+
+// 0x0B - UP
+static void vdu_11 (int code, int data1, int data2)
+    {
+    if ( vflags & HRGFLG )
+        {
+        pltpt[0].y -= 2 * pmode->thgt;
+        hrback ();
+        }
+    else
+        {
+        if ( ycsr == tvt ) scrldn ();
+        else --ycsr;
+        }
+#if VT100_PRT
+    if ( bPrint ) printf ("\033M");
+#endif
+    return;
+    }
+
+// 0x0C - CLEAR SCREEN
+static void vdu_12 (int code, int data1, int data2)
+    {
+    cls ();
+#if VT100_PRT
+    if ( bPrint ) printf ("\033[H\033[J");
+#else
+    if ( bPrint ) putchar (0x0C);
+#endif
+    return;
+    }
+
+// 0x0D - RETURN
+static void vdu_13 (int code, int data1, int data2)
+    {
+    if ( vflags & HRGFLG )
+        {
+        newpix (gvl, pltpt[0].y >> yshift);
+        }
+    else
+        {
+        xcsr = tvl;
+        }
+    if ( bPrint ) putchar (0x0D);
+    return;
+    }
+
+// 0x0E - PAGING ON
+static void vdu_14 (int code, int data1, int data2)
+    {
+    scroln = 0x80 + tvb - ycsr + 1;
+    return;
+    }
+
+// 0x0F - PAGING OFF
+static void vdu_15 (int code, int data1, int data2)
+    {
+    scroln = 0;
+    return;
+    }
+
+// 0x10 - CLEAR GRAPHICS SCREEN
+static void vdu_16 (int code, int data1, int data2)
+    {
+    if ( pmode->ncbt != 3 )
+        {
+        clrgraph ();
+#if VT100_PRT
+        if ( bPrint ) printf ("\033[H\033[J");
+#endif
+        return;
+        }
+    }
+
+// 0x11 - COLOUR n
+static void vdu_17 (int code, int data1, int data2)
+    {
+    if ( code & 0x80 )
+        {
+        bg = clrmsk (code);
+        bgfill = (uint8_t) cdef->cpx[bg];
+        txtbak = bg;
+#if DEBUG & 2
+        printf ("Background colour %d, bgfill = 0x%02X\n", bg, bgfill);
+#endif
+        }
+    else
+        {
+        fg = clrmsk (code);
+        txtfor = fg;
+#if DEBUG & 2
+        printf ("Foreground colour %d\n", fg);
+#endif
+        }
+#if VT100_PRT
+    if ( bPrint )
+        {
+        int vdu;
+        vdu = 30 + (code & 7);
+        if (code & 8)
+            vdu += 60;
+        if (code & 0x80)
+            vdu += 10;
+        printf ("\033[%im", vdu);
+        }
+#endif
+    return;
+    }
+
+// 0x12 - GCOL m, n
+static void vdu_18 (int code, int data1, int data2)
+    {
+    if ( code & 0x80 )
+        {
+        gbg = clrmsk (code) | (( data1 >> 16 ) & 0x0700);
+        bakgnd = gbg;
+        }
+    else
+        {
+        gfg = clrmsk (code) | (( data1 >> 16 ) & 0x0700);
+        forgnd = gfg;
+        }
+#if VT100_PRT
+    if ( bPrint )
+        {
+        int vdu;
+        vdu = 30 + (data1 & 7);
+        if (code & 8)
+            vdu += 60;
+        if (code & 0x80)
+            vdu += 10;
+        printf ("\033[%im", vdu);
+        }
+#endif
+    return;
+    }
+
+// 0x13 - SET CURPAL
+static void vdu_19 (int code, int data1, int data2)
+    {
+    int pal = data1 & 0x0F;
+    int phy = ( data1 >> 8 ) & 0xFF;
+    int r = ( data1 >> 16 ) & 0xFF;
+    int g = ( data1 >> 24 ) & 0xFF;;
+    int b = code & 0xFF;
+#if DEBUG & 2
+    printf ("pal = %d, phy = %d, r = %d, g = %d, b = %d\n", pal, phy, r, g, b);
+#endif
+    if ( pmode->ncbt == 3 ) pal *= 2;
+    if ( phy < 16 ) curpal[pal] = defclr (phy);
+    else if ( phy == 16 ) curpal[pal] = rgbclr (r, g, b);
+    else if ( phy == 255 ) curpal[pal] = rgbclr (8*r, 8*g, 8*b);
+#if DEBUG & 2
+    printf ("curpal[%d] = 0x%04X\n", pal, curpal[pal]);
+#endif
+    if ( pmode->ncbt == 3 ) curpal[pal+1] = curpal[pal];
+    else genrb (curpal);
+    return;
+    }
+
+// 0x14 - RESET COLOURS
+static void vdu_20 (int code, int data1, int data2)
+    {
+    clrreset ();
+#if VT100_PRT
+    if ( bPrint ) printf ("\033[37m\033[40m");
+#endif
+    return;
+    }
+
+// 0x15 - DISABLE VDU DRIVERS
+static void vdu_21 (int code, int data1, int data2)
+    {
+    vflags |= VDUDIS;
+    return;
+    }
+
+// 0x16 - MODE CHANGE
+static void vdu_22 (int code, int data1, int data2)
+    {
+    modechg (code & 0x7F);
+    return;
+    }
+
+// 0x17 - DEFINE CHARACTER ETC.
+static void vdu_23 (int code, int data1, int data2)
+    {
+#if DEBUG & 2
+    printf ("VDU 0x17: code = 0x%04X, data1 = 0x%08X, data2 = 0x%08X\n",
+        code, data1, data2);
+#endif
+    int vdu = data2 & 0xFF;
+    if ( vdu <= 1 )
+        {
+        csrdef (data2);
+        }
+    else if ( vdu == 18 )
+        {
+        uint8_t a = (data2 >> 8) & 0xFF;
+        uint8_t b = (data2 >> 16) & 0xFF;
+        cmcflg = (cmcflg & b) ^ a;
+        }
+    else if ( vdu >= 32 )
+        {
+        defchr (vdu, (data2 >> 8) & 0xFF, (data2 >> 16) & 0xFF,
+            (data2 >> 24) & 0xFF, data1 & 0xFF, (data1 >> 8) & 0xFF,
+            (data1 >> 16) & 0xFF, (data1 >> 24) & 0xFF, code & 0xFF);
+        }
+    return;
+    }
+
+// 0x18 - DEFINE GRAPHICS VIEWPORT
+static void vdu_24 (int code, int data1, int data2)
+    {
+    gwind ((data2 >> 8) & 0xFFFF,
+        ((data2 >> 24) & 0xFF) | ((data1 & 0xFF) << 8),
+        (data1 >> 8) & 0xFFFF,
+        ((data1 >> 24) & 0xFF) | ((code & 0xFF) << 8));
+    return;
+    }
+
+// 0x19 - PLOT
+static void vdu_25 (int code, int data1, int data2)
+    {
+    if ( pmode->ncbt != 3 )
+        plot (data1 & 0xFF, (data1 >> 8) & 0xFFFF,
+            ((data1 >> 24) & 0xFF) | ((code & 0xFF) << 8));
+    return;
+    }
+
+// 0x1A - RESET VIEWPORTS
+static void vdu_26 (int code, int data1, int data2)
+    {
+    rstview ();
+    return;
+    }
+
+// 0x1B - SEND NEXT TO OUTC
+static void vdu_27 (int code, int data1, int data2)
+    {
+    showchr (code & 0xFF);
+    return;
+    }
+
+// 0x1C - SET TEXT VIEWPORT
+static void vdu_28 (int code, int data1, int data2)
+    {
+    twind ((data1 >> 8) & 0xFF, (data1 >> 16) & 0xFF,
+        (data1 >> 24) & 0xFF, code & 0xFF);
+    return;
+    }
+
+// 0x1D - SET GRAPHICS ORIGIN
+static void vdu_29 (int code, int data1, int data2)
+    {
+    origx = (data1 >> 8) & 0xFFFF;
+    origy = ((data1 >> 24) & 0xFF) | ((code & 0xFF) << 8);
+    return;
+    }
+
+// 0x1E - CURSOR HOME
+static void vdu_30 (int code, int data1, int data2)
+    {
+#if VT100_PRT
+    if ( bPrint ) printf ("\033[H");
+#endif
+    home ();
+    return;
+    }
+
+// 0x1F - TAB(X,Y)
+static void vdu_31 (int code, int data1, int data2)
+    {
+    tabxy (data1 >> 24, code & 0xFF);
+#if VT100_PRT
+    if ( bPrint ) printf ("\033[%i;%iH", ycsr + 1, xcsr + 1);
+#endif
+    return;
+    }
+
+static void vdu_127 (void)
+    {
+    xeqvdu (0x0800, 0, 0);
+    if ( vflags & HRGFLG )
+        {
+        rectangle (clrmsk (gbg), pltpt[0].x >> xshift, pltpt[0].y >> yshift,
+            pltpt[0].x >> xshift + 7, pltpt[0].y >> yshift + pmode->thgt - 1);
+        }
+    else
+        {
+        xeqvdu (0x2000, 0, 0);
+        xeqvdu (0x0800, 0, 0);
+        }
+    }
+
+typedef void (*VDU_FUNC)(int code, int data1, int data2);
+
+static const VDU_FUNC vdu_func[] =
+    {
+    vdu_0,  // 0x00 - NULL
+    vdu_1,  // 0x01 - Next character to printer only
+    vdu_2,  // 0x02 - PRINTER ON
+    vdu_3,  // 0x03 - PRINTER OFF
+    vdu_4,  // 0x04 - LO-RES TEXT
+    vdu_5,  // 0x05 - HI-RES TEXT
+    vdu_6,  // 0x06 - ENABLE VDU DRIVERS
+    vdu_7,  // 0x07 - BELL
+    vdu_8,  // 0x08 - LEFT
+    vdu_9,  // 0x09 - RIGHT
+    vdu_10, // 0x0A - LINE FEED
+    vdu_11, // 0x0B - UP
+    vdu_12, // 0x0C - CLEAR SCREEN
+    vdu_13, // 0x0D - RETURN
+    vdu_14, // 0x0E - PAGING ON
+    vdu_15, // 0x0F - PAGING OFF
+    vdu_16, // 0x10 - CLEAR GRAPHICS SCREEN
+    vdu_17, // 0x11 - COLOUR n
+    vdu_18, // 0x12 - GCOL m, n
+    vdu_19, // 0x13 - SET CURPAL
+    vdu_20, // 0x14 - RESET COLOURS
+    vdu_21, // 0x15 - DISABLE VDU DRIVERS
+    vdu_22, // 0x16 - MODE CHANGE
+    vdu_23, // 0x17 - DEFINE CHARACTER ETC.
+    vdu_24, // 0x18 - DEFINE GRAPHICS VIEWPORT
+    vdu_25, // 0x19 - PLOT
+    vdu_26, // 0x1A - RESET VIEWPORTS
+    vdu_27, // 0x1B - SEND NEXT TO OUTC
+    vdu_28, // 0x1C - SET TEXT VIEWPORT
+    vdu_29, // 0x1D - SET GRAPHICS ORIGIN
+    vdu_30, // 0x1E - CURSOR HOME
+    vdu_31  // 0x1F - TAB(X,Y)
+    };
+    
+
 void xeqvdu (int code, int data1, int data2)
     {
     int vdu = code >> 8;
@@ -2582,351 +3061,17 @@ void xeqvdu (int code, int data1, int data2)
         return;
 
     hidecsr ();
-    switch (vdu)
+    if ( vdu < ' ' )
         {
-        case 0: // 0x00 - NULL
-            break;
-            
-        case 1: // 0x01 - Next character to printer only
-            putchar (code & 0xFF);
-            break;
-            
-        case 2: // 0x02 - PRINTER ON
-            bPrint = true;
-            break;
-
-        case 3: // 0x03 - PRINTER OFF
-            bPrint = false;
-            break;
-
-        case 4: // 0x04 - LO-RES TEXT
-            vflags &= ~HRGFLG;
-            break;
-
-        case 5: // 0x05 - HI-RES TEXT
-            vflags |= HRGFLG;
-            break;
-
-        case 6: // 0x06 - ENABLE VDU DRIVERS
-            vflags &= ~VDUDIS;
-            break;
-
-        case 7: // 0x07 - BELL
-            if ( bPrint ) putchar (vdu);
-            break;
-
-        case 8: // 0x08 - LEFT
-            if ( vflags & HRGFLG )
-                {
-                pltpt[0].x -= 16;
-                hrback ();
-#if VT100_PRT
-                if ( bPrint ) putchar (vdu);
-#endif
-                }
-            else
-                {
-                if (xcsr == tvl)
-                    {
-                    xcsr = tvr;
-                    if (ycsr == tvt)
-                        {
-                        scrldn ();
-#if VT100_PRT
-                        if ( bPrint ) printf ("\033M");
-#endif
-                        }
-                    else
-                        {
-                        ycsr--;
-#if VT100_PRT
-                        if ( bPrint ) printf ("\033[%i;%iH", ycsr + 1, xcsr + 1);
-#endif
-                        }
-                    }
-                else
-                    {
-                    xcsr--;
-#if VT100_PRT
-                    if ( bPrint ) putchar (vdu);
-#endif
-                    }
-                }
-#if ! VT100_PRT
-            if ( bPrint ) putchar (vdu);
-#endif
-            break;
-
-        case 9: // 0x09 - RIGHT
-            if ( vflags & HRGFLG )
-                {
-                pltpt[0].x += 16;
-                hrwrap (NULL, NULL);
-                }
-            else
-                {
-                if (xcsr > tvr)
-                    {
-                    wrap ();
-                    }
-                else
-                    {
-                    xcsr++;
-                    }
-                }
-#if VT100_PRT
-            if ( bPrint ) printf ("\033[C");
-#else
-            if ( bPrint ) putchar (vdu);
-#endif
-            break;
-
-        case 10: // 0x0A - LINE FEED
-            if ( vflags & HRGFLG )
-                {
-                pltpt[0].y += 2 * pmode->thgt;
-                hrwrap (NULL, NULL);
-                if ( bPrint ) putchar (vdu);
-                }
-            else
-                {
-                newline (&xcsr, &ycsr);
-                }
-            break;
-
-        case 11: // 0x0B - UP
-            if ( vflags & HRGFLG )
-                {
-                pltpt[0].y -= 2 * pmode->thgt;
-                hrback ();
-                }
-            else
-                {
-                if ( ycsr == tvt ) scrldn ();
-                else --ycsr;
-                }
-#if VT100_PRT
-            if ( bPrint ) printf ("\033M");
-#endif
-            break;
-
-        case 12: // 0x0C - CLEAR SCREEN
-            cls ();
-#if VT100_PRT
-            if ( bPrint ) printf ("\033[H\033[J");
-#else
-            if ( bPrint ) putchar (vdu);
-#endif
-            break;
-
-        case 13: // 0x0D - RETURN
-            if ( vflags & HRGFLG )
-                {
-                newpix (gvl, pltpt[0].y >> yshift);
-                }
-            else
-                {
-                xcsr = tvl;
-                }
-            if ( bPrint ) putchar (vdu);
-            break;
-
-        case 14: // 0x0E - PAGING ON
-            scroln = 0x80 + tvb - ycsr + 1;
-            break;
-
-        case 15: // 0x0F - PAGING OFF
-            scroln = 0;
-            break;
-
-        case 16: // 0x10 - CLEAR GRAPHICS SCREEN
-            if ( pmode->ncbt != 3 )
-                {
-                clrgraph ();
-#if VT100_PRT
-                if ( bPrint ) printf ("\033[H\033[J");
-#endif
-                break;
-                }
-
-        case 17: // 0x11 - COLOUR n
-            if ( code & 0x80 )
-                {
-                bg = clrmsk (code);
-                bgfill = (uint8_t) cdef->cpx[bg];
-                txtbak = bg;
-#if DEBUG & 2
-                printf ("Background colour %d, bgfill = 0x%02X\n", bg, bgfill);
-#endif
-                }
-            else
-                {
-                fg = clrmsk (code);
-                txtfor = fg;
-#if DEBUG & 2
-                printf ("Foreground colour %d\n", fg);
-#endif
-                }
-#if VT100_PRT
-            if ( bPrint )
-                {
-                vdu = 30 + (code & 7);
-                if (code & 8)
-                    vdu += 60;
-                if (code & 0x80)
-                    vdu += 10;
-                printf ("\033[%im", vdu);
-                }
-#endif
-            break;
-
-        case 18: // 0x12 - GCOL m, n
-            if ( code & 0x80 )
-                {
-                gbg = clrmsk (code) | (( data1 >> 16 ) & 0x0700);
-                bakgnd = gbg;
-                }
-            else
-                {
-                gfg = clrmsk (code) | (( data1 >> 16 ) & 0x0700);
-                forgnd = gfg;
-                }
-#if VT100_PRT
-            if ( bPrint )
-                {
-                vdu = 30 + (data1 & 7);
-                if (code & 8)
-                    vdu += 60;
-                if (code & 0x80)
-                    vdu += 10;
-                printf ("\033[%im", vdu);
-                }
-#endif
-            break;
-
-        case 19: // 0x13 - SET CURPAL
-        {
-            int pal = data1 & 0x0F;
-            int phy = ( data1 >> 8 ) & 0xFF;
-            int r = ( data1 >> 16 ) & 0xFF;
-            int g = ( data1 >> 24 ) & 0xFF;;
-            int b = code & 0xFF;
-#if DEBUG & 2
-            printf ("pal = %d, phy = %d, r = %d, g = %d, b = %d\n", pal, phy, r, g, b);
-#endif
-            if ( pmode->ncbt == 3 ) pal *= 2;
-            if ( phy < 16 ) curpal[pal] = defclr (phy);
-            else if ( phy == 16 ) curpal[pal] = rgbclr (r, g, b);
-            else if ( phy == 255 ) curpal[pal] = rgbclr (8*r, 8*g, 8*b);
-#if DEBUG & 2
-            printf ("curpal[%d] = 0x%04X\n", pal, curpal[pal]);
-#endif
-            if ( pmode->ncbt == 3 ) curpal[pal+1] = curpal[pal];
-            else genrb (curpal);
-            break;
+        vdu_func[vdu](code, data1, data2);
         }
-
-        case 20: // 0x14 - RESET COLOURS
-            clrreset ();
-#if VT100_PRT
-            if ( bPrint ) printf ("\033[37m\033[40m");
-#endif
-            break;
-
-        case 21: // 0x15 - DISABLE VDU DRIVERS
-            vflags |= VDUDIS;
-            break;
-
-        case 22: // 0x16 - MODE CHANGE
-            modechg (code & 0x7F);
-            break;
-
-        case 23: // 0x17 - DEFINE CHARACTER ETC.
-#if DEBUG & 2
-            printf ("VDU 0x17: code = 0x%04X, data1 = 0x%08X, data2 = 0x%08X\n",
-                code, data1, data2);
-#endif
-            vdu = data2 & 0xFF;
-            if ( vdu <= 1 )
-                {
-                csrdef (data2);
-                }
-            else if ( vdu == 18 )
-                {
-                uint8_t a = (data2 >> 8) & 0xFF;
-                uint8_t b = (data2 >> 16) & 0xFF;
-                cmcflg = (cmcflg & b) ^ a;
-                }
-            else if ( vdu >= 32 )
-                {
-                defchr (vdu, (data2 >> 8) & 0xFF, (data2 >> 16) & 0xFF,
-                    (data2 >> 24) & 0xFF, data1 & 0xFF, (data1 >> 8) & 0xFF,
-                    (data1 >> 16) & 0xFF, (data1 >> 24) & 0xFF, code & 0xFF);
-                }
-            break;
-
-        case 24: // 0x18 - DEFINE GRAPHICS VIEWPORT
-            gwind ((data2 >> 8) & 0xFFFF,
-                ((data2 >> 24) & 0xFF) | ((data1 & 0xFF) << 8),
-                (data1 >> 8) & 0xFFFF,
-                ((data1 >> 24) & 0xFF) | ((code & 0xFF) << 8));
-            break;
-
-        case 25: // 0x19 - PLOT
-            if ( pmode->ncbt != 3 )
-                plot (data1 & 0xFF, (data1 >> 8) & 0xFFFF,
-                  	((data1 >> 24) & 0xFF) | ((code & 0xFF) << 8));
-            break;
-
-        case 26: // 0x1A - RESET VIEWPORTS
-            rstview ();
-            break;
-
-        case 27: // 0x1B - SEND NEXT TO OUTC
-            showchr (code & 0xFF);
-            break;
-
-        case 28: // 0x1C - SET TEXT VIEWPORT
-            twind ((data1 >> 8) & 0xFF, (data1 >> 16) & 0xFF,
-                (data1 >> 24) & 0xFF, code & 0xFF);
-            break;
-
-        case 29: // 0x1D - SET GRAPHICS ORIGIN
-            origx = (data1 >> 8) & 0xFFFF;
-            origy = ((data1 >> 24) & 0xFF) | ((code & 0xFF) << 8);
-            break;
-
-        case 30: // 0x1E - CURSOR HOME
-#if VT100_PRT
-            if ( bPrint ) printf ("\033[H");
-#endif
-            home ();
-            break;
-
-        case 31: // 0x1F - TAB(X,Y)
-            tabxy (data1 >> 24, code & 0xFF);
-#if VT100_PRT
-            if ( bPrint ) printf ("\033[%i;%iH", ycsr + 1, xcsr + 1);
-#endif
-            break;
-
-        case 127: // DEL
-            xeqvdu (0x0800, 0, 0);
-            if ( vflags & HRGFLG )
-                {
-                rectangle (clrmsk (gbg), pltpt[0].x >> xshift, pltpt[0].y >> yshift,
-                    pltpt[0].x >> xshift + 7, pltpt[0].y >> yshift + pmode->thgt - 1);
-                }
-            else
-                {
-                xeqvdu (0x2000, 0, 0);
-                xeqvdu (0x0800, 0, 0);
-                }
-            break;
-
-        default:
-            showchr (vdu);
-            break;
+    else if ( vdu == 0x7F )
+        {
+        vdu_127 ();
+        }
+    else
+        {
+        showchr (vdu);
         }
     showcsr ();
     textx = 8 * xcsr;
