@@ -1261,7 +1261,7 @@ static void install_stack_guard (void *stack_bottom)
         // the minimum we can protect is 32 bytes on a 32 byte boundary, so round up which will
         // just shorten the valid stack range a tad
         stk_guard = ((uintptr_t) stack_bottom + 95u) & ~31u;
-        printf ("stk_guard = %p\n", stk_guard);
+        // printf ("stk_guard = %p\n", stk_guard);
 
         // mask is 1 bit per 32 bytes of the 256 byte range... clear the bit for the segment we want
         uint32_t subregion_select = 0xff0000ffu << ((stk_guard >> 5u) & 7u);
@@ -1288,6 +1288,7 @@ static void install_stack_guard (void *stack_bottom)
             mpu_hw->rasr = 0; // disable region
             }
         }
+    /*
     uint32_t nrgn = mpu_hw->type;
     printf ("type = 0x%08X, ctrl = 0x%08X\n", nrgn, mpu_hw->ctrl);
     nrgn = ( nrgn >> 8 ) & 0xFF;
@@ -1296,6 +1297,7 @@ static void install_stack_guard (void *stack_bottom)
         mpu_hw->rnr = i;
         printf ("rbar = 0x%08X, rasr = 0x%08X\n", mpu_hw->rbar, mpu_hw->rasr);
         }
+    */
     }
 #endif
 
