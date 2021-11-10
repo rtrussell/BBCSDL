@@ -1305,7 +1305,7 @@ static void install_stack_guard (void *stack_bottom)
 heapptr oshwm (void *addr, int settop)
     {
 #if PICO_STACK_CHECK & 0x04
-    printf ("oshwm (%p, %d)\n", addr, settop);
+    // printf ("oshwm (%p, %d)\n", addr, settop);
     install_stack_guard (addr);
 #endif
 #ifdef _WIN32
