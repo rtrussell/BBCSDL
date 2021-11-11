@@ -26,7 +26,6 @@ if (TARGET tinyusb_device)
   add_executable(bbcbasic 
     ../../src/bbdata_arm_32.s
     ../../src/bbmain.c
-    ../../src/bbexec.c
     ../../src/bbccos.c
     ../../src/bbpico.c
     ../../src/bbasmb_arm_v6m.c 
@@ -35,9 +34,15 @@ if (TARGET tinyusb_device)
     ../../mcu/pico/sympico.c
     )
   if (${MIN_STACK})
-    target_sources(bbcbasic PRIVATE ../../src/bbeval2.c)
+    target_sources(bbcbasic PRIVATE
+      ../../src/bbexec2.c
+      ../../src/bbeval2.c
+      )
   else()
-    target_sources(bbcbasic PRIVATE ../../src/bbeval.c)
+    target_sources(bbcbasic PRIVATE
+      ../../src/bbexec.c
+      ../../src/bbeval.c
+      )
   endif()
   if (${STACK_CHECK} GREATER_EQUAL 4)
     target_sources(bbcbasic PRIVATE ../../mcu/pico/stack_trap.c)

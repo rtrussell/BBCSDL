@@ -2,6 +2,7 @@ BOARD=pico
 SOURCES= \
     ../../src/bbmain.c \
     ../../src/bbexec.c \
+    ../../src/bbexec2.c \
     ../../src/bbeval.c \
     ../../src/bbeval2.c \
     ../../src/bbccos.c \
@@ -29,11 +30,12 @@ all: bbcbasic filesystem
 bbcbasic: bbcbasic.uf2
 filesystem:	filesystem.uf2
 
-build/Makefile: ../../mcu/pico/CMakeLists.txt
+build/Makefile: ../../mcu/pico/CMakeLists.txt Makefile
 	rm -rf build
 	mkdir -p build
 	cd build && PICO_SDK_PATH=$(PICO_SDK_PATH) \
-		cmake -DPICO_BOARD=$(BOARD) -DSTDIO=USB+UART -DLFS=Y -DFAT=N -DSTACK_CHECK=4 -S ../../../mcu/pico -B .
+		cmake -DPICO_BOARD=$(BOARD) -DSTDIO=USB+UART -DLFS=Y -DFAT=N -DSTACK_CHECK=4 \
+			-DMIN_STACK=Y -S ../../../mcu/pico -B .
 
 bbcbasic.uf2: build/Makefile $(SOURCES)
 	cd build && make

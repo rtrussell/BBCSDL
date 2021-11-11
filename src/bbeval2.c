@@ -2350,8 +2350,7 @@ static VAR item_DEFAULT (void)
 
 typedef VAR (*item_func)(void);
 
-
-static item_func item_list[] =
+static const item_func item_list[] =
     {
     item_DEFAULT,   // TAND	        -128
 	item_DEFAULT,	// TDIV	        -127
@@ -2625,7 +2624,7 @@ VAR item (void)
     errno = 0 ;
     esi++ ;
 #if 1
-    return item_list[(int)al - 0x80]();
+    return item_list[(int)al + 0x80]();
 #else
     if (( al >= TLINO ) && ( al <= TSUM ))
         {
