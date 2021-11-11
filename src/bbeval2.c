@@ -1,12 +1,12 @@
 /*****************************************************************\
-*       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
-*                                                                 *
-*       The name 'BBC BASIC' is the property of the British       *
-*       Broadcasting Corporation and used with their permission   *
-*                                                                 *
-*       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.25a, 07-Oct-2021                                *
+ *       32-bit or 64-bit BBC BASIC Interpreter                    *
+ *       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
+ *                                                                 *
+ *       The name 'BBC BASIC' is the property of the British       *
+ *       Broadcasting Corporation and used with their permission   *
+ *                                                                 *
+ *       bbeval.c: Expression evaluation, functions and arithmetic *
+ *       Version 1.25a, 07-Oct-2021                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -43,942 +43,1057 @@
 #endif
 
 // Routines in bbmain:
-void check (void) ;		// Check for running out of memory
-int range0 (char) ;		// Test char for valid in a variable name
-signed char nxt (void) ;	// Skip spaces, handle line continuation
-void error (int, const char*) ;	// Process an error
-void outchr (unsigned char) ;	// Output a character
-void text (const char *) ;	// Output NUL-terminated string
-void crlf (void) ;		// Output a newline
-unsigned short report (void) ;	// Put error message in string accumulator
-char *moves (STR *, int) ;	// Move string into temporary buffer
-void fixs (VAR) ;		// Copy to string accumulator
-heapptr *pushs (VAR) ;		// Push string on stack
-void comma (void) ;		// Check for comma
-void braket (void) ;		// Check for closing parenthesis
-char *alloct (int) ;		// Allocate a temporary string buffer
-int arrlen (void **) ;		// Count elements in an array
-void *getvar (unsigned char *) ;	// Get a variable's pointer and type
-void *getput (unsigned char *) ;	// Get, and if necessary create, var
-void *putvar (void *ptr, unsigned char*) ;
-char *lexan (char *, char *, unsigned char) ;
-signed char *gettop (signed char *, unsigned short *) ;
-unsigned short setlin (signed char *, char **) ;
-signed char *search (signed char *, signed char) ;
-char *allocs (STR *, int) ;
+void check (void);		// Check for running out of memory
+int range0 (char);		// Test char for valid in a variable name
+signed char nxt (void);	// Skip spaces, handle line continuation
+void error (int, const char*);	// Process an error
+void outchr (unsigned char);	// Output a character
+void text (const char *);	// Output NUL-terminated string
+void crlf (void);		// Output a newline
+unsigned short report (void);	// Put error message in string accumulator
+char *moves (STR *, int);	// Move string into temporary buffer
+void fixs (VAR);		// Copy to string accumulator
+heapptr *pushs (VAR);		// Push string on stack
+void comma (void);		// Check for comma
+void braket (void);		// Check for closing parenthesis
+char *alloct (int);		// Allocate a temporary string buffer
+int arrlen (void **);		// Count elements in an array
+void *getvar (unsigned char *);	// Get a variable's pointer and type
+void *getput (unsigned char *);	// Get, and if necessary create, var
+void *putvar (void *ptr, unsigned char*);
+char *lexan (char *, char *, unsigned char);
+signed char *gettop (signed char *, unsigned short *);
+unsigned short setlin (signed char *, char **);
+signed char *search (signed char *, signed char);
+char *allocs (STR *, int);
 
 // Routines in bbexec:
-void modify (VAR, void *, unsigned char, signed char) ;
-void modifs (VAR, void *, unsigned char, signed char) ;
-void storen (VAR, void *, unsigned char) ;
-void procfn (signed char) ;	// User-defined PROC or FN
-VAR xeq (void) ;		// Execute
+void modify (VAR, void *, unsigned char, signed char);
+void modifs (VAR, void *, unsigned char, signed char);
+void storen (VAR, void *, unsigned char);
+void procfn (signed char);	// User-defined PROC or FN
+VAR xeq (void);		// Execute
 
 // Routines in bbcmos:
-unsigned char osrdch (void) ;	// Get character from console input
-int oskey (int) ;		// Wait for character or test key
-int getime (void) ;		// Return centisecond count
-int getims (void) ;		// Get clock time string to accs
-int vtint (int, int) ;		// Get RGB pixel colour or -1
-int vpoint (int, int) ;		// Get palette index or -1
-void getcsr (int*, int*) ;	// Get text cursor (caret) coords
-int vgetc (int, int) ;		// Get character at specified coords
-int oscall (int) ;		// Call an emulated OS function
-int widths (char *, int) ;	// Get string width in graphics units
-int adval (int) ;		// ADVAL function
-void *osopen (int, char *) ;	// Open a file
-unsigned char osbget (void*, int*) ; // Get a byte from a file
-long long getptr (void*) ;	// Get file pointer
-long long getext (void*) ;	// Get file length
-long long geteof (void*) ;	// Get EOF status
-void *sysadr (char *) ;		// Get the address of an API function
+unsigned char osrdch (void);	// Get character from console input
+int oskey (int);		// Wait for character or test key
+int getime (void);		// Return centisecond count
+int getims (void);		// Get clock time string to accs
+int vtint (int, int);		// Get RGB pixel colour or -1
+int vpoint (int, int);		// Get palette index or -1
+void getcsr (int*, int*);	// Get text cursor (caret) coords
+int vgetc (int, int);		// Get character at specified coords
+int oscall (int);		// Call an emulated OS function
+int widths (char *, int);	// Get string width in graphics units
+int adval (int);		// ADVAL function
+void *osopen (int, char *);	// Open a file
+unsigned char osbget (void*, int*); // Get a byte from a file
+long long getptr (void*);	// Get file pointer
+long long getext (void*);	// Get file length
+long long geteof (void*);	// Get EOF status
+void *sysadr (char *);		// Get the address of an API function
 
 // Global jump buffer:
-extern jmp_buf env ;
+extern jmp_buf env;
 
 #if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__
 static void setfpu(void) {}
 static double xpower[9] = {1.0e1, 1.0e2, 1.0e4, 1.0e8, 1.0e16, 1.0e32, 1.0e64,
-			   1.0e128, 1.0e256} ;
+    1.0e128, 1.0e256};
 #else
 static void setfpu(void) { unsigned int mode = 0x37F; asm ("fldcw %0" : : "m" (*&mode)); } 
 static long double xpower[13] = {1.0e1L, 1.0e2L, 1.0e4L, 1.0e8L, 1.0e16L, 1.0e32L, 1.0e64L,
-				1.0e128L, 1.0e256L, 1.0e512L, 1.0e1024L, 1.0e2048L, 1.0e4096L} ;
+    1.0e128L, 1.0e256L, 1.0e512L, 1.0e1024L, 1.0e2048L, 1.0e4096L};
 #endif
 
 // Get possibly-parenthesised variable:
 static void *getvbr(unsigned char *ptype)
-{
+    {
 	if (nxt () == '(')
 	    {
-		void *ptr ;
-		esi++ ;
-		ptr = getvbr (ptype) ;
-		braket () ;
-		return ptr ;
+		void *ptr;
+		esi++;
+		ptr = getvbr (ptype);
+		braket ();
+		return ptr;
 	    }
-	return getvar (ptype) ;
-}
+	return getvar (ptype);
+    }
 
 // Convert a numeric value to a NUL-terminated decimal string:
 int str (VAR v, char *dst, int format)
-{
-	int n ;
-	char *p ;
-	char fmt[5] = "%d" ;
-	int width = format & 0xFF ;
-        int prec = (format & 0xFF00) >> 8 ;
+    {
+	int n;
+	char *p;
+	char fmt[5] = "%d";
+	int width = format & 0xFF;
+    int prec = (format & 0xFF00) >> 8;
 
 	switch (format & 0x30000)
 	    {
 		case 0x10000:
-			if (prec) prec-- ;
-			if (v.i.t == 0) v.f = v.i.n ;
-			n = sprintf(dst, EFORMAT, prec, v.f) ;
-			strcpy (fmt, "%-3d") ;
-			break ;
+			if (prec) prec--;
+			if (v.i.t == 0) v.f = v.i.n;
+			n = sprintf(dst, EFORMAT, prec, v.f);
+			strcpy (fmt, "%-3d");
+			break;
 
 		case 0x20000:
-			if (v.i.t == 0) v.f = v.i.n ;
-			n = sprintf(dst, FFORMAT, prec, v.f) ;
-			break ;
+			if (v.i.t == 0) v.f = v.i.n;
+			n = sprintf(dst, FFORMAT, prec, v.f);
+			break;
 
 		default:
-		if (prec == 0) prec = 9 ;
-		if (v.i.t == 0)
-		    {
-			n = sprintf(dst, "%lld", v.i.n) ; // ARM (no 80-bit float)
-			if (n <= prec) break ;
-			v.f = v.i.n ;
-		    }
-		n = sprintf(dst, GFORMAT, prec, v.f) ;
+            if (prec == 0) prec = 9;
+            if (v.i.t == 0)
+                {
+                n = sprintf(dst, "%lld", v.i.n); // ARM (no 80-bit float)
+                if (n <= prec) break;
+                v.f = v.i.n;
+                }
+            n = sprintf(dst, GFORMAT, prec, v.f);
 	    }
 
-	p = strchr (dst, 'E') ;
+	p = strchr (dst, 'E');
 	if (p)
 	    {
-		sprintf (p + 1, fmt, atoi (p + 1)) ;
-		n = strlen (dst) ;
+		sprintf (p + 1, fmt, atoi (p + 1));
+		n = strlen (dst);
 	    }
 
 	if (n < width) 
 	    {
-		memmove (dst + width - n, dst, n + 1) ;
-		memset (dst, ' ', width - n) ;
-		n = width ;
+		memmove (dst + width - n, dst, n + 1);
+		memset (dst, ' ', width - n);
+		n = width;
 	    }
 
 	if (format & 0x800000)
 	    {
-		p = strchr (dst, '.') ;
-		if (p) *p = ',' ;
+		p = strchr (dst, '.');
+		if (p) *p = ',';
 	    }
-	return n ;
-}
+	return n;
+    }
 
 // Convert a numeric value to a NUL-terminated hexadecimal string:
 int strhex (VAR v, char *dst, int field)
-{
-	char fmt[12] ;
-	long long n ;
+    {
+	char fmt[12];
+	long long n;
 
 #ifdef _WIN32
-	sprintf (fmt, "%%%uI64X", field) ;
+	sprintf (fmt, "%%%uI64X", field);
 #else
-	sprintf (fmt, "%%%ullX", field) ;
+	sprintf (fmt, "%%%ullX", field);
 #endif
 
 	if (v.i.t)
 	    {
-		long long t = v.f ;
+		long long t = v.f;
 		if (t != truncl (v.f))
-			error (20, NULL) ; // 'Number too big'
-		v.i.n = t ;
+			error (20, NULL); // 'Number too big'
+		v.i.n = t;
 	    }
 
-	n = v.i.n ; // copy because v is effectively passed-by-reference
+	n = v.i.n; // copy because v is effectively passed-by-reference
 	if ((liston & BIT2) == 0)
-		n &= 0xFFFFFFFF ;
-	return sprintf(dst, fmt, n) ;
-}
+		n &= 0xFFFFFFFF;
+	return sprintf(dst, fmt, n);
+    }
 
 // Multiply by an integer-power of 10:
 #if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__
 static double xpow10 (double n, int p)
-{
-	int f = 0, i = 0 ;
+#else
+    static long double xpow10 (long double n, int p)
+#endif
+    {
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__
+	int f = 0, i = 0;
 
 	if (p >= 512)
-		error (20, NULL) ; // 'Number too big'
+		error (20, NULL); // 'Number too big'
 	if (p <= -512)
-		return 0.0L ;
+		return 0.0L;
 #else
-static long double xpow10 (long double n, int p)
-{
-	int f = 0, i = 0 ;
-	setfpu () ;
+    int f = 0, i = 0;
+    setfpu ();
 
-	if (p >= 8192)
-		error (20, NULL) ; // 'Number too big'
-	if (p <= -8192)
-		return 0.0L ;
+    if (p >= 8192)
+        error (20, NULL); // 'Number too big'
+    if (p <= -8192)
+        return 0.0L;
 #endif
 
-	if (p < 0)
-	    {
-		p = -p ;
-		f = 1 ;
-	    }
+    if (p < 0)
+        {
+        p = -p;
+        f = 1;
+        }
 
-	while (p)
-	    {
-		if (p & 1)
-		    {
-			if (f)
-				n /= xpower[i] ;
-			else
-				n *= xpower[i] ;
-		    }
-		i++ ;
-		p = p >> 1 ;
-	    }
-	return n ;
-}
+    while (p)
+        {
+        if (p & 1)
+            {
+            if (f)
+                n /= xpower[i];
+            else
+                n *= xpower[i];
+            }
+        i++;
+        p = p >> 1;
+        }
+    return n;
+    }
 
 // Get an unsigned integer from a string:
 
 static unsigned long long number (int *pcount, int *ptrunc)
-{
-	unsigned long long n = 0 ;
-	while (1)
-	    {
-		char al = *esi ;
-		if ((al < '0') || (al > '9'))
-			break ;
-		esi++ ;
-		(*pcount)++ ;
-		if ((n > 0x1999999999999999L) || ((n == 0x1999999999999999L) && 
-				((al > '5') || *ptrunc)))
-			(*ptrunc)++ ;
-		else
-			n = n * 10 + (al - '0') ;
-	    }
-	return n ;
-}
+    {
+    unsigned long long n = 0;
+    while (1)
+        {
+        char al = *esi;
+        if ((al < '0') || (al > '9'))
+            break;
+        esi++;
+        (*pcount)++;
+        if ((n > 0x1999999999999999L) || ((n == 0x1999999999999999L) && 
+                ((al > '5') || *ptrunc)))
+            (*ptrunc)++;
+        else
+            n = n * 10 + (al - '0');
+        }
+    return n;
+    }
 
 // Get an unsigned numeric constant:
 VAR con (void)
-{
-	VAR v ;
-	unsigned long long i = 0, f = 0 ;
-	int e = 0, ni, nf = 0, ne = 0, nt = 0 ;
-	setfpu () ;
+    {
+    VAR v;
+    unsigned long long i = 0, f = 0;
+    int e = 0, ni, nf = 0, ne = 0, nt = 0;
+    setfpu ();
 
-	i = number (&ni, &nt) ;
-	v.i.n = i ;
-	v.i.t = 0 ;
-	if ((*esi == '.') || (v.i.n < 0) || (nt != 0))
-	    {
-		v.i.t = 1 ; // ARM
-		v.f = i ; // integer overflow
-	    }
+    i = number (&ni, &nt);
+    v.i.n = i;
+    v.i.t = 0;
+    if ((*esi == '.') || (v.i.n < 0) || (nt != 0))
+        {
+        v.i.t = 1; // ARM
+        v.f = i; // integer overflow
+        }
 
-	if (nt != 0)
-	    {
-		v.f = xpow10 (v.f, nt) ;
-		nt = 0 ;
-	    }
+    if (nt != 0)
+        {
+        v.f = xpow10 (v.f, nt);
+        nt = 0;
+        }
 
-	if (*esi == '.')
-	    {
-		esi++ ;
-		f = number (&nf, &nt) ;
-		v.f += xpow10 (f, nt - nf) ;
-	    }
+    if (*esi == '.')
+        {
+        esi++;
+        f = number (&nf, &nt);
+        v.f += xpow10 (f, nt - nf);
+        }
 
-	if ((*esi == 'E') || ((liston & BIT3) && (*esi == 'e')))
-	    {
-		int neg = 0 ;
+    if ((*esi == 'E') || ((liston & BIT3) && (*esi == 'e')))
+        {
+        int neg = 0;
 
-		esi++ ;
-		if (*esi == '-')
-		    {
-			esi++ ;
-			neg = 1 ;
-		    }
-		else if (*esi == '+')
-			esi++ ;
-		e = number (&ne, &nt) ;
-		if (neg)
-			e = -e ;
+        esi++;
+        if (*esi == '-')
+            {
+            esi++;
+            neg = 1;
+            }
+        else if (*esi == '+')
+            esi++;
+        e = number (&ne, &nt);
+        if (neg)
+            e = -e;
 
-		if (v.i.t == 0)
-		    {
-			v.i.t = 1 ; // ARM
-			v.f = i ;
-		    }
-		v.f = xpow10 (v.f, e) ;
-		if ((v.i.t == 0) || (v.i.t == (short)0x8000))
-			v.f = 0.0L ; // underflow
-		if (isinf(v.f) || (v.i.t == -1))
-			error (20, NULL) ; // 'Number too big'
-	    }
+        if (v.i.t == 0)
+            {
+            v.i.t = 1; // ARM
+            v.f = i;
+            }
+        v.f = xpow10 (v.f, e);
+        if ((v.i.t == 0) || (v.i.t == (short)0x8000))
+            v.f = 0.0L; // underflow
+        if (isinf(v.f) || (v.i.t == -1))
+            error (20, NULL); // 'Number too big'
+        }
 
-	if (*esi == '#') esi++ ;
-	return v ;
-}
+    if (*esi == '#') esi++;
+    return v;
+    }
 
 // Get a string constant (quoted string):
 VAR cons (void)
-{
-	VAR v ;
-	signed char al ;
-	char *p = accs ;
-	while (1)
-	    {
-		al = *esi++ ;
-		if (al == 0x0D)
-			error (9, NULL) ; // 'Missing "'
-		if ((al == '"') && (*esi++ != '"'))
-		    {
-			esi-- ;
-			v.s.p = accs - (char *) zero ;
-			v.s.l = p - accs ;
-			v.s.t = -1 ;
-			break ;
-		    }
-		*p++ = al ;
-	    }
-	return v ;
-}
+    {
+    VAR v;
+    signed char al;
+    char *p = accs;
+    while (1)
+        {
+        al = *esi++;
+        if (al == 0x0D)
+            error (9, NULL); // 'Missing "'
+        if ((al == '"') && (*esi++ != '"'))
+            {
+            esi--;
+            v.s.p = accs - (char *) zero;
+            v.s.l = p - accs;
+            v.s.t = -1;
+            break;
+            }
+        *p++ = al;
+        }
+    return v;
+    }
 
 // Load a numeric variable:
 // type is 1, 4, 5, 8, 10, 36 or 40
 VAR loadn (void *ptr, unsigned char type)
-{
-	VAR v ;
-	switch (type)
-	    {
-		case 1:
-			v.i.t = 0 ;
-			v.i.n = *(unsigned char*)ptr ;
-			break ;
+    {
+    VAR v;
+    switch (type)
+        {
+        case 1:
+            v.i.t = 0;
+            v.i.n = *(unsigned char*)ptr;
+            break;
 
-		case 4:
-			v.i.t = 0 ;
-			v.i.n = ILOAD(ptr) ;
-			break ;
+        case 4:
+            v.i.t = 0;
+            v.i.n = ILOAD(ptr);
+            break;
 
-		case 5:
-			{
-			int ecx = *((unsigned char*)ptr + 4) ;
-			int edx = ILOAD(ptr) ;
-			int sign = (edx < 0) ;
-			if (ecx == 0)
-			    {
-				v.i.t = 0 ;
-				v.i.n = edx ;
-				break ;
-			    }
-			ecx += 895 ;
-			edx = edx << 1 ;
-			ecx = (ecx << 20) | ((unsigned int)edx >> 12) ;
-			edx = edx << 20 ;
-			if (sign) ecx |= 0x80000000 ;
-			v.s.p = edx ;
-			v.s.l = ecx ;
-			v.i.t = 1 ; // ARM
-			v.f = v.d.d ;
-			}
-			break ;
+        case 5:
+        {
+        int ecx = *((unsigned char*)ptr + 4);
+        int edx = ILOAD(ptr);
+        int sign = (edx < 0);
+        if (ecx == 0)
+            {
+            v.i.t = 0;
+            v.i.n = edx;
+            break;
+            }
+        ecx += 895;
+        edx = edx << 1;
+        ecx = (ecx << 20) | ((unsigned int)edx >> 12);
+        edx = edx << 20;
+        if (sign) ecx |= 0x80000000;
+        v.s.p = edx;
+        v.s.l = ecx;
+        v.i.t = 1; // ARM
+        v.f = v.d.d;
+        }
+        break;
 
-		case 8:
-			if (ILOAD((char *) ptr + 4) == 0)
-			    {
-				v.i.t = 0 ;
-				v.i.n = ILOAD(ptr) ; // 64-bit variant
-				break ;
-			    }
-			{
-			// v.s.p = *(heapptr*)ptr ;
-			// v.s.l = *(int *)((char *)ptr + 4) ;
-			memcpy (&v.s.p, ptr, 8) ; // may be unaligned
-			v.i.t = 1 ; // ARM
-			v.f = v.d.d ;
-			}
-			break ;
+        case 8:
+            if (ILOAD((char *) ptr + 4) == 0)
+                {
+                v.i.t = 0;
+                v.i.n = ILOAD(ptr); // 64-bit variant
+                break;
+                }
+                {
+                // v.s.p = *(heapptr*)ptr;
+                // v.s.l = *(int *)((char *)ptr + 4);
+                memcpy (&v.s.p, ptr, 8); // may be unaligned
+                v.i.t = 1; // ARM
+                v.f = v.d.d;
+                }
+        break;
 
-		case 10:
-			// v.s.p = *(heapptr*)ptr ;
-			// v.s.l = *(int *)((char *)ptr + 4) ;
-			// v.i.t = *(short *)((char *)ptr + 8) ;
-			memcpy (&v.s.p, ptr, 10) ; // may be unaligned
-			break ;
+        case 10:
+            // v.s.p = *(heapptr*)ptr;
+            // v.s.l = *(int *)((char *)ptr + 4);
+            // v.i.t = *(short *)((char *)ptr + 8);
+            memcpy (&v.s.p, ptr, 10); // may be unaligned
+            break;
 
-		case 40:
-			v.i.t = 0 ;
-			// v.s.p = *(heapptr*)ptr ;
-			// v.s.l = *(int *)((char *)ptr + 4) ;
-			memcpy (&v.s.p, ptr, 8) ; // may be unaligned
-			break ;
+        case 40:
+            v.i.t = 0;
+            // v.s.p = *(heapptr*)ptr;
+            // v.s.l = *(int *)((char *)ptr + 4);
+            memcpy (&v.s.p, ptr, 8); // may be unaligned
+            break;
 
-		case 36:
-			v.i.t = 0 ;
-			v.i.n = (intptr_t) VLOAD(ptr) ;
-			break ;
+        case 36:
+            v.i.t = 0;
+            v.i.n = (intptr_t) VLOAD(ptr);
+            break;
 
-		default:
-			v.i.t = 0 ;
-			v.i.n = 0 ;
-			error (6, NULL) ; // 'Type mismatch'
-	    }
-	return v ;
-}
+        default:
+            v.i.t = 0;
+            v.i.n = 0;
+            error (6, NULL); // 'Type mismatch'
+        }
+    return v;
+    }
 
 // Load a string variable:
 // type is 128, 130 or 136
 VAR loads (void *ptr, unsigned char type)
-{
-	VAR v ;
-	switch (type)
-	    {
-		case 128:
-			v.s.l = memchr (ptr, 0x0D, 0x10000) - ptr ;
-			if (v.s.l > 0xFFFF)
-				error (19, NULL) ; // 'String too long'
-			if ((ptr < zero) || ((ptr + v.s.l) > (zero + 0xFFFFFFFF)))
-			    {
-				// Don't use alloct because it will put string in accs
-				v.s.p = allocs (&tmps, v.s.l) - (char *) zero ;
-				memcpy (v.s.p + zero, ptr, v.s.l) ;
-			    }
-			else
-				v.s.p = ptr - zero ;
-			break ;
+    {
+    VAR v;
+    switch (type)
+        {
+        case 128:
+            v.s.l = memchr (ptr, 0x0D, 0x10000) - ptr;
+            if (v.s.l > 0xFFFF)
+                error (19, NULL); // 'String too long'
+            if ((ptr < zero) || ((ptr + v.s.l) > (zero + 0xFFFFFFFF)))
+                {
+                // Don't use alloct because it will put string in accs
+                v.s.p = allocs (&tmps, v.s.l) - (char *) zero;
+                memcpy (v.s.p + zero, ptr, v.s.l);
+                }
+            else
+                v.s.p = ptr - zero;
+            break;
 
-		case 130:
-			v.s.l = strlen (ptr) ;
-			if ((ptr < zero) || ((ptr + v.s.l) > (zero + 0xFFFFFFFF)))
-			    {
-				// Don't use alloct because it will put string in accs
-				v.s.p = allocs (&tmps, v.s.l) - (char *) zero ;
-				memcpy (v.s.p + zero, ptr, v.s.l) ;
-			    }
-			else
-				v.s.p = ptr - zero ;
-			break ;
+        case 130:
+            v.s.l = strlen (ptr);
+            if ((ptr < zero) || ((ptr + v.s.l) > (zero + 0xFFFFFFFF)))
+                {
+                // Don't use alloct because it will put string in accs
+                v.s.p = allocs (&tmps, v.s.l) - (char *) zero;
+                memcpy (v.s.p + zero, ptr, v.s.l);
+                }
+            else
+                v.s.p = ptr - zero;
+            break;
 
-		case 136:
-			v.s.p = ULOAD(ptr) ;
-			v.s.l = ILOAD(ptr + 4) ;
-			break ;
+        case 136:
+            v.s.p = ULOAD(ptr);
+            v.s.l = ILOAD(ptr + 4);
+            break;
 
-		default:
-			error (6, NULL) ; // 'Type mismatch'
-	    }
-	v.s.t = -1 ;
-	return v ;
-}
+        default:
+            error (6, NULL); // 'Type mismatch'
+        }
+    v.s.t = -1;
+    return v;
+    }
 
 // Load an integer numeric:
 long long loadi (void *ptr, unsigned char type)
-{
-	VAR v = loadn (ptr, type) ;
-	if (v.i.t != 0)
-	    {
-		long long t = v.f ;
-		if (t != truncl (v.f))
-			error (20, NULL) ; // 'Number too big'
-		v.i.n = t ;
-	    }
-	return v.i.n ;
-}
+    {
+    VAR v = loadn (ptr, type);
+    if (v.i.t != 0)
+        {
+        long long t = v.f;
+        if (t != truncl (v.f))
+            error (20, NULL); // 'Number too big'
+        v.i.n = t;
+        }
+    return v.i.n;
+    }
 
 void xfix (VAR *px)
-{
-	if (px->i.t)
-	    {
-		long long t = px->f ;
-		if (t != truncl (px->f))
-			error (20, NULL) ; // 'Number too big'
-		px->i.n = t ;
-		px->i.t = 0 ;
-	    }
-}
+    {
+    if (px->i.t)
+        {
+        long long t = px->f;
+        if (t != truncl (px->f))
+            error (20, NULL); // 'Number too big'
+        px->i.n = t;
+        px->i.t = 0;
+        }
+    }
 
 static void fix2 (VAR *px, VAR *py)
-{
-	if (px->i.t)
-	    {
-		long long t = px->f ;
-		if (t != truncl (px->f))
-			error (20, NULL) ; // 'Number too big'
-		px->i.n = t ;
-		px->i.t = 0 ;
-	    }
-	if (py->i.t)
-	    {
-		long long t = py->f ;
-		if (t != truncl (py->f))
-			error (20, NULL) ; // 'Number too big'
-		py->i.n = t ; 
-		py->i.t = 0 ;
-	    }
-}
+    {
+    if (px->i.t)
+        {
+        long long t = px->f;
+        if (t != truncl (px->f))
+            error (20, NULL); // 'Number too big'
+        px->i.n = t;
+        px->i.t = 0;
+        }
+    if (py->i.t)
+        {
+        long long t = py->f;
+        if (t != truncl (py->f))
+            error (20, NULL); // 'Number too big'
+        py->i.n = t; 
+        py->i.t = 0;
+        }
+    }
 
 void xfloat (VAR *px)
-{
-	if (px->i.t == 0)
-	    {
-		px->i.t = 1 ; // ARM
-		px->f = px->i.n ;
-	    }
-}
+    {
+    if (px->i.t == 0)
+        {
+        px->i.t = 1; // ARM
+        px->f = px->i.n;
+        }
+    }
 
 static void float2 (VAR *px, VAR *py)
-{
-	if (px->i.t == 0)
-	    {
-		px->i.t = 1 ; // ARM
-		px->f = px->i.n ;
-	    }
-	if (py->i.t == 0)
-	    {
-		py->i.t = 1 ; // ARM
-		py->f = py->i.n ;
-	    }
-}
+    {
+    if (px->i.t == 0)
+        {
+        px->i.t = 1; // ARM
+        px->f = px->i.n;
+        }
+    if (py->i.t == 0)
+        {
+        py->i.t = 1; // ARM
+        py->f = py->i.n;
+        }
+    }
 
 // Return a pseudo-random integer:
 unsigned int rnd (void)
-{
-	unsigned int ecx = *(unsigned char*)(&prand + 1) ;
-	unsigned int edx = prand ;
-	unsigned int eax = (edx >> 1) | (ecx << 31) ;
-	*(unsigned char*)(&prand + 1) = (ecx & ~1) | (edx & 1) ; // Preserve bits 1-7
-	eax = eax ^ (edx << 12) ;
-	edx = eax ^ (eax >> 20) ;
-	prand = edx ;
-	return edx ;
-}
+    {
+    unsigned int ecx = *(unsigned char*)(&prand + 1);
+    unsigned int edx = prand;
+    unsigned int eax = (edx >> 1) | (ecx << 31);
+    *(unsigned char*)(&prand + 1) = (ecx & ~1) | (edx & 1); // Preserve bits 1-7
+    eax = eax ^ (edx << 12);
+    edx = eax ^ (eax >> 20);
+    prand = edx;
+    return edx;
+    }
+
+VAR math (VAR x, signed char op, VAR y);
+
+static VAR math_plus (VAR x, VAR y) // '+'
+    {
+    if ((x.i.t == 0) && (y.i.t == 0))
+        {
+#if defined __GNUC__ && __GNUC__ < 5
+        long long sum = x.i.n + y.i.n;
+        if (((int)(x.s.l ^ y.s.l) < 0) || ((sum ^ x.i.n) >= 0))
+#else
+            long long sum;
+        if (! __builtin_saddll_overflow (x.i.n, y.i.n, &sum))
+#endif
+            {
+            x.i.n = sum;
+            return x;
+            }
+        }
+    float2 (&x, &y);
+    x.f += y.f;
+
+    if (isinf(x.f) || isnan(x.f) || (x.i.t == -1) || errno)
+        error (20, NULL); // 'Number too big'
+
+    if ((x.i.t == 0) || (x.i.t == (short) 0x8000))
+        x.f = 0.0; // Underflow
+
+    return x;
+    }
+
+static VAR math_minus (VAR x, VAR y) // '-'
+    {
+    if ((x.i.t == 0) && (y.i.t == 0))
+        {
+#if defined __GNUC__  && __GNUC__ < 5
+        long long dif = x.i.n - y.i.n;
+        if (((int)(x.s.l ^ y.s.l) >= 0) || ((dif ^ x.i.n) >= 0))
+#else
+            long long dif;
+        if (! __builtin_ssubll_overflow (x.i.n, y.i.n, &dif))
+#endif
+            {
+            x.i.n = dif;
+            return x;
+            }
+        }
+    float2 (&x, &y);
+    x.f -= y.f;
+
+    if (isinf(x.f) || isnan(x.f) || (x.i.t == -1) || errno)
+        error (20, NULL); // 'Number too big'
+
+    if ((x.i.t == 0) || (x.i.t == (short) 0x8000))
+        x.f = 0.0; // Underflow
+
+    return x;
+    }
+
+static VAR math_multiply (VAR x, VAR y) // '*'
+    {
+    if (x.i.n == 0)
+        return x;
+    if (y.i.n == 0)
+        return y;
+    if ((x.i.t == 0) && (y.i.t == 0))
+        {
+#if defined __GNUC__  && __GNUC__ < 5
+        long long prod = x.i.n * y.i.n;
+        if ((x.i.n != 0x8000000000000000) && (y.i.n != 0x8000000000000000) &&
+                ((__builtin_clzll(x.i.n) + __builtin_clzll(~x.i.n) +
+                    __builtin_clzll(y.i.n) + __builtin_clzll(~y.i.n)) > 63))
+#else
+            long long prod;
+        if (! __builtin_smulll_overflow (x.i.n, y.i.n, &prod))
+#endif
+            {
+            x.i.n = prod;
+            return x;
+            }
+        }
+    float2 (&x, &y);
+    x.f *= y.f;
+
+    if (isinf(x.f) || isnan(x.f) || (x.i.t == -1) || errno)
+        error (20, NULL); // 'Number too big'
+
+    if ((x.i.t == 0) || (x.i.t == (short) 0x8000))
+        x.f = 0.0; // Underflow
+
+    return x;
+    }
+
+static VAR math_divide (VAR x, VAR y) // '/'
+    {
+    float2 (&x, &y);
+    x.f /= y.f;
+
+    if (isinf(x.f) || isnan(x.f) || (x.i.t == -1) || errno)
+        error (20, NULL); // 'Number too big'
+
+    if ((x.i.t == 0) || (x.i.t == (short) 0x8000))
+        x.f = 0.0; // Underflow
+
+    return x;
+    }
+
+static VAR math_power (VAR x, VAR y) // '^'
+    {
+    if (y.i.t == 0)
+        {
+        if (y.i.n == 0)
+            {
+            y.i.n = 1;
+            return y;
+            }
+        int n;
+        if (y.i.n == -1)
+            n = 64;
+        else
+            n = __builtin_clzll(y.i.n) + __builtin_clzll(~y.i.n);
+        if (n > 32)
+            {
+            VAR v;
+            int yi = y.i.n;
+            v.i.t = 0;
+            v.i.n = 1;
+
+            if (yi < 0)
+                {
+                yi = -yi;
+                x = math (v, '/', x);
+                }
+            yi = yi << (n - 33);
+            n = 65 - n;
+            while (n--)
+                {
+                v = math (v, '*', v);
+                if (yi < 0)
+                    v = math (v, '*', x);
+                yi = yi << 1;
+                }
+            return v;
+            }
+        }
+    float2 (&x, &y);
+    x.f = powl(x.f, y.f);
+
+    if (isinf(x.f) || isnan(x.f) || (x.i.t == -1) || errno)
+        error (22, NULL); // 'Logarithm range'
+
+    if ((x.i.t == 0) || (x.i.t == (short) 0x8000))
+        x.f = 0.0; // Underflow
+
+    return x;
+    }
+
+static VAR math_TDIV (VAR x, VAR y)
+    {
+    fix2 (&x, &y);
+    if (y.i.n == 0) error (18, NULL); // 'Division by zero'
+    x.i.n /= y.i.n;
+    return x;
+    }
+
+static VAR math_TMOD (VAR x, VAR y)
+    {
+    fix2 (&x, &y);
+    if (y.i.n == 0) error (18, NULL); // 'Division by zero'
+    x.i.n %= y.i.n;
+    return x;
+    }
+
+static VAR math_TAND (VAR x, VAR y)
+    {
+    fix2(&x, &y);
+    x.i.n &= y.i.n;
+    return x;
+    }
+
+static VAR math_TOR (VAR x, VAR y)
+    {
+    fix2(&x, &y);
+    x.i.n |= y.i.n;
+    return x;
+    }
+
+static VAR math_TEOR (VAR x, VAR y)
+    {
+    fix2(&x, &y);
+    x.i.n ^= y.i.n;
+    return x;
+    }
+
+static VAR math_TSUM (VAR x, VAR y)
+    {
+    fix2(&x, &y);
+    x.i.n += y.i.n;
+    return x;
+    }
+
+static VAR math_less (VAR x, VAR y) // '<'
+    {
+    if ((x.i.t == 0) && (y.i.t == 0))
+        x.i.n = -(x.i.n < y.i.n);
+    else
+        {
+        float2 (&x, &y);
+        x.i.n = -(x.f < y.f);
+        x.i.t = 0; // must come after!
+        }
+    return x;
+    }
+
+static VAR math_equal (VAR x, VAR y) // '='
+    {
+    if ((x.i.t == 0) && (y.i.t == 0))
+        x.i.n = -(x.i.n == y.i.n);
+    else
+        {
+        float2 (&x, &y);
+        x.i.n = -(x.f == y.f);
+        x.i.t = 0; // must come after!
+        }
+    return x;
+    }
+
+static VAR math_greater (VAR x, VAR y) // '>'
+    {
+    if ((x.i.t == 0) && (y.i.t == 0))
+        x.i.n = -(x.i.n > y.i.n);
+    else
+        {
+        float2 (&x, &y);
+        x.i.n = -(x.f > y.f);
+        x.i.t = 0; // must come after!
+        }
+    return x;
+    }
+
+static VAR math_y (VAR x, VAR y) // 'y'
+    {
+    if ((x.i.t == 0) && (y.i.t == 0))
+        x.i.n = -(x.i.n <= y.i.n);
+    else
+        {
+        float2 (&x, &y);
+        x.i.n = -(x.f <= y.f);
+        x.i.t = 0; // must come after!
+        }
+    return x;
+    }
+
+static VAR math_z (VAR x, VAR y) // 'z'
+    {
+    if ((x.i.t == 0) && (y.i.t == 0))
+        x.i.n = -(x.i.n != y.i.n);
+    else
+        {
+        float2 (&x, &y);
+        x.i.n = -(x.f != y.f);
+        x.i.t = 0; // must come after!
+        }
+    return x;
+    }
+
+static VAR math_brace (VAR x, VAR y) // '{'
+    {
+    if ((x.i.t == 0) && (y.i.t == 0))
+        x.i.n = -(x.i.n >= y.i.n);
+    else
+        {
+        float2 (&x, &y);
+        x.i.n = -(x.f >= y.f);
+        x.i.t = 0; // must come after!
+        }
+    return x;
+    }
+
+static VAR math_4 (VAR x, VAR y)
+    {
+    fix2 (&x, &y);
+    if (y.i.n > 63)
+        {
+        x.i.n = 0;
+        return x;
+        }
+    x.i.n = x.i.n << y.i.n;
+    if ((liston & BIT2) == 0)
+        x.i.n = (x.i.n << 32) >> 32;
+    return x;
+    }
+
+static VAR math_5 (VAR x, VAR y)
+    {
+    fix2 (&x, &y);
+    if (y.i.n > 63)
+        {
+        x.i.n = 0;
+        return x;
+        }
+    x.i.n = x.i.n << y.i.n;
+    return x;
+    }
+
+static VAR math_6 (VAR x, VAR y)
+    {
+    fix2 (&x, &y);
+    if (y.i.n > 63)
+        y.i.n = 63;
+    x.i.n = x.i.n >> y.i.n;
+    return x;
+    }
+
+static VAR math_7 (VAR x, VAR y)
+    {
+    fix2 (&x, &y);
+    if (y.i.n > 63)
+        {
+        x.i.n = 0;
+        return x;
+        }
+    if (((liston & BIT2) == 0) && (y.i.n != 0))
+        x.i.n &= 0xFFFFFFFF;
+    x.i.n = (unsigned long long) x.i.n >> y.i.n;
+    return x;
+    }
+
+typedef VAR (* math_func)(VAR x, VAR y);
+
+struct
+    {
+    int         code;
+    math_func   fn;
+    }
+    math_table[] = {
+        {TAND, math_TAND},      // TAND -128
+        {TDIV, math_TDIV},      // TDIV -127
+        {TEOR, math_TEOR},      // TEOR -126
+        {TMOD, math_TMOD},      // TMOD -125
+        {TOR, math_TOR},        // TOR  -124
+        {TSUM, math_TSUM},      // TSUM -58
+        {4, math_4},            // 4    4
+        {5, math_5},            // 5    5
+        {6, math_6},            // 6    6
+        {7, math_7},            // 7    7
+        {'*', math_multiply},   // '*'  42
+        {'+', math_plus},       // '+'  43
+        {'-', math_minus},      // '-'  45
+        {'/', math_divide},     // '/'  47
+        {'<', math_less},       // '<'  60
+        {'=', math_equal},      // '='  61
+        {'>', math_greater},    // '>'  62
+        {'^', math_power},      // '^'  94
+        {'y', math_y},          // 'y'  121
+        {'z', math_z},          // 'z'  122
+        {'{', math_brace},      // '{'  123
+        };
 
 VAR math (VAR x, signed char op, VAR y)
-{
-	errno = 0 ;
-	setfpu () ;
-	switch (op)
-	    {
-		case '+':
-			if ((x.i.t == 0) && (y.i.t == 0))
-			    {
-#if defined __GNUC__ && __GNUC__ < 5
-				long long sum = x.i.n + y.i.n ;
-				if (((int)(x.s.l ^ y.s.l) < 0) || ((sum ^ x.i.n) >= 0))
-#else
-				long long sum ;
-				if (! __builtin_saddll_overflow (x.i.n, y.i.n, &sum))
-#endif
-				    {
-					x.i.n = sum ;
-					return x ;
-				    }
-			    }
-			float2 (&x, &y) ;
-			x.f += y.f ;
-			break ;
-
-		case '-':
-			if ((x.i.t == 0) && (y.i.t == 0))
-			    {
-#if defined __GNUC__  && __GNUC__ < 5
-				long long dif = x.i.n - y.i.n ;
-				if (((int)(x.s.l ^ y.s.l) >= 0) || ((dif ^ x.i.n) >= 0))
-#else
-				long long dif ;
-				if (! __builtin_ssubll_overflow (x.i.n, y.i.n, &dif))
-#endif
-				    {
-					x.i.n = dif ;
-					return x ;
-				    }
-			    }
-			float2 (&x, &y) ;
-			x.f -= y.f ;
-			break ;
-
-		case '*':
-			if (x.i.n == 0)
-				return x ;
-			if (y.i.n == 0)
-				return y ;
-			if ((x.i.t == 0) && (y.i.t == 0))
-			    {
-#if defined __GNUC__  && __GNUC__ < 5
-				long long prod = x.i.n * y.i.n ;
-				if ((x.i.n != 0x8000000000000000) && (y.i.n != 0x8000000000000000) &&
-					((__builtin_clzll(x.i.n) + __builtin_clzll(~x.i.n) +
-					  __builtin_clzll(y.i.n) + __builtin_clzll(~y.i.n)) > 63))
-#else
-				long long prod ;
-				if (! __builtin_smulll_overflow (x.i.n, y.i.n, &prod))
-#endif
-				    {
-					x.i.n = prod ;
-					return x ;
-				    }
-			    }
-			float2 (&x, &y) ;
-			x.f *= y.f ;
-			break ;
-
-		case '/':
-			float2 (&x, &y) ;
-			x.f /= y.f ;
-			break ;
-
-		case '^':
-			if (y.i.t == 0)
-			    {
-				if (y.i.n == 0)
-				    {
-					y.i.n = 1 ;
-					return y ;
-				    }
-				int n ;
-				if (y.i.n == -1)
-					n = 64 ;
-				else
-					n = __builtin_clzll(y.i.n) + __builtin_clzll(~y.i.n) ;
-				if (n > 32)
-				    {
-					VAR v ;
-					int yi = y.i.n ;
-					v.i.t = 0 ;
-					v.i.n = 1 ;
-
-					if (yi < 0)
-					    {
-						yi = -yi ;
-						x = math (v, '/', x) ;
-					    }
-					yi = yi << (n - 33) ;
-					n = 65 - n ;
-					while (n--)
-					    {
-						v = math (v, '*', v) ;
-						if (yi < 0)
-							v = math (v, '*', x) ;
-						yi = yi << 1 ;
-					    }
-					return v ;
-				    }
-			    }
-			float2 (&x, &y) ;
-			x.f = powl(x.f, y.f) ;
-			break ;
-
-		case TDIV:
-			fix2 (&x, &y) ;
-			if (y.i.n == 0) error (18, NULL) ; // 'Division by zero'
-			x.i.n /= y.i.n ;
-			return x ;
-
-		case TMOD:
-			fix2 (&x, &y) ;
-			if (y.i.n == 0) error (18, NULL) ; // 'Division by zero'
-			x.i.n %= y.i.n ;
-			return x ;
-
-		case TAND:
-			fix2(&x, &y) ;
-			x.i.n &= y.i.n ;
-			return x ;
-
-		case TOR:
-			fix2(&x, &y) ;
-			x.i.n |= y.i.n ;
-			return x ;
-
-		case TEOR:
-			fix2(&x, &y) ;
-			x.i.n ^= y.i.n ;
-			return x ;
-
-		case TSUM:
-			fix2(&x, &y) ;
-			x.i.n += y.i.n ;
-			return x ;
-
-		case '<':
-			if ((x.i.t == 0) && (y.i.t == 0))
-				x.i.n = -(x.i.n < y.i.n) ;
-			else
-			    {
-				float2 (&x, &y) ;
-				x.i.n = -(x.f < y.f) ;
-				x.i.t = 0 ; // must come after!
-			    }
-			return x ;
-
-		case '=':
-			if ((x.i.t == 0) && (y.i.t == 0))
-				x.i.n = -(x.i.n == y.i.n) ;
-			else
-			    {
-				float2 (&x, &y) ;
-				x.i.n = -(x.f == y.f) ;
-				x.i.t = 0 ; // must come after!
-			    }
-			return x ;
-
-		case '>':
-			if ((x.i.t == 0) && (y.i.t == 0))
-				x.i.n = -(x.i.n > y.i.n) ;
-			else
-			    {
-				float2 (&x, &y) ;
-				x.i.n = -(x.f > y.f) ;
-				x.i.t = 0 ; // must come after!
-			    }
-			return x ;
-
-		case 'y':
-			if ((x.i.t == 0) && (y.i.t == 0))
-				x.i.n = -(x.i.n <= y.i.n) ;
-			else
-			    {
-				float2 (&x, &y) ;
-				x.i.n = -(x.f <= y.f) ;
-				x.i.t = 0 ; // must come after!
-			    }
-			return x ;
-
-		case 'z':
-			if ((x.i.t == 0) && (y.i.t == 0))
-				x.i.n = -(x.i.n != y.i.n) ;
-			else
-			    {
-				float2 (&x, &y) ;
-				x.i.n = -(x.f != y.f) ;
-				x.i.t = 0 ; // must come after!
-			    }
-			return x ;
-
-		case '{':
-			if ((x.i.t == 0) && (y.i.t == 0))
-				x.i.n = -(x.i.n >= y.i.n) ;
-			else
-			    {
-				float2 (&x, &y) ;
-				x.i.n = -(x.f >= y.f) ;
-				x.i.t = 0 ; // must come after!
-			    }
-			return x ;
-
-		case 4:
-			fix2 (&x, &y) ;
-			if (y.i.n > 63)
-			    {
-				x.i.n = 0 ;
-				return x ;
-			    }
-			x.i.n = x.i.n << y.i.n ;
-			if ((liston & BIT2) == 0)
-				x.i.n = (x.i.n << 32) >> 32 ;
-			return x ;
-
-		case 5:
-			fix2 (&x, &y) ;
-			if (y.i.n > 63)
-			    {
-				x.i.n = 0 ;
-				return x ;
-			    }
-			x.i.n = x.i.n << y.i.n ;
-			return x ;
-
-		case 6:
-			fix2 (&x, &y) ;
-			if (y.i.n > 63)
-				y.i.n = 63 ;
-			x.i.n = x.i.n >> y.i.n ;
-			return x ;
-
-		case 7:
-			fix2 (&x, &y) ;
-			if (y.i.n > 63)
-			    {
-				x.i.n = 0 ;
-				return x ;
-			    }
-			if (((liston & BIT2) == 0) && (y.i.n != 0))
-				x.i.n &= 0xFFFFFFFF ;
-			x.i.n = (unsigned long long) x.i.n >> y.i.n ;
-			return x ;
-	    }
-
-	if (isinf(x.f) || isnan(x.f) || (x.i.t == -1) || errno)
-	    {
-		if (op == '/')
-			error (18, NULL) ; // 'Division by zero'
-		else if (op == '^')
-			error (22, NULL) ; // 'Logarithm range'
-		else
-			error (20, NULL) ; // 'Number too big'
-	    }
-
-	if ((x.i.t == 0) || (x.i.t == (short) 0x8000))
-		x.f = 0.0 ; // Underflow
-
-	return x ;
-}
+    {
+    errno = 0;
+    setfpu ();
+    int n1 = -1;
+    int n2 = sizeof (math_table) / sizeof (math_table[0]);
+    while ( n2 - n1 > 1 )
+        {
+        int n3 = ( n1 + n2 ) / 2;
+        if ( math_table[n3].code == op )
+            {
+            return math_table[n3].fn (x, y);
+            }
+        else if ( math_table[n3].code < op )
+            {
+            n1 = n3;
+            }
+        else
+            {
+            n2 = n3;
+            }
+        }
+    error (0, "Invalid math operation");
+    return x;
+    }
 
 // Get a possibly signed numeric constant from string accumulator:
 VAR val (void)
-{
-	VAR v ;
-	signed char *tmpesi = esi ;
-	esi = (signed char *) accs ;
-	while (*esi == ' ') esi++ ;
-	if (*esi == '-')
-	    {
-		VAR z = {0} ;
-		esi++ ;
-		v = math (z, '-', con ()) ;
-	    }
-	else
-	    {
-		if (*esi == '+') esi++ ;
-		v = con () ;
-	    }
-	esi = tmpesi ;
-	return v ;
-}
+    {
+    VAR v;
+    signed char *tmpesi = esi;
+    esi = (signed char *) accs;
+    while (*esi == ' ') esi++;
+    if (*esi == '-')
+        {
+        VAR z = {0};
+        esi++;
+        v = math (z, '-', con ());
+        }
+    else
+        {
+        if (*esi == '+') esi++;
+        v = con ();
+        }
+    esi = tmpesi;
+    return v;
+    }
 
-VAR item (void) ;
-VAR expr (void) ;
+VAR item (void);
+VAR expr (void);
 
 VAR items (void)
-{
-	VAR v = item () ;
-	if (v.s.t != -1)
-		error (6, NULL) ; // 'Type mismatch'
-	return v ;
-}
+    {
+    VAR v = item ();
+    if (v.s.t != -1)
+        error (6, NULL); // 'Type mismatch'
+    return v;
+    }
 
 static VAR itemn (void)
-{
-	VAR v = item () ;
-	if (v.s.t == -1)
-		error (6, NULL) ; // 'Type mismatch'
-	return v ;
-}
+    {
+    VAR v = item ();
+    if (v.s.t == -1)
+        error (6, NULL); // 'Type mismatch'
+    return v;
+    }
 
 static VAR itemf (void)
-{
-	VAR v = item () ;
-	if (v.s.t == -1)
-		error (6, NULL) ; // 'Type mismatch'
-	if (v.i.t == 0)
-	    {
-		v.i.t = 1 ; // ARM
-		v.f = v.i.n ;
-	    }
-	return v ;
-}
+    {
+    VAR v = item ();
+    if (v.s.t == -1)
+        error (6, NULL); // 'Type mismatch'
+    if (v.i.t == 0)
+        {
+        v.i.t = 1; // ARM
+        v.f = v.i.n;
+        }
+    return v;
+    }
 
 long long itemi (void)
-{
-	VAR v = item () ;
-	if (v.s.t == -1)
-		error (6, NULL) ; // 'Type mismatch'
-	if (v.i.t != 0)
-	    {
-		long long t = v.f ;
-		if (t != truncl (v.f))
-			error (20, NULL) ; // 'Number too big'
-		v.i.n = t ;
-	    }
-	return v.i.n ;
-}
+    {
+    VAR v = item ();
+    if (v.s.t == -1)
+        error (6, NULL); // 'Type mismatch'
+    if (v.i.t != 0)
+        {
+        long long t = v.f;
+        if (t != truncl (v.f))
+            error (20, NULL); // 'Number too big'
+        v.i.n = t;
+        }
+    return v.i.n;
+    }
 
 VAR exprs (void)
-{
-	VAR v = expr () ;
-	if (v.s.t != -1)
-		error (6, NULL) ; // 'Type mismatch'
-	return v ;
-}
+    {
+    VAR v = expr ();
+    if (v.s.t != -1)
+        error (6, NULL); // 'Type mismatch'
+    return v;
+    }
 
 VAR exprn (void)
-{
-	VAR v = expr () ;
-	if (v.s.t == -1)
-		error (6, NULL) ; // 'Type mismatch'
-	return v ;
-}
+    {
+    VAR v = expr ();
+    if (v.s.t == -1)
+        error (6, NULL); // 'Type mismatch'
+    return v;
+    }
 
 long long expri (void)
-{
-	VAR v = expr () ;
-	if (v.s.t == -1)
-		error (6, NULL) ; // 'Type mismatch'
-	if (v.i.t != 0)
-	    {
-		long long t = v.f ;
-		if (t != truncl (v.f))
-			error (20, NULL) ; // 'Number too big'
-		v.i.n = t ;
-	    }
-	return v.i.n ;
-}
+    {
+    VAR v = expr ();
+    if (v.s.t == -1)
+        error (6, NULL); // 'Type mismatch'
+    if (v.i.t != 0)
+        {
+        long long t = v.f;
+        if (t != truncl (v.f))
+            error (20, NULL); // 'Number too big'
+        v.i.n = t;
+        }
+    return v.i.n;
+    }
 
 void *channel (void)
-{
-	if (nxt () != '#')
-		error (45, NULL) ; // 'Missing #'
-	esi++ ;
-	return (void *) (size_t) itemi () ;
-}
+    {
+    if (nxt () != '#')
+        error (45, NULL); // 'Missing #'
+    esi++;
+    return (void *) (size_t) itemi ();
+    }
 
 static int dimfunc (void)
-{
-	int d, n ;
-	void *ptr ;
-	unsigned char type ;
-	if (nxt () == '(')
-	    {
-		esi++ ;
-		n = dimfunc () ;
-		braket () ;
-		return n ;
-	    }
-	ptr = getvar (&type) ;
-	if (ptr == NULL)
-		error (16, NULL) ; // 'Syntax error'
-	if (type == 0)
-		error (26, NULL) ; // 'No such variable'
-	if ((type & (BIT4 | BIT6)) == 0)
-		error (6, NULL) ; // 'Type mismatch'
-	if ((type & BIT6) == 0)
-	    {
-		ptr = VLOAD(ptr) ; // Structure format ptr
-		if (ptr < (void *)2)
-			error (56, NULL) ; // 'Bad use of structure'
-		return ILOAD(ptr) ;
-	    }
-	ptr = VLOAD(ptr) ;
-	if (ptr < (void *)2)
-		error (14, NULL) ; // 'Bad use of array'
-	d = *(unsigned char *)ptr ;
-	if (*esi != ',')
-		return d;
-	esi++ ;
-	n = expri () - 1 ;
-	if ((n < 0) || (n >= d))
-		error (15, NULL) ; // 'Bad subscript'
-	return ILOAD(ptr + 1 + n * 4) - 1 ;
-}
+    {
+    int d, n;
+    void *ptr;
+    unsigned char type;
+    if (nxt () == '(')
+        {
+        esi++;
+        n = dimfunc ();
+        braket ();
+        return n;
+        }
+    ptr = getvar (&type);
+    if (ptr == NULL)
+        error (16, NULL); // 'Syntax error'
+    if (type == 0)
+        error (26, NULL); // 'No such variable'
+    if ((type & (BIT4 | BIT6)) == 0)
+        error (6, NULL); // 'Type mismatch'
+    if ((type & BIT6) == 0)
+        {
+        ptr = VLOAD(ptr); // Structure format ptr
+        if (ptr < (void *)2)
+            error (56, NULL); // 'Bad use of structure'
+        return ILOAD(ptr);
+        }
+    ptr = VLOAD(ptr);
+    if (ptr < (void *)2)
+        error (14, NULL); // 'Bad use of array'
+    d = *(unsigned char *)ptr;
+    if (*esi != ',')
+        return d;
+    esi++;
+    n = expri () - 1;
+    if ((n < 0) || (n >= d))
+        error (15, NULL); // 'Bad subscript'
+    return ILOAD(ptr + 1 + n * 4) - 1;
+    }
 
 /************************* Parenthesised expression ****************************/
 
@@ -1527,10 +1642,10 @@ static VAR item_TSIN (void)
     {
     VAR v = itemf ();
     v.f = sinl (v.f);
-	if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
-        error (20, NULL) ; // 'Number too big'
-	if (v.i.t == 0)
-		v.i.n = 0 ; // Underflow
+    if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
+        error (20, NULL); // 'Number too big'
+    if (v.i.t == 0)
+        v.i.n = 0; // Underflow
     return v;
     }
 
@@ -1540,10 +1655,10 @@ static VAR item_TCOS (void)
     {
     VAR v = itemf ();
     v.f = cosl (v.f);
-	if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
-        error (20, NULL) ; // 'Number too big'
-	if (v.i.t == 0)
-		v.i.n = 0 ; // Underflow
+    if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
+        error (20, NULL); // 'Number too big'
+    if (v.i.t == 0)
+        v.i.n = 0; // Underflow
     return v;
     }
 
@@ -1553,10 +1668,10 @@ static VAR item_TTAN (void)
     {
     VAR v = itemf ();
     v.f = tanl (v.f);
-	if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
-        error (20, NULL) ; // 'Number too big'
-	if (v.i.t == 0)
-		v.i.n = 0 ; // Underflow
+    if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
+        error (20, NULL); // 'Number too big'
+    if (v.i.t == 0)
+        v.i.n = 0; // Underflow
     return v;
     }
 
@@ -1566,10 +1681,10 @@ static VAR item_TASN (void)
     {
     VAR v = itemf ();
     v.f = asinl (v.f);
-	if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
-        error (20, NULL) ; // 'Number too big'
-	if (v.i.t == 0)
-		v.i.n = 0 ; // Underflow
+    if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
+        error (20, NULL); // 'Number too big'
+    if (v.i.t == 0)
+        v.i.n = 0; // Underflow
     return v;
     }
 
@@ -1579,10 +1694,10 @@ static VAR item_TACS (void)
     {
     VAR v = itemf ();
     v.f = acosl (v.f);
-	if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
-        error (20, NULL) ; // 'Number too big'
-	if (v.i.t == 0)
-		v.i.n = 0 ; // Underflow
+    if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
+        error (20, NULL); // 'Number too big'
+    if (v.i.t == 0)
+        v.i.n = 0; // Underflow
     return v;
     }
 
@@ -1592,10 +1707,10 @@ static VAR item_TATN (void)
     {
     VAR v = itemf ();
     v.f = atanl (v.f);
-	if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
-        error (20, NULL) ; // 'Number too big'
-	if (v.i.t == 0)
-		v.i.n = 0 ; // Underflow
+    if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
+        error (20, NULL); // 'Number too big'
+    if (v.i.t == 0)
+        v.i.n = 0; // Underflow
     return v;
     }
 
@@ -1637,8 +1752,8 @@ static VAR item_TEXP (void)
     v.f = expl (v.f);
     if (isinf (v.f))
         error (24, NULL); // 'Exponent range'
-	if (v.i.t == 0)
-		v.i.n = 0 ; // Underflow
+    if (v.i.t == 0)
+        v.i.n = 0; // Underflow
     return v;
     }
 
@@ -1650,8 +1765,8 @@ static VAR item_TLN (void)
     v.f = logl (v.f);
     if (isnan (v.f) || isinf (v.f))
         error (22, NULL); // 'Logarithm range'
-	if (v.i.t == 0)
-		v.i.n = 0 ; // Underflow
+    if (v.i.t == 0)
+        v.i.n = 0; // Underflow
     return v;
     }
 
@@ -1680,10 +1795,10 @@ static VAR item_TSQR (void)
     {
     VAR v = itemf ();
     v.f = sqrtl (v.f);
-	if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
-        error (21, NULL) ; // 'Negative root'
-	if (v.i.t == 0)
-		v.i.n = 0 ; // Underflow
+    if (isinf(v.f) || isnan(v.f) || (v.i.t == -1) || errno)
+        error (21, NULL); // 'Negative root'
+    if (v.i.t == 0)
+        v.i.n = 0; // Underflow
     return v;
     }
 
@@ -2353,18 +2468,18 @@ typedef VAR (*item_func)(void);
 static const item_func item_list[] =
     {
     item_DEFAULT,   // TAND	        -128
-	item_DEFAULT,	// TDIV	        -127
-	item_DEFAULT,	// TEOR	        -126
-	item_TMOD,	    // TMOD	        -125
-	item_DEFAULT,	// TOR	        -124
-	item_DEFAULT,	// TERROR       -123
-	item_DEFAULT,	// TLINE        -122
-	item_DEFAULT,	// TOFF	        -121
-	item_DEFAULT,	// TSTEP        -120
-	item_DEFAULT,	// TSPC	        -119
-	item_DEFAULT,	// TTAB	        -118
-	item_DEFAULT,	// TELSE        -117
-	item_DEFAULT,	// TTHEN        -116
+    item_DEFAULT,	// TDIV	        -127
+    item_DEFAULT,	// TEOR	        -126
+    item_TMOD,	    // TMOD	        -125
+    item_DEFAULT,	// TOR	        -124
+    item_DEFAULT,	// TERROR       -123
+    item_DEFAULT,	// TLINE        -122
+    item_DEFAULT,	// TOFF	        -121
+    item_DEFAULT,	// TSTEP        -120
+    item_DEFAULT,	// TSPC	        -119
+    item_DEFAULT,	// TTAB	        -118
+    item_DEFAULT,	// TELSE        -117
+    item_DEFAULT,	// TTHEN        -116
     item_TLINO,     // TLINO        -115
     item_TOPENIN,   // TOPENIN      -114
     item_TPTRR,     // TPTRR        -113
@@ -2613,16 +2728,16 @@ static const item_func item_list[] =
 VAR item (void)
     {
     item_func fn = item_DEFAULT;
-    VAR v ;
-    signed char al = nxt () ;
+    VAR v;
+    signed char al = nxt ();
 #if PICO_STACK_CHECK & 0x02
     if((&al < (signed char *)libtop + 0x800) && (&al >= (signed char *)userRAM))
         {
         error(0, "Processor stack too deep!");
         }
 #endif
-    errno = 0 ;
-    esi++ ;
+    errno = 0;
+    esi++;
 #if 1
     return item_list[(int)al + 0x80]();
 #else
@@ -2638,25 +2753,25 @@ VAR item (void)
     else
         {
         /*
-        switch (al)
-            {
-            case TMOD:      fn = item_TMOD;     break;  // -125     1
-            case TDIM:      fn = item_TDIM;     break;  // -34      2
-            case TEND:      fn = item_TEND;     break;  // -32      3
-            case TMODE:     fn = item_TMODE;    break;  // -21      4
-            case TPROC:     fn = item_TPROC;    break;  // -14      5
-            case TREPORT:   fn = item_TREPORT;  break;  // -10      6
-            case TWIDTH:    fn = item_TWIDTH;   break;  // -2       7
-            case TSYS:      fn = item_TSYS;     break;  // 9        8
-            case TTINT:     fn = item_TTINT;    break;  // 10       9
-            case '"':       fn = cons;          break;  // 34       10
-            case '%':       fn = item_BIN;      break;  // 37       11
-            case '&':       fn = item_HEX;      break;  // 38       12
-            case '(':       fn = item_BRACKET;  break;  // 40       13
-            case '+':       fn = itemn;         break;  // 43       14
-            case '-':       fn = item_MINUS;    break;  // 45       15
-            case '^':       fn = item_ADDR;     break;  // 94       16
-            default:        fn = item_DEFAULT;  break;
+          switch (al)
+          {
+          case TMOD:      fn = item_TMOD;     break;  // -125     1
+          case TDIM:      fn = item_TDIM;     break;  // -34      2
+          case TEND:      fn = item_TEND;     break;  // -32      3
+          case TMODE:     fn = item_TMODE;    break;  // -21      4
+          case TPROC:     fn = item_TPROC;    break;  // -14      5
+          case TREPORT:   fn = item_TREPORT;  break;  // -10      6
+          case TWIDTH:    fn = item_TWIDTH;   break;  // -2       7
+          case TSYS:      fn = item_TSYS;     break;  // 9        8
+          case TTINT:     fn = item_TTINT;    break;  // 10       9
+          case '"':       fn = cons;          break;  // 34       10
+          case '%':       fn = item_BIN;      break;  // 37       11
+          case '&':       fn = item_HEX;      break;  // 38       12
+          case '(':       fn = item_BRACKET;  break;  // 40       13
+          case '+':       fn = itemn;         break;  // 43       14
+          case '-':       fn = item_MINUS;    break;  // 45       15
+          case '^':       fn = item_ADDR;     break;  // 94       16
+          default:        fn = item_DEFAULT;  break;
         */
         // Bisection search
         if ( al == TSYS ) fn = item_TSYS;
@@ -2728,27 +2843,27 @@ VAR item (void)
 //           <<  0x04   <<< 0x05   >>  0x06   >>> 0x07
 
 static signed char relop (void)
-{
-	unsigned char al, op = *esi ;
-	if ((op != '<') && (op != '=') && (op != '>'))
-		return 0 ;
-	esi++ ;
- 	al = nxt () ;
-	if ((al != '<') && (al != '=') && (al != '>'))
-		return op ; // < = >
-	esi++ ;
-	if (al != op)
-		return op + al ; // <= <> >=
-	if (al == '=')
-		return op ; // == treated as =
-	al = nxt () ;
-	if (al == op)
-	    {
-		esi++ ;
-		op += 1 ;
-	    }
-	return (op & 7) ; // << <<< >> >>>
-}
+    {
+    unsigned char al, op = *esi;
+    if ((op != '<') && (op != '=') && (op != '>'))
+        return 0;
+    esi++;
+    al = nxt ();
+    if ((al != '<') && (al != '=') && (al != '>'))
+        return op; // < = >
+    esi++;
+    if (al != op)
+        return op + al; // <= <> >=
+    if (al == '=')
+        return op; // == treated as =
+    al = nxt ();
+    if (al == op)
+        {
+        esi++;
+        op += 1;
+        }
+    return (op & 7); // << <<< >> >>>
+    }
 
 // Evaluate an expression:
 // Hierarchy: (1) Variables, functions, constants, parenthesized expressions.
@@ -2761,452 +2876,452 @@ static signed char relop (void)
 
 // Level 5: ^:
 static VAR expr5 (void)
-{
-	VAR x = item () ;
-	signed char op = nxt () ;
-	if (x.s.t == -1)
-		return x ; // string
-	while (1) 
-	    {
-		if (op == '^')
-		    {
-			esi++ ;
-			VAR y = item () ;
-			if (y.s.t == -1)
-				error (6, NULL) ; // 'Type mismatch'
-			x = math (x, op, y) ;
-		    }
-		else
-			break ;
-		op = nxt () ;
-	    }
-	return x;
-}
+    {
+    VAR x = item ();
+    signed char op = nxt ();
+    if (x.s.t == -1)
+        return x; // string
+    while (1) 
+        {
+        if (op == '^')
+            {
+            esi++;
+            VAR y = item ();
+            if (y.s.t == -1)
+                error (6, NULL); // 'Type mismatch'
+            x = math (x, op, y);
+            }
+        else
+            break;
+        op = nxt ();
+        }
+    return x;
+    }
 
 // Level 4: *, /, MOD, DIV:
 static VAR expr4 (void)
-{
-	VAR x = expr5 () ;
-	if (x.s.t == -1)
-		return x ; // string
-	while (1) 
-	    {
-		signed char op = *esi ;
-		if ((op == '*') || (op == '/') || (op == TMOD) || (op == TDIV))
-		    {
-			esi++ ;
-			VAR y = expr5 () ;
-			if (y.s.t == -1)
-				error (6, NULL) ; // 'Type mismatch'
-			x = math (x, op, y) ;
-		    }
-		else
-			break ;
-	    }
-	return x;
-}
+    {
+    VAR x = expr5 ();
+    if (x.s.t == -1)
+        return x; // string
+    while (1) 
+        {
+        signed char op = *esi;
+        if ((op == '*') || (op == '/') || (op == TMOD) || (op == TDIV))
+            {
+            esi++;
+            VAR y = expr5 ();
+            if (y.s.t == -1)
+                error (6, NULL); // 'Type mismatch'
+            x = math (x, op, y);
+            }
+        else
+            break;
+        }
+    return x;
+    }
 
 // Level 3: +, -, SUM:
 static VAR expr3 (void)
-{
-	VAR x = expr4 () ;
-	if (x.s.t == -1)
-	    {
-		while (1)
-		    {
-			signed char op = *esi ;
-			if (op == '+') // concatenate strings
-			    {
-				char *tmp ;
-				heapptr *oldesp ;
-				esi++ ;
-				oldesp = pushs (x) ;
-				VAR y = expr4 () ;
-				if (y.s.t != -1)
-					error (6, NULL) ; // 'Type mismatch'
-				tmp = moves ((STR *) &y, x.s.l) ;
-				memmove (tmp, esp, x.s.l) ;
-				esp = oldesp ;
-				x.s.p = tmp - (char *) zero ;
-				x.s.l += y.s.l ;
-			    }
-			else
-				break ;
-		    }
-		return x ;
-	    }
-	while (1) 
-	    {
-		signed char op = *esi ;
-		if ((op == '+') || (op == '-') || (op == TSUM))
-		    {
-			esi++ ;
-			VAR y = expr4 () ;
-			if (y.s.t == -1)
-				error (6, NULL) ; // 'Type mismatch'
-			x = math (x, op, y) ;
-		    }
-		else
-			break ;
-	    }
-	return x;
-}
+    {
+    VAR x = expr4 ();
+    if (x.s.t == -1)
+        {
+        while (1)
+            {
+            signed char op = *esi;
+            if (op == '+') // concatenate strings
+                {
+                char *tmp;
+                heapptr *oldesp;
+                esi++;
+                oldesp = pushs (x);
+                VAR y = expr4 ();
+                if (y.s.t != -1)
+                    error (6, NULL); // 'Type mismatch'
+                tmp = moves ((STR *) &y, x.s.l);
+                memmove (tmp, esp, x.s.l);
+                esp = oldesp;
+                x.s.p = tmp - (char *) zero;
+                x.s.l += y.s.l;
+                }
+            else
+                break;
+            }
+        return x;
+        }
+    while (1) 
+        {
+        signed char op = *esi;
+        if ((op == '+') || (op == '-') || (op == TSUM))
+            {
+            esi++;
+            VAR y = expr4 ();
+            if (y.s.t == -1)
+                error (6, NULL); // 'Type mismatch'
+            x = math (x, op, y);
+            }
+        else
+            break;
+        }
+    return x;
+    }
 
 // Level 2: =, <, >, <>, <=, >=, <<, >>, >>>:
 // (these operators do not chain)
 static VAR expr2 (void)
-{
-	VAR x = expr3 () ;
-	signed char op = relop () ;
-	if (op == 0)
-		return x ;
-	if (x.s.t == -1)
-	    {
-		VAR y ;
-		int n, r ;
-		heapptr *oldesp ;
+    {
+    VAR x = expr3 ();
+    signed char op = relop ();
+    if (op == 0)
+        return x;
+    if (x.s.t == -1)
+        {
+        VAR y;
+        int n, r;
+        heapptr *oldesp;
 
-		oldesp = pushs (x) ;
-		y = expr3 () ;
-		if (y.s.t != -1)
-			error (6, NULL) ; // 'Type mismatch'
+        oldesp = pushs (x);
+        y = expr3 ();
+        if (y.s.t != -1)
+            error (6, NULL); // 'Type mismatch'
 
-		n = x.s.l ;
-		if (n > y.s.l)
-			n = y.s.l ;
-		r = memcmp (esp, y.s.p + zero, n) ;
-		if (r == 0)
-			r = (x.s.l > y.s.l) - (x.s.l < y.s.l) ;
-		esp = oldesp ;
+        n = x.s.l;
+        if (n > y.s.l)
+            n = y.s.l;
+        r = memcmp (esp, y.s.p + zero, n);
+        if (r == 0)
+            r = (x.s.l > y.s.l) - (x.s.l < y.s.l);
+        esp = oldesp;
 
-		switch (op)
-		    {
-			case '<':
-				x.i.n = -(r < 0) ;
-				break ;
-			case '=':
-				x.i.n = -(r == 0) ;
-				break ;
-			case '>':
-				x.i.n = -(r > 0) ;
-				break ;
-			case 'y':
-				x.i.n = -(r <= 0) ;
-				break ;
-			case 'z':
-				x.i.n = -(r != 0) ;
-				break ;
-			case '{':
-				x.i.n = -(r >= 0) ;
-				break ;
-			default:
-				error (16, NULL) ; // Syntax error
-		    }
-		x.i.t = 0 ;
-	    }
-	else
-	    {
-		VAR y = expr3 () ;
-		if (y.s.t == -1)
-			error (6, NULL) ; // 'Type mismatch'
-		x = math (x, op, y) ;
-	    }
-	return x;
-}
+        switch (op)
+            {
+            case '<':
+                x.i.n = -(r < 0);
+                break;
+            case '=':
+                x.i.n = -(r == 0);
+                break;
+            case '>':
+                x.i.n = -(r > 0);
+                break;
+            case 'y':
+                x.i.n = -(r <= 0);
+                break;
+            case 'z':
+                x.i.n = -(r != 0);
+                break;
+            case '{':
+                x.i.n = -(r >= 0);
+                break;
+            default:
+                error (16, NULL); // Syntax error
+            }
+        x.i.t = 0;
+        }
+    else
+        {
+        VAR y = expr3 ();
+        if (y.s.t == -1)
+            error (6, NULL); // 'Type mismatch'
+        x = math (x, op, y);
+        }
+    return x;
+    }
 
 // Level 1: AND:
 static VAR expr1 (void)
-{
-	VAR x = expr2 () ;
-	if (x.s.t == -1)
-		return x ; // string
-	while (1)
-	    {
-		signed char op = *esi ;
-		if (op == TAND)
-		    {
-			esi++ ;
-			VAR y = expr2 () ;
-			if (y.s.t == -1)
-				error (6, NULL) ; // 'Type mismatch'
-			x = math (x, op, y) ;
-		    }
-		else
-			break ;
-	    }
-	return x;
-}
+    {
+    VAR x = expr2 ();
+    if (x.s.t == -1)
+        return x; // string
+    while (1)
+        {
+        signed char op = *esi;
+        if (op == TAND)
+            {
+            esi++;
+            VAR y = expr2 ();
+            if (y.s.t == -1)
+                error (6, NULL); // 'Type mismatch'
+            x = math (x, op, y);
+            }
+        else
+            break;
+        }
+    return x;
+    }
 
 // Level 0: OR, EOR:
 VAR expr (void)
-{
-	VAR x = expr1 () ;
-	if (x.s.t == -1)
-		return x ; // string
-	while (1) 
-	    {
-		signed char op = *esi ;
-		if ((op == TOR) || (op == TEOR))
-		    {
-			esi++ ;
-			VAR y = expr1 () ;
-			if (y.s.t == -1)
-				error (6, NULL) ; // 'Type mismatch'
-			x = math (x, op, y) ;
-		    }
-		else
-			break ;
-	    }
-	return x;
-}
+    {
+    VAR x = expr1 ();
+    if (x.s.t == -1)
+        return x; // string
+    while (1) 
+        {
+        signed char op = *esi;
+        if ((op == TOR) || (op == TEOR))
+            {
+            esi++;
+            VAR y = expr1 ();
+            if (y.s.t == -1)
+                error (6, NULL); // 'Type mismatch'
+            x = math (x, op, y);
+            }
+        else
+            break;
+        }
+    return x;
+    }
 
 // Evaluate an array expression (strictly left-to-right):
 int expra (void *ebp, int ecx, unsigned char type)
-{
-	int i ;
-	signed char op ;
-	unsigned char type2 ;
-	void *ptr ;
+    {
+    int i;
+    signed char op;
+    unsigned char type2;
+    void *ptr;
 
-	if (nxt () == TEVAL)
-	    {
-		int count ;
-		signed char *tmpesi ;
-		esi++ ;
-		VAR v = items () ;
-		fixs (v) ;
-		lexan (accs, buff, 0) ;
-		tmpesi = esi ;
-		esi = (signed char *) buff ;
-		count = expra (ebp, ecx, type) ; // recursive call
-		esi = tmpesi ;
-		if (nxt () != ',')
-			return count ;
-	    }
-	else
-	    {
-		op = '=' ; // for initial assignment
-		while (1)
-		    {
-			void *savebp = ebp ;
-			signed char *savesi = esi ;
-			signed char saveop = op ;
+    if (nxt () == TEVAL)
+        {
+        int count;
+        signed char *tmpesi;
+        esi++;
+        VAR v = items ();
+        fixs (v);
+        lexan (accs, buff, 0);
+        tmpesi = esi;
+        esi = (signed char *) buff;
+        count = expra (ebp, ecx, type); // recursive call
+        esi = tmpesi;
+        if (nxt () != ',')
+            return count;
+        }
+    else
+        {
+        op = '='; // for initial assignment
+        while (1)
+            {
+            void *savebp = ebp;
+            signed char *savesi = esi;
+            signed char saveop = op;
 
-			if ((nxt () == '-') && (op == '=')) // unary minus
-			    {
-				esi++ ;
-				nxt () ;
-				op = '-' ;
-			    }
+            if ((nxt () == '-') && (op == '=')) // unary minus
+                {
+                esi++;
+                nxt ();
+                op = '-';
+                }
 
-			ptr = getvar (&type2) ;
-			if ((ptr != NULL) && (type2 & BIT6)) // RHS is an array
-			    {
-				if (ptr < (void *)2)
-					error (14, NULL) ; // 'Bad use of array'
-				ptr = VLOAD(ptr) ;
+            ptr = getvar (&type2);
+            if ((ptr != NULL) && (type2 & BIT6)) // RHS is an array
+                {
+                if (ptr < (void *)2)
+                    error (14, NULL); // 'Bad use of array'
+                ptr = VLOAD(ptr);
 
-				if (nxt () == '.') // dot product
-					break ;
+                if (nxt () == '.') // dot product
+                    break;
 
-				if ((type != type2) || (ecx != arrlen(&ptr)))
-					error (6, NULL) ; // 'Type mismatch'
-				if (type < 128) // numeric array
-				    {
-					for (i = 0; i < ecx; i++)
-					    {
-						VAR v = loadn (ptr, type & ~BIT6) ;
-						modify (v, ebp, type & ~BIT6, op) ;
-						ebp += type & TMASK ; // GCC extension
-						ptr += type & TMASK ; // GCC extension
-					    }
-				    }
-				else // string array
-				    {
-					for (i = 0; i < ecx; i++)
-					    {
-						modifs (NLOAD(ptr), ebp, type & ~BIT6, op) ;
-						ebp += 8 ; // GCC extension (void has size 1)
-						ptr += 8 ; // GCC extension (void has size 1)
-					    }
-				    }
-			    }
-			else // RHS is not an array
-			    {
-				VAR v ;
-				esi = savesi ;
-				op = saveop ;
+                if ((type != type2) || (ecx != arrlen(&ptr)))
+                    error (6, NULL); // 'Type mismatch'
+                if (type < 128) // numeric array
+                    {
+                    for (i = 0; i < ecx; i++)
+                        {
+                        VAR v = loadn (ptr, type & ~BIT6);
+                        modify (v, ebp, type & ~BIT6, op);
+                        ebp += type & TMASK; // GCC extension
+                        ptr += type & TMASK; // GCC extension
+                        }
+                    }
+                else // string array
+                    {
+                    for (i = 0; i < ecx; i++)
+                        {
+                        modifs (NLOAD(ptr), ebp, type & ~BIT6, op);
+                        ebp += 8; // GCC extension (void has size 1)
+                        ptr += 8; // GCC extension (void has size 1)
+                        }
+                    }
+                }
+            else // RHS is not an array
+                {
+                VAR v;
+                esi = savesi;
+                op = saveop;
 
-				if (type < 128) // numeric non-array
-				    {
-					switch (op)
-					    {
-						case TOR:
-						case TAND:
-						case TEOR:
-							v = expr3 () ;
-							break ;
+                if (type < 128) // numeric non-array
+                    {
+                    switch (op)
+                        {
+                        case TOR:
+                        case TAND:
+                        case TEOR:
+                            v = expr3 ();
+                            break;
 
-						case '+':
-						case '-':
-							v = expr4 () ;
-							break ;
+                        case '+':
+                        case '-':
+                            v = expr4 ();
+                            break;
 
-						default:
-							v = expr5 () ;
-					    }
-					if (v.s.t == -1)
-						error (6, NULL) ; // 'Type mismatch'
+                        default:
+                            v = expr5 ();
+                        }
+                    if (v.s.t == -1)
+                        error (6, NULL); // 'Type mismatch'
 
-					for (i = 0; i < ecx; i++)
-					    {
-						modify (v, ebp, type & ~BIT6, op) ;
-						ebp += type & TMASK ; // GCC extension
-						if (nxt () == ',') break ;
-					    }
-				    }
-				else // string non-array
-				    {
-					heapptr *savesp ;
-					v = items () ;
-					savesp = pushs (v) ;
-					v.s.p = (char *) esp - (char *) zero ;
-					for (i = 0; i < ecx; i++)
-					    {
-						modifs (v, ebp, type & ~BIT6, op) ;
-						ebp += 8 ; // GCC extension
-						if (nxt () == ',') break ;
-					    }
-					esp = savesp ;
-				    }
-			    }
+                    for (i = 0; i < ecx; i++)
+                        {
+                        modify (v, ebp, type & ~BIT6, op);
+                        ebp += type & TMASK; // GCC extension
+                        if (nxt () == ',') break;
+                        }
+                    }
+                else // string non-array
+                    {
+                    heapptr *savesp;
+                    v = items ();
+                    savesp = pushs (v);
+                    v.s.p = (char *) esp - (char *) zero;
+                    for (i = 0; i < ecx; i++)
+                        {
+                        modifs (v, ebp, type & ~BIT6, op);
+                        ebp += 8; // GCC extension
+                        if (nxt () == ',') break;
+                        }
+                    esp = savesp;
+                    }
+                }
 
-			ebp = savebp ;
-			op = nxt () ;
-			switch (op)
-			    {
-				// TODO enforce left-to-right priority
-				case TOR:
-				case TAND:
-				case TEOR:
-				case '+':
-				case '-':
-				case '*':
-				case '/':
-				case TDIV:
-				case TMOD:
-					esi++ ;
-					continue ;
-			    }
-			break ;
-		    }
-	    }
+            ebp = savebp;
+            op = nxt ();
+            switch (op)
+                {
+                // TODO enforce left-to-right priority
+                case TOR:
+                case TAND:
+                case TEOR:
+                case '+':
+                case '-':
+                case '*':
+                case '/':
+                case TDIV:
+                case TMOD:
+                    esi++;
+                    continue;
+                }
+            break;
+            }
+        }
 
-	if (*esi == '.')
-	    {
-		int i, j, k, dimsl, dimsr, size ;
-		int rowsl, colsl, rowsr, colsr ;
-		unsigned char type3 ;
-		void *rhs ;
+    if (*esi == '.')
+        {
+        int i, j, k, dimsl, dimsr, size;
+        int rowsl, colsl, rowsr, colsr;
+        unsigned char type3;
+        void *rhs;
 
-		esi++ ; // skip dot
-		nxt () ;
-		rhs = getvar (&type3) ;
-		if ((rhs == NULL) || (ptr == NULL))
-			error (16, NULL) ; // 'Syntax error'
-		if (type3 == 0)
-			error (26, NULL) ; // 'No such variable'
-		if ((type != type2) || (type != type3) || (type3 & BIT7))
-			error (6, NULL) ; // 'Type mismatch'
-		if (rhs < (void *)2)
-			error (14, NULL) ; // 'Bad use of array'
-		rhs = VLOAD(rhs) ;
+        esi++; // skip dot
+        nxt ();
+        rhs = getvar (&type3);
+        if ((rhs == NULL) || (ptr == NULL))
+            error (16, NULL); // 'Syntax error'
+        if (type3 == 0)
+            error (26, NULL); // 'No such variable'
+        if ((type != type2) || (type != type3) || (type3 & BIT7))
+            error (6, NULL); // 'Type mismatch'
+        if (rhs < (void *)2)
+            error (14, NULL); // 'Bad use of array'
+        rhs = VLOAD(rhs);
 
-		dimsl = *(unsigned char *)ptr ;
-		dimsr = *(unsigned char *)rhs ;
-		if ((dimsl > 2) || (dimsr > 2))
-			error (6, NULL) ; // 'Type mismatch'
+        dimsl = *(unsigned char *)ptr;
+        dimsr = *(unsigned char *)rhs;
+        if ((dimsl > 2) || (dimsr > 2))
+            error (6, NULL); // 'Type mismatch'
 
-		if (dimsl == 2)
-		    {
-			rowsl = ILOAD(ptr + 1) ; // GCC extension: sizeof(void) = 1
-			colsl = ILOAD(ptr + 5) ; // GCC extension: sizeof(void) = 1
-			ptr += 9 ;
-		    }
-		else
-		    {
-			rowsl = 1 ;
-			colsl = ILOAD(ptr + 1) ;
-			ptr += 5 ;
-		    }
+        if (dimsl == 2)
+            {
+            rowsl = ILOAD(ptr + 1); // GCC extension: sizeof(void) = 1
+            colsl = ILOAD(ptr + 5); // GCC extension: sizeof(void) = 1
+            ptr += 9;
+            }
+        else
+            {
+            rowsl = 1;
+            colsl = ILOAD(ptr + 1);
+            ptr += 5;
+            }
 
-		if (dimsr == 2)
-		    {
-			rowsr = ILOAD(rhs + 1) ; // GCC extension: sizeof(void) = 1
-			colsr = ILOAD(rhs + 5) ; // GCC extension: sizeof(void) = 1
-			rhs += 9 ;
-		    }
-		else
-		    {
-			colsr = 1 ;
-			rowsr = ILOAD(rhs + 1) ;
-			rhs += 5 ;
-		    }
+        if (dimsr == 2)
+            {
+            rowsr = ILOAD(rhs + 1); // GCC extension: sizeof(void) = 1
+            colsr = ILOAD(rhs + 5); // GCC extension: sizeof(void) = 1
+            rhs += 9;
+            }
+        else
+            {
+            colsr = 1;
+            rowsr = ILOAD(rhs + 1);
+            rhs += 5;
+            }
 
-		if ((colsl != rowsr) || (ecx != (colsr * rowsl)))
-			error (6, NULL) ; // 'Type mismatch'
+        if ((colsl != rowsr) || (ecx != (colsr * rowsl)))
+            error (6, NULL); // 'Type mismatch'
 
-		type &= ~BIT6 ;
-		size = type & TMASK ;
-		for (i = 0; i < rowsl; i++)
-		    {
-			void *oldrhs = rhs ;
-			for (j = 0; j < colsr; j++)
-			    {
-				void *oldptr = ptr ;
-				void *oldrhs = rhs ;
-				for (k = 0; k < colsl; k++)
-				    {
-					modify (math (loadn (ptr,type), '*', loadn (rhs,type)), 
-						ebp, type, '+') ;
-					ptr += size ;
-					rhs += size * colsr ;
-				    }
-				ebp += size ;
-				rhs = oldrhs + size ;
-				ptr = oldptr ;
-			    }
-			rhs = oldrhs ;
-			ptr += size * colsl ;
-		    }
-		return ecx ;
-	    }
+        type &= ~BIT6;
+        size = type & TMASK;
+        for (i = 0; i < rowsl; i++)
+            {
+            void *oldrhs = rhs;
+            for (j = 0; j < colsr; j++)
+                {
+                void *oldptr = ptr;
+                void *oldrhs = rhs;
+                for (k = 0; k < colsl; k++)
+                    {
+                    modify (math (loadn (ptr,type), '*', loadn (rhs,type)), 
+                        ebp, type, '+');
+                    ptr += size;
+                    rhs += size * colsr;
+                    }
+                ebp += size;
+                rhs = oldrhs + size;
+                ptr = oldptr;
+                }
+            rhs = oldrhs;
+            ptr += size * colsl;
+            }
+        return ecx;
+        }
 
-	i = 0 ;
-	while ((nxt () == ',') && (++i < ecx)) // list of initialisers supplied
-	    {
-		VAR v ;
-		esi++ ;
-		if (type < 128)
-		    {
-			v = exprn () ;
-			ebp += type & TMASK ; // GCC extension
-			modify (v, ebp, type & ~BIT6, '=') ;
-		    }
-		else
-		    {
-			v = exprs () ;
-			ebp += 8 ; // GCC extension
-			modifs (v, ebp, type & ~BIT6, '=') ;
-		    }
-	    }
+    i = 0;
+    while ((nxt () == ',') && (++i < ecx)) // list of initialisers supplied
+        {
+        VAR v;
+        esi++;
+        if (type < 128)
+            {
+            v = exprn ();
+            ebp += type & TMASK; // GCC extension
+            modify (v, ebp, type & ~BIT6, '=');
+            }
+        else
+            {
+            v = exprs ();
+            ebp += 8; // GCC extension
+            modifs (v, ebp, type & ~BIT6, '=');
+            }
+        }
 
-	if (i) ecx = i + 1 ;
-	return ecx ;
-}
+    if (i) ecx = i + 1;
+    return ecx;
+    }
 
 // Function aliases:
 int str00 (VAR v, char *dst, int format)
-{
-	return str (v, dst, format) ;
-}
+    {
+    return str (v, dst, format);
+    }

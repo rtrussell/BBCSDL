@@ -2328,7 +2328,6 @@ static void xeq_TCLG (void)
 static void xeq_TMODE (void)
     {
     int n = expri ();
-    printf ("Mode = %d\n");
     oswrch (22);
     oswrch (n);
     vcount = 0;

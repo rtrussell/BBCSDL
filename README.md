@@ -333,4 +333,11 @@ The following options may be specified with the cmake command:
 * -DLFS=Y to include storage on Pico flash or -DLFS=N to exclude it.
 * -DFAT=Y to include storage on SD card or -DFAT=N to exclude it.
 * -DSOUND=Y to include sound support or -DSOUND=N to exclude it.
+* -DSTACK_CHECK=n Selects different stack checking options:
+  * Bit 0 - Check in interpretor loop.
+  * Bit 1 - Check in expression evaluator.
+  * Bit 2 - Check using a memory barrier.
+* -DMIN_STACK=Y to use restructured code to minimise stack utilisation. This appears to work
+  but has not been as extensively validated as the original BBC Basic code. Use -DMIN_STACK=N
+  to use the original coding.
 * Other cmake options if required.
