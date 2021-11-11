@@ -39,11 +39,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include "mcu/fbufvdu.h"
+#include "fbufvdu.h"
 #include "bbccon.h"
 
 #if BBC_FONT == 0
-#include "mcu/font_10.h"
+#include "font_10.h"
 #endif
 
 // Defined in bbmain.c:

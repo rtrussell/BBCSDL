@@ -31,11 +31,11 @@
 #include "bsp/board.h"
 #include "tusb.h"
 #include "class/hid/hid.h"
-#include "mcu/fbufvdu.h"
+#include "fbufvdu.h"
 #include <stdio.h>
 #include "bbccon.h"
 
-#include "mcu/font_tt.h"
+#include "font_tt.h"
 
 void modechg (int mode);
 void error (int iErr, const char *psErr);

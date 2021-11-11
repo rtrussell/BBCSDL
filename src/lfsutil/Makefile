@@ -1,6 +1,6 @@
-CFLAGS=-O2 -Wall -I.. -I../littlefs -I../../include/mcu
+CFLAGS=-O2 -Wall -I.. -I../../littlefs -I../../include
 TARGETS=filesystem.uf2 filesystem.elf filesystem.lfs mklfsimage uf2conv
-SOURCES=mklfsimage.c ../lfsmcu.c ../littlefs/lfs.a
+SOURCES=mklfsimage.c ../lfsmcu.c ../../littlefs/lfs.a
 
 all: $(TARGETS)
 
@@ -16,17 +16,17 @@ tree:
 	mkdir tree/lib
 	for i in arraylib.bbc classlib.bbc datelib.bbc fnusing.bbc \
 		sortlib.bbc stringlib.bbc utf8lib.bbc xmllib.bbc; \
-		do cp ../../lib/$$i tree/lib/$$i; done 
-	cp ../../examples/general/calendar.bbc tree/
-	cp ../../examples/general/sortdemo.bbc tree/
+		do cp ../../BBCSDL/lib/$$i tree/lib/$$i; done 
+	cp ../../BBCSDL/examples/general/calendar.bbc tree/
+	cp ../../BBCSDL/examples/general/sortdemo.bbc tree/
 	for i in hanoi.bbc snake.bbc sudoku.bbc sudoku.dat; \
-		do cp ../../examples/games/$$i tree/$$i; done 
-	cp ../../examples/tools/timing.bbc tree/
+		do cp ../../BBCSDL/examples/games/$$i tree/$$i; done 
+	cp ../../BBCSDL/examples/tools/timing.bbc tree/
 
-filesystem.lfs: ../../lib/* mklfsimage tree
+filesystem.lfs: ../../BBCSDL/lib/* mklfsimage tree
 	rm -f filesystem.lfs
 	./mklfsimage tree ../../console/pico/examples
-	./mklfsimage -p tests ../../tests
+	./mklfsimage -p tests ../../BBCSDL/tests
 ifdef EXTRA
 	./mklfsimage $(EXTRA)
 endif
@@ -35,7 +35,7 @@ mklfsimage: $(SOURCES)
 	gcc $(CFLAGS) -o mklfsimage $(SOURCES)
 
 ../littlefs/lfs.a:
-	cd ../littlefs && make
+	cd ../../littlefs && make
 
 uf2conv: uf2conv.c uf2format.h
 	gcc $(CFLAGS) -o uf2conv uf2conv.c uf2format.h
