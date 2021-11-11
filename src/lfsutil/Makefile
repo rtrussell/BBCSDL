@@ -34,7 +34,7 @@ endif
 mklfsimage: $(SOURCES)
 	gcc $(CFLAGS) -o mklfsimage $(SOURCES)
 
-../littlefs/lfs.a:
+../../littlefs/lfs.a:
 	cd ../../littlefs && make
 
 uf2conv: uf2conv.c uf2format.h

@@ -2,7 +2,10 @@
 
 For the original BBCSDL please go to https://github.com/rtrussell/BBCSDL
 
-This fork is part of an attempt to implement BBC Basic on a Raspberry Pi Pico.
+This project is part of an attempt to implement BBC Basic on a Raspberry Pi Pico.
+It was originally a fork of R. Russell's repository, but now that is included as
+a sub-module.
+
 For discussion see https://www.raspberrypi.org/forums/viewtopic.php?f=144&t=316761
 
 It includes work by:
@@ -35,19 +38,20 @@ The following limitations are noted:
 1.  HIMEM-PAGE=128K with an additional 41K has reserved for CALL and
     INSTALL libraries and the CPU stack.
 
-2.  m0FaultDispatch is linked in by default.  This license for this
-    library is free for hobby and other non-commercial products.  If
-    you wish to create a commercial version of the program contained
-    here, please add -DFREE to the CMakeLists.txt file.
-
-3.  All programs in tests and the root filesystem have been tested
+2.  All programs in tests and the root filesystem have been tested
     and appear to work.  However, any remaining bugs are more likely
     to be related to the Pico port.  As always this is open source
     with expressly no warranty provided.
 
-4.  There is are known buffer overflows in the wrappers appearing in
+3.  There is are known buffer overflows in the wrappers appearing in
     lfswrap.c which are triggered when a filename path grows to be
     greater than 256 characters.  Please don't do that.
+
+4.  m0FaultDispatch is optionally linked.  This license for this
+    library is free for hobby and other non-commercial products.  If
+    you wish to create a commercial version of the program contained
+    here, please add -DFREE to the CMakeLists.txt file.
+
 
 This project includes source from various locations with difference licenses. See the
 various LICENSE.txt files.
@@ -60,11 +64,13 @@ tinyusb module installed.
 Ensure that the environment variable PICO_SDK_PATH points to the path where the SDK is installed.
 Then type:
 
+     $ git clone --recurse-submodules https://github.com/Memotech-Bill/BBCSDL.git
      $ cd console/pico
      $ make
 
 To build for hardware other than a Pico (assuming the hardware is supported by the SDK) use:
 
+     $ git clone --recurse-submodules https://github.com/Memotech-Bill/BBCSDL.git
      $ cd console/pico
      $ make BOARD=...
 
@@ -149,12 +155,14 @@ If the user interface is connected via a serial connection, then do not open tha
 Ensure that the environment variable PICO_SDK_PATH points to the path where the SDK is installed
 and PICO_EXTRAS_PATH points to where these are installed. Then type:
 
+     $ git clone --recurse-submodules https://github.com/Memotech-Bill/BBCSDL.git
      $ cd bin/pico
      $ make
 
 To build for hardware other than a Pico on a VGA Demo Board (assuming the hardware is supported by
 the SDK) use:
 
+     $ git clone --recurse-submodules https://github.com/Memotech-Bill/BBCSDL.git
      $ cd bin/pico
      $ make BOARD=...
 
