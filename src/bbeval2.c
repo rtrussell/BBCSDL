@@ -1292,16 +1292,16 @@ static VAR item_TPAGER (void)
 
 static VAR item_TTO (void)
     {
+    VAR v;
     if ((*esi == 'P') || (((liston & BIT3) != 0) && (*esi == 'p')))
         {
-        VAR v;
         esi++;
         v.i.n = (size_t) gettop (vpage + (signed char *) zero, NULL) + 3;
         v.i.t = 0;
-        return v;
         }
     else
         error (16, NULL); // 'Syntax error'
+    return v;
     }
 
 /************************************ LOMEM ************************************/
@@ -2727,8 +2727,6 @@ static const item_func item_list[] =
 
 VAR item (void)
     {
-    item_func fn = item_DEFAULT;
-    VAR v;
     signed char al = nxt ();
 #if PICO_STACK_CHECK & 0x02
     if((&al < (signed char *)libtop + 0x800) && (&al >= (signed char *)userRAM))
@@ -2738,103 +2736,7 @@ VAR item (void)
 #endif
     errno = 0;
     esi++;
-#if 1
     return item_list[(int)al + 0x80]();
-#else
-    if (( al >= TLINO ) && ( al <= TSUM ))
-        {
-        fn = item_list[al - TLINO];
-        }
-    else if (((al >= '0') && (al <= '9')) || (al == '.'))
-        {
-        --esi;
-        fn = con;
-        }
-    else
-        {
-        /*
-          switch (al)
-          {
-          case TMOD:      fn = item_TMOD;     break;  // -125     1
-          case TDIM:      fn = item_TDIM;     break;  // -34      2
-          case TEND:      fn = item_TEND;     break;  // -32      3
-          case TMODE:     fn = item_TMODE;    break;  // -21      4
-          case TPROC:     fn = item_TPROC;    break;  // -14      5
-          case TREPORT:   fn = item_TREPORT;  break;  // -10      6
-          case TWIDTH:    fn = item_TWIDTH;   break;  // -2       7
-          case TSYS:      fn = item_TSYS;     break;  // 9        8
-          case TTINT:     fn = item_TTINT;    break;  // 10       9
-          case '"':       fn = cons;          break;  // 34       10
-          case '%':       fn = item_BIN;      break;  // 37       11
-          case '&':       fn = item_HEX;      break;  // 38       12
-          case '(':       fn = item_BRACKET;  break;  // 40       13
-          case '+':       fn = itemn;         break;  // 43       14
-          case '-':       fn = item_MINUS;    break;  // 45       15
-          case '^':       fn = item_ADDR;     break;  // 94       16
-          default:        fn = item_DEFAULT;  break;
-        */
-        // Bisection search
-        if ( al == TSYS ) fn = item_TSYS;
-        else if ( al < TSYS )
-            {
-            if ( al == TMODE ) fn = item_TMODE;
-            else if ( al < TMODE )
-                {
-                if ( al == TDIM ) fn = item_TDIM;
-                else if  ( al < TDIM )
-                    {
-                    if ( al == TMOD ) fn = item_TMOD;
-                    }
-                else
-                    {
-                    if ( al == TEND ) fn = item_TEND;
-                    }
-                }
-            else
-                {
-                if ( al == TREPORT ) fn = item_TREPORT;
-                else if ( al < TREPORT )
-                    {
-                    if ( al == TPROC ) fn = item_TPROC;
-                    }
-                else
-                    {
-                    if ( al == TWIDTH ) fn = item_TWIDTH;
-                    }
-                }
-            }
-        else
-            {
-            if ( al == '&' ) fn = item_HEX;
-            else if ( al < '&' )
-                {
-                if ( al == '"' ) fn = cons;
-                else if ( al < '"' )
-                    {
-                    if ( al == TTINT ) fn = item_TTINT;
-                    }
-                else
-                    {
-                    if ( al == '%' ) fn = item_BIN;
-                    }
-                }
-            else
-                {
-                if ( al == '+' ) fn = itemn;
-                else if ( al < '+' )
-                    {
-                    if ( al == '(' ) fn = item_BRACKET;
-                    }
-                else
-                    {
-                    if ( al == '-' ) fn = item_MINUS;
-                    else if ( al == '^' ) fn = item_ADDR;
-                    }
-                }
-            }
-        }
-    return fn ();
-#endif
     }
 
 // Check for relational or shift operator.
