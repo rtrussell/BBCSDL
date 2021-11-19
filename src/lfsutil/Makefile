@@ -19,7 +19,7 @@ tree:
 		do cp ../../BBCSDL/lib/$$i tree/lib/$$i; done 
 	cp ../../BBCSDL/examples/general/calendar.bbc tree/
 	cp ../../BBCSDL/examples/general/sortdemo.bbc tree/
-	for i in hanoi.bbc snake.bbc sudoku.bbc sudoku.dat; \
+	for i in hanoi.bbc sudoku.bbc sudoku.dat; \
 		do cp ../../BBCSDL/examples/games/$$i tree/$$i; done 
 	cp ../../BBCSDL/examples/tools/timing.bbc tree/
 
