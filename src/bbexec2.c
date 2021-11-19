@@ -2064,7 +2064,7 @@ static void xeq_TINPUT (void)
                     }
                 if (flag & BIT7)
                     {
-                    v.s.l = (char *) memchr (bufptr, 0x0D, 255) - bufptr;
+                    v.s.l = (char *) memchr (bufptr, 0x0D, 256) - bufptr;
                     memcpy (accs, bufptr, v.s.l + 1);
                     bufptr += v.s.l;
                     }
