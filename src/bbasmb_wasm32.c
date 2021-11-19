@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.26a, 03-Nov-2021                                *
+*       Version 1.26a, 17-Nov-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -23,6 +23,7 @@
 #include "SDL_net.h"
 #include "BBC.h"
 #include "SDL2_gfxPrimitives.h"
+#include "SDL2_rotozoom.h"
 
 typedef size_t st ;
 typedef double db ;
@@ -111,6 +112,10 @@ long long BBC_aaFilledPolyBezierColor(st renderer, st x, st y, st n, st s, st co
 double BBC_EvaluateBezier(st data, st ndata, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db t, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return _evaluateBezier((double*) data, ndata, t); }
+
+long long BBC_RotoZoomSurface(st src, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db angle, db zoomx, db zoomy, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) rotozoomSurfaceXY((SDL_Surface*) src, angle, zoomx, zoomy, 0); }
 
 // 2D Surfaces and Textures (e.g. used by imglib.bbc):
 
@@ -246,6 +251,10 @@ long long BBC_CreateRGBSurface(st flgs, st width, st height, st depth, st Rmask,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) SDL_CreateRGBSurface(flgs, width, height, depth, Rmask, Gmask, Bmask, Amask); }
 
+long long BBC_CreateRGBSurfaceWithFormat(st flgs, st width, st height, st depth, st format, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDL_CreateRGBSurfaceWithFormat(flgs, width, height, depth, format); }
+
 long long BBC_SetSurfaceAlphaMod(st surface, st alpha, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_SetSurfaceAlphaMod((SDL_Surface*) surface, alpha); }
@@ -253,6 +262,10 @@ long long BBC_SetSurfaceAlphaMod(st surface, st alpha, st i2, st i3, st i4, st i
 long long BBC_SetSurfaceColorMod(st surface, st r, st g, st b, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_SetSurfaceColorMod((SDL_Surface*) surface, r, g, b); }
+
+long long BBC_SetSurfaceBlendMode(st surface, st blend, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_SetSurfaceBlendMode((SDL_Surface*) surface, blend); }
 
 long long BBC_UpperBlit(st src, st srcrect, st dst, st dstrect, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -553,12 +566,13 @@ long long BBC_emscripten_async_wget(st url, st file, st i2, st i3, st i4, st i5,
 	return 0 ;
 }
 
-#define NSYS 114
+#define NSYS 117
 #define POW2 128 // smallest power-of-2 >= NSYS
 
 static const char *sysname[NSYS] = {
 	"B2D_GetProcAddress",
 	"GFX_EvaluateBezier",
+	"GFX_RotoZoomSurface",
 	"GFX_aaArcColor",
 	"GFX_aaBezierColor",
 	"GFX_aaFilledEllipseColor",
@@ -590,6 +604,7 @@ static const char *sysname[NSYS] = {
 	"SDL_ConvertAudio",
 	"SDL_ConvertSurfaceFormat",
 	"SDL_CreateRGBSurface",
+	"SDL_CreateRGBSurfaceWithFormat",
 	"SDL_CreateTexture",
 	"SDL_CreateTextureFromSurface",
 	"SDL_DestroyTexture",
@@ -644,6 +659,7 @@ static const char *sysname[NSYS] = {
 	"SDL_SetRenderDrawColor",
 	"SDL_SetRenderTarget",
 	"SDL_SetSurfaceAlphaMod",
+	"SDL_SetSurfaceBlendMode",
 	"SDL_SetSurfaceColorMod",
 	"SDL_SetTextureAlphaMod",
 	"SDL_SetTextureBlendMode",
@@ -675,6 +691,7 @@ static const char *sysname[NSYS] = {
 static void *sysfunc[NSYS] = {
 	B2D_GetProcAddress,
 	BBC_EvaluateBezier,
+	BBC_RotoZoomSurface,
 	BBC_aaArcColor,
 	BBC_aaBezierColor,
 	BBC_aaFilledEllipseColor,
@@ -706,6 +723,7 @@ static void *sysfunc[NSYS] = {
 	BBC_ConvertAudio,
 	BBC_ConvertSurfaceFormat,
 	BBC_CreateRGBSurface,
+	BBC_CreateRGBSurfaceWithFormat,
 	BBC_CreateTexture,
 	BBC_CreateTextureFromSurface,
 	BBC_DestroyTexture,
@@ -760,6 +778,7 @@ static void *sysfunc[NSYS] = {
 	BBC_SetRenderDrawColor,
 	BBC_SetRenderTarget,
 	BBC_SetSurfaceAlphaMod,
+	BBC_SetSurfaceBlendMode,
 	BBC_SetSurfaceColorMod,
 	BBC_SetTextureAlphaMod,
 	BBC_SetTextureBlendMode,

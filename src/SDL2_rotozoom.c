@@ -71,6 +71,9 @@ SDL_STBIMG_DEF int GFX_aaFilledPolyBezierColor(SDL_Renderer * renderer, double *
 SDL_STBIMG_DEF double GFX_EvaluateBezier(double *data, int ndata, double t)
 {	return _evaluateBezier (data, ndata, t) ; }
 
+SDL_STBIMG_DEF SDL_Surface* GFX_RotoZoomSurface(SDL_Surface * src, double angle, double zoomx, double zoomy)
+{	return rotozoomSurfaceXY(src, angle, zoomx, zoomy, 0) ; }
+
 /* ---- Internally used structures */
 
 /*!

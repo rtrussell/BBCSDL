@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.25a, 21-Aug-2021                                *
+*       Version 1.26a, 19-Nov-2021                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -2111,7 +2111,7 @@ VAR xeq (void)
 						    }
 						if (flag & BIT7)
 						    {
-							v.s.l = (char *) memchr (bufptr, 0x0D, 255) - bufptr ;
+							v.s.l = (char *) memchr (bufptr, 0x0D, 256) - bufptr ;
 							memcpy (accs, bufptr, v.s.l + 1) ;
 							bufptr += v.s.l ;
 						    }
