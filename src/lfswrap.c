@@ -15,7 +15,7 @@ void message (const char *psFmt, ...);
 #endif
 #endif
 
-#define LFS_TELL    0   // 0 = Manually track, 1 = Use lfs_file_tell
+#define LFS_TELL    1   // 0 = Manually track, 1 = Use lfs_file_tell
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -481,7 +481,7 @@ int myfseek (FILE *fp, long offset, int whence)
             offset += r;
             }
 #endif
-        int r = lfs_file_seek (&lfs_root, (void *)fp, offset, lfs_whence);
+        int r = lfs_file_seek (&lfs_root, lfsptr (fp), offset, lfs_whence);
 #if DEBUG
         dbgmsg ("fseek lfs offset = %d, r = %d\r\n", offset, r);
 #endif
