@@ -466,12 +466,10 @@ int myfseek (FILE *fp, long offset, int whence)
 #else
         if (whence == SEEK_CUR)
             {
-            int r = lfs_file_tell (&lfs_root, lfsptr (fp));
 #if DEBUG
-            dbgmsg ("Current position = %d\r\n", r);
+            dbgmsg ("Current position = %d\r\n", ((multi_file *)fp)->npos);
 #endif
-            if (r < 0) return -1;
-            offset += r;
+            offset += ((multi_file *)fp)->npos;
             }
         else if (whence == SEEK_END)
             {
