@@ -252,7 +252,8 @@ noted:
 * Character codes are divided into blocks of 32 characters.
 * The first user defined character in a block allocates memory for all the characters in the block.
 * The first character block overwrites szCmdLine, which has minimal utility for the Pico.
-* PAGE has to be raised (by 256 bytes per block) if more than block of user defined characters is required.
+* PAGE has to be raised (by 256 bytes per block) if more than one block of user defined characters
+  is required.
 
 #### Serial Input and Output
 

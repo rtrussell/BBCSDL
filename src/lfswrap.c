@@ -7,13 +7,15 @@
 
 #define DEBUG   0
 #if DEBUG
-#ifdef PICO_GUI
+#if DEBUG == 2
 #define dbgmsg message
 void message (const char *psFmt, ...);
 #else
 #define dbgmsg printf
 #endif
 #endif
+
+#define LFS_TELL    0   // 0 = Manually track, 1 = Use lfs_file_tell
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -95,6 +97,9 @@ typedef struct
         DEVID   did;
 #endif
         };
+#if defined (HAVE_LFS) && ( LFS_TELL == 0 )
+    unsigned int    npos;
+#endif
     } multi_file;
 
 static inline FSTYPE get_filetype (const FILE *fp)
@@ -402,15 +407,29 @@ long myftell (FILE *fp)
 #ifdef HAVE_FAT
     if ( fst == fstFAT )
         {
-        return f_tell (fatptr (fp));
+        long iTell = f_tell (fatptr (fp));
+#if DEBUG
+        dbgmsg ("ftell (%p) fat = %d\r\n", fp, iTell);
+#endif
+        return iTell;
         }
 #endif
 #ifdef HAVE_LFS
     if ( fst == fstLFS )
         {
+#if LFS_TELL == 1
         int r = lfs_file_tell (&lfs_root, lfsptr (fp));
+#if DEBUG
+        dbgmsg ("ftell (%p) lfs = %d\r\n", fp, r);
+#endif
         if (r < 0) return -1;
         return r;
+#else
+#if DEBUG
+        dbgmsg ("ftell (%p) lfs npos = %d\r\n", fp, ((multi_file *)fp)->npos);
+#endif
+        return ((multi_file *)fp)->npos;
+#endif
         }
 #endif
     return -1;
@@ -419,13 +438,21 @@ long myftell (FILE *fp)
 int myfseek (FILE *fp, long offset, int whence)
     {
     FSTYPE fst = get_filetype (fp);
+#if DEBUG
+    dbgmsg ("fseek (%p, %d, %s)\r\n", fp, offset,
+        (whence == SEEK_END) ? "SEEK_END" : (whence == SEEK_CUR) ? "SEEK_CUR" : "SEEK_SET");
+#endif
 #ifdef HAVE_FAT
     if ( fst == fstFAT )
         {
         FIL *pf = fatptr (fp);
         if (whence == SEEK_END) offset += f_size (pf);
         else if (whence == SEEK_CUR) offset += f_tell (pf);
-        if ( f_lseek (pf, offset) != FR_OK ) return -1;
+        FRESULT fr = f_lseek (pf, offset);
+#if DEBUG
+        dbgmsg ("fseek fat offset = %d, fr = %d\r\n", offset, fr);
+#endif
+        if ( fr != FR_OK ) return -1;
         return 0;
         }
 #endif
@@ -433,10 +460,37 @@ int myfseek (FILE *fp, long offset, int whence)
     if ( fst == fstLFS )
         {
         int lfs_whence = LFS_SEEK_SET;
+#if LFS_TELL == 1
         if (whence == SEEK_END) lfs_whence = LFS_SEEK_END;
         else if (whence == SEEK_CUR) lfs_whence = LFS_SEEK_CUR;
+#else
+        if (whence == SEEK_CUR)
+            {
+            int r = lfs_file_tell (&lfs_root, lfsptr (fp));
+#if DEBUG
+            dbgmsg ("Current position = %d\r\n", r);
+#endif
+            if (r < 0) return -1;
+            offset += r;
+            }
+        else if (whence == SEEK_END)
+            {
+            int r = lfs_file_size (&lfs_root, lfsptr (fp));
+#if DEBUG
+            dbgmsg ("File size = %d\r\n", r);
+#endif
+            if (r < 0) return -1;
+            offset += r;
+            }
+#endif
         int r = lfs_file_seek (&lfs_root, (void *)fp, offset, lfs_whence);
+#if DEBUG
+        dbgmsg ("fseek lfs offset = %d, r = %d\r\n", offset, r);
+#endif
         if (r < 0) return -1;
+#if LFS_TELL == 0
+        ((multi_file *)fp)->npos = offset;
+#endif
         return 0;
         }
 #endif
@@ -529,7 +583,13 @@ FILE *myfopen (char *p, char *mode)
                 if ( mode[1] == '+' ) of = LFS_O_CREAT | LFS_O_TRUNC | LFS_O_RDWR | LFS_O_APPEND;
                 break;
             }
-        if ( lfs_file_open (&lfs_root, lfsptr (fp), fswpath, of) >= 0 ) return fp;
+        if ( lfs_file_open (&lfs_root, lfsptr (fp), fswpath, of) >= 0 )
+            {
+#if LFS_TELL == 0
+            ((multi_file *)fp)->npos = 0;
+#endif
+            return fp;
+            }
         }
 #endif
     free (fp);
@@ -582,15 +642,15 @@ int myfclose (FILE *fp)
 
 size_t myfread (void *ptr, size_t size, size_t nmemb, FILE *fp)
     {
-#if DEBUG
-    dbgmsg ("fread (%p, %d, %d, %p)\r\n", ptr, size, nmemb, fp);
-#endif
     if (fp == stdin)
         {
 #undef fread
         return fread (ptr, size, nmemb, stdin);
 #define fread myfread
         }
+#if DEBUG
+    dbgmsg ("fread (%p, %d, %d, %p)\r\n", ptr, size, nmemb, fp);
+#endif
     FSTYPE fst = get_filetype (fp);
 #ifdef HAVE_DEV
     if ( fst == fstDEV )
@@ -618,6 +678,9 @@ size_t myfread (void *ptr, size_t size, size_t nmemb, FILE *fp)
         if (size == 1)
             {
             f_read (fatptr (fp), ptr, nmemb, &nbyte);
+#if DEBUG
+            dbgmsg ("fread fat, size=1, nbyte = %d\r\n", nbyte);
+#endif
             return nbyte;
             }
         else
@@ -625,10 +688,19 @@ size_t myfread (void *ptr, size_t size, size_t nmemb, FILE *fp)
             for (int i = 0; i < nmemb; ++i)
                 {
                 FRESULT fr = f_read (fatptr (fp), ptr, size, &nbyte);
-                if ( (fr != FR_OK) || (nbyte < size)) return i;
+                if ( (fr != FR_OK) || (nbyte < size))
+                    {
+#if DEBUG
+                    dbgmsg ("fread fat, size=%d, fr = %d, nbyte = %d, i = %d\r\n", size, fr, nbyte, i);
+#endif
+                    return i;
+                    }
                 ptr += size;
                 }
             }
+#if DEBUG
+        dbgmsg ("fread fat, size=%d, nmemb = %d\r\n", size, nmemb);
+#endif
         return nmemb;
         }
 #endif
@@ -638,14 +710,33 @@ size_t myfread (void *ptr, size_t size, size_t nmemb, FILE *fp)
         if (size == 1)
             {
             int r = lfs_file_read (&lfs_root, lfsptr (fp), (char *)ptr, nmemb);
+#if DEBUG
+            dbgmsg ("fread lfs, size=1, r = %d\r\n", r);
+#endif
             if (r < 0) return 0;
+#if LFS_TELL == 0
+            ((multi_file *)fp)->npos += r;
+#endif
             return r;
             } 
         for (int i = 0; i < nmemb; ++i)
             {
-            if (lfs_file_read (&lfs_root, lfsptr (fp), (char *)ptr, size) < 0) return i;
+            int r = lfs_file_read (&lfs_root, lfsptr (fp), (char *)ptr, size);
+#if LFS_TELL == 0
+            if ( r > 0 ) ((multi_file *)fp)->npos += r;
+#endif
+            if (r < size)
+                {
+#if DEBUG
+                dbgmsg ("fread lfs, size=%d, i = %d\r\n", size, i);
+#endif
+                return i;
+                }
             ptr += size;
             }
+#if DEBUG
+        dbgmsg ("fread lfs, size=%d, nmemb = %d\r\n", size, nmemb);
+#endif
         return nmemb;
         }
 #endif
@@ -654,15 +745,15 @@ size_t myfread (void *ptr, size_t size, size_t nmemb, FILE *fp)
 
 size_t myfwrite (void *ptr, size_t size, size_t nmemb, FILE *fp)
     {
-#if DEBUG
-    dbgmsg ("fwrite (%p, %d, %d, %p)\r\n", ptr, size, nmemb, fp);
-#endif
     if (fp == stdout || fp == stderr)
         {
 #undef fwrite
         return fwrite (ptr, size, nmemb, stdout);
 #define fwrite myfwrite
         }
+#if DEBUG
+    dbgmsg ("fwrite (%p, %d, %d, %p)\r\n", ptr, size, nmemb, fp);
+#endif
     FSTYPE fst = get_filetype (fp);
 #ifdef HAVE_DEV
     if ( fst == fstDEV )
@@ -711,11 +802,18 @@ size_t myfwrite (void *ptr, size_t size, size_t nmemb, FILE *fp)
             {
             int r = lfs_file_write (&lfs_root, lfsptr (fp), (char *)ptr, nmemb);
             if (r < 0) return 0;
+#if LFS_TELL == 0
+            ((multi_file *)fp)->npos += r;
+#endif
             return r;
             } 
         for (int i = 0; i < nmemb; ++i)
             {
-            if (lfs_file_write (&lfs_root, lfsptr (fp), (char *)ptr, size) < 0) return i;
+            int r = lfs_file_write (&lfs_root, lfsptr (fp), (char *)ptr, size);
+#if LFS_TELL == 0
+            if ( r > 0 ) ((multi_file *)fp)->npos += r;
+#endif
+            if (r < size) return i;
             ptr += size;
             }
         return nmemb;

@@ -100,6 +100,9 @@ if (TARGET tinyusb_device)
       ../../src/pico/ff_disk.c
       ../../src/pico/sd_spi2.c
       )
+    target_include_directories(bbcbasic PRIVATE
+      ../../include/pico
+      )
     target_link_libraries(bbcbasic hardware_dma hardware_pio)
   endif()
 
