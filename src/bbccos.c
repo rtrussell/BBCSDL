@@ -673,7 +673,7 @@ void oscli (char *cmd)
 			if (dstfile == NULL)
 			    {
 				fclose (srcfile) ;
-				error (189, "Couldn't close file") ;
+				error (189, "Couldn't create file") ;
 			    }
 			p = malloc (COPYBUFLEN) ;
 			if (p == NULL)

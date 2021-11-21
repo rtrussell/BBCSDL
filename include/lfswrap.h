@@ -29,6 +29,7 @@ extern size_t myfwrite(void *ptr, size_t size, size_t nmemb, FILE *fp);
 extern DIR *myopendir(const char *name);
 extern struct dirent *myreaddir(DIR *dirp);
 extern int myclosedir(DIR *dirp);
+extern int myrename (const char *old, const char *new);
 extern int mount(void);
 
 #define realpath myrealpath
@@ -47,5 +48,6 @@ extern int mount(void);
 #define opendir myopendir
 #define readdir myreaddir
 #define closedir myclosedir
+#define rename myrename
 
 #endif

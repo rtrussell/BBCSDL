@@ -974,6 +974,32 @@ int myclosedir (DIR *dirp)
     free (dirp);
     }
 
+extern int myrename (const char *old, const char *new)
+    {
+    static char newpath[260];
+    myrealpath (old, fswpath);
+    myrealpath (new, newpath);
+    FSTYPE fsto = pathtype (fswpath);
+    FSTYPE fstn = pathtype (newpath);
+    if ( fstn != fsto ) return -1;
+#ifdef HAVE_FAT
+    if ( fstn == fstFAT )
+        {
+        if ( f_rename (fat_path (fswpath), fat_path (newpath)) != FR_OK ) return -1;
+        return 0;
+        }
+#endif
+#ifdef HAVE_LFS
+    if ( fstn == fstLFS )
+        {
+        int r = lfs_rename (&lfs_root, fswpath, newpath);
+        if ( r < 0 ) return -1;
+        return 0;
+        }
+#endif
+    return -1;
+    }
+
 #ifdef HAVE_LFS
 static struct lfs_config lfs_root_cfg = {
     .context = &lfs_root_context,
