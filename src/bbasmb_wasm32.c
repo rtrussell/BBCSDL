@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.26a, 17-Nov-2021                                *
+*       Version 1.27a, 22-Nov-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -182,6 +182,10 @@ long long BBC_SetRenderTarget(st renderer, st texture, st i2, st i3, st i4, st i
 long long BBC_RenderCopy(st renderer, st texture, st srcrect, st dstrect, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_RenderCopy((SDL_Renderer*) renderer, (SDL_Texture*) texture, (const SDL_Rect*) srcrect, (const SDL_Rect*) dstrect); }
+
+long long BBC_RenderCopyF(st renderer, st texture, st srcrect, st dstrect, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_RenderCopyF((SDL_Renderer*) renderer, (SDL_Texture*) texture, (const SDL_Rect*) srcrect, (const SDL_FRect*) dstrect); }
 
 long long BBC_SetRenderDrawBlendMode(st renderer, st mode, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -566,7 +570,7 @@ long long BBC_emscripten_async_wget(st url, st file, st i2, st i3, st i4, st i5,
 	return 0 ;
 }
 
-#define NSYS 117
+#define NSYS 118
 #define POW2 128 // smallest power-of-2 >= NSYS
 
 static const char *sysname[NSYS] = {
@@ -643,6 +647,7 @@ static const char *sysname[NSYS] = {
 	"SDL_RenderCopy",
 	"SDL_RenderCopyEx",
 	"SDL_RenderCopyExF",
+	"SDL_RenderCopyF",
 	"SDL_RenderDrawLine",
 	"SDL_RenderDrawLines",
 	"SDL_RenderDrawPoint",
@@ -762,6 +767,7 @@ static void *sysfunc[NSYS] = {
 	BBC_RenderCopy,
 	BBC_RenderCopyEx,
 	BBC_RenderCopyExF,
+	BBC_RenderCopyF,
 	BBC_RenderDrawLine,
 	BBC_RenderDrawLines,
 	BBC_RenderDrawPoint,

@@ -3,13 +3,13 @@
 *       Copyright (c) R. T. Russell, 2000-2021                     *
 *                                                                  *
 *       bbccon.h constant definitions                              *
-*       Version v0.38, 16-Oct-2021                                 *
+*       Version v0.39, 25-Nov-2021                                 *
 \******************************************************************/
 
 // System constants :
 
 #define YEAR    "2021"          // Copyright year
-#define VERSION "v0.38"         // Version string
+#define VERSION "v0.39"         // Version string
 #ifdef PICO
 #define ACCSLEN 1024  // Must be the same in bbcsdl.h and bbccon.h
 #define DEFAULT_RAM PAGE_OFFSET+0x20000 // Initial amount of RAM to allocate
