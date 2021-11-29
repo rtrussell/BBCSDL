@@ -33,17 +33,20 @@ if (TARGET tinyusb_device)
     ../../src/pico/sympico.c
     )
   if (${MIN_STACK})
+    message(STATUS "Expression evaluation revised to reduce stack usage")
     target_sources(bbcbasic PRIVATE
       ../../src/bbexec2.c
       ../../src/bbeval2.c
       )
   else()
+    message(STATUS "Using upstream expression evaluation code")
     target_sources(bbcbasic PRIVATE
       ../../src/bbexec.c
       ../../src/bbeval.c
       )
   endif()
   if (${STACK_CHECK} GREATER_EQUAL 4)
+    message(STATUS "Using memory protection to detect stack overrun")
     target_sources(bbcbasic PRIVATE ../../src/pico/stack_trap.c)
   else()
     target_sources(bbcbasic PRIVATE ../../m0FaultDispatch/m0FaultDispatch.c)
