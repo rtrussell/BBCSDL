@@ -42,6 +42,12 @@ build/Makefile: ../../src/pico/CMakeLists.txt Makefile
 		cmake -DPICO_BOARD=$(BOARD) -DSTDIO=USB+UART -DLFS=Y -DFAT=N -DSTACK_CHECK=4 \
 			-DMIN_STACK=$(MIN_STACK) -S ../../../src/pico -B .
 
+../../BBCSDL/include/version.h:
+	git submodule update --remote
+
+../../littlefs/lfs.c:
+	git submodule update --remote
+
 bbcbasic.uf2: build/Makefile $(SOURCES)
 	cd build && make
 	cp build/bbcbasic.uf2 bbcbasic.uf2
