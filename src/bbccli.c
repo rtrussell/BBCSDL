@@ -670,12 +670,12 @@ void oscli (char *cmd)
 			q = 0 ;
 			if (*p != 0x0D)
 			    {
-				q = (char *) (size_t) strtoll (p, &p, 16) ;
+				q = (char *) (size_t) strtoull (p, &p, 16) ;
 				while (*p == ' ') p++ ;
 				if (*p == '+')
 					n = strtol (p + 1, &p, 16) ;
 				else
-					n = (char *) (size_t) strtoll (p, &p, 16) - q ;
+					n = (char *) (size_t) strtoull (p, &p, 16) - q ;
 			    }
 			if ((n <= 0) && ((q < (char *)userRAM) || (q >= (char *)userTOP)))
 				error (8, NULL) ; // 'Address out of range'
@@ -823,12 +823,12 @@ void oscli (char *cmd)
 			q = 0 ;
 			if (*p != 0x0D)
 			    {
-				q = (char *) (size_t) strtoll (p, &p, 16) ;
+				q = (char *) (size_t) strtoull (p, &p, 16) ;
 				while (*p == ' ') p++ ;
 				if (*p == '+')
 					n = strtol (p + 1, &p, 16) ;
 				else
-					n = (char *) (size_t) strtoll (p, &p, 16) - q ;
+					n = (char *) (size_t) strtoull (p, &p, 16) - q ;
 			    }
 			if (n <= 0)
 				error (254, "Bad command") ;
@@ -959,14 +959,14 @@ void oscli (char *cmd)
 			h = 0 ;
 			if (*p != 0x0D)
 			    {
-				long long s = strtoll (p, &p, 16) ;
+				unsigned long long s = strtoull (p, &p, 16) ;
 				if ((s != 0) && (-1 == SDL_RWseek (srcfile, s, RW_SEEK_SET)))
 					error (189, SDL_GetError ()) ;
 				while (*p == ' ') p++ ;
 				if (*p == '+')
 					h = strtol (p + 1, &p, 16) ;
 				else
-					h = strtoll (p, &p, 16) - s ;
+					h = strtoull (p, &p, 16) - s ;
 				b = s & 0xFFFFFFFF ;
 			    }
 			do
