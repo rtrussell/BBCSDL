@@ -13,13 +13,13 @@ OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
 all: bbcsdl.html
 
 bbmain.o: bbmain.c BBC.h
-	$(CXX) -c -O3 $< -o $@
+	$(CXX) -c -O3 -ffast-math $< -o $@
 
 bbexec.o: bbexec.c BBC.h
-	$(CXX) -c -O3 $< -o $@
+	$(CXX) -c -O3 -ffast-math $< -o $@
 
 bbeval.o: bbeval.c BBC.h
-	$(CXX) -c -O3 $< -o $@
+	$(CXX) -c -O3 -ffast-math $< -o $@
 
 bbasmb.o: bbasmb_wasm32.c BBC.h
 	$(CXX) -c -Os $< -o $@

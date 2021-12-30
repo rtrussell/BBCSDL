@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.26a, 08-Nov-2021                                *
+*       Version 1.27a, 28-Dec-2021                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -1507,13 +1507,10 @@ int basic (void *ecx, void *edx, void *prompt)
 	if (errcode < 0)
 		return ~errcode ;
 
-	if (errcode)
-		prompt = (void *) 1 ;
-
 	if ((errcode > 0) && (errcode < 256))
 	    {
 		esp = (heapptr *)((himem + (size_t) zero) & -4) ;
-		if (errtrp)
+		if (errtrp && (autonum == 0))
 		    {
 			esi = errtrp + (signed char *) zero ;
 			prompt = NULL ;
@@ -1539,6 +1536,8 @@ int basic (void *ecx, void *edx, void *prompt)
 			autoinc = 0 ;
 		    }
 	    }
+	else if (errcode)
+		prompt = (void *) 1 ;
 
 	while (prompt)
 	    {

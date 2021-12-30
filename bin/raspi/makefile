@@ -19,13 +19,13 @@ OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
 all: bbcsdl
 
 bbmain.o: bbmain.c BBC.h
-	$(CXX) -Wno-attributes $(CXXFLAGS) -O2 $< -o $@
+	$(CXX) -Wno-attributes $(CXXFLAGS) -O2 -freg-struct-return -ffast-math $< -o $@
 
 bbexec.o: bbexec.c BBC.h
-	$(CXX) $(CXXFLAGS) -DARMHF -O2 $< -o $@
+	$(CXX) $(CXXFLAGS) -DARMHF -O2 -freg-struct-return -ffast-math $< -o $@
 
 bbeval.o: bbeval.c BBC.h
-	$(CXX) -Wno-array-bounds $(CXXFLAGS) -O2 $< -o $@
+	$(CXX) -Wno-array-bounds $(CXXFLAGS) -O2 -freg-struct-return -ffast-math $< -o $@
 
 bbasmb.o: bbasmb_arm_32.c BBC.h
 	$(CXX) $(CXXFLAGS) -Os $< -o $@

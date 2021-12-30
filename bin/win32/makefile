@@ -25,13 +25,13 @@ bbeval.i: bbeval.c BBC.h
 	$(CXX) -E $< > bbeval.i
 
 bbmain.o: bbmain.c BBC.h
-	$(CXX) -c -O2 $< -o $@
+	$(CXX) -c -O2 -freg-struct-return -ffast-math $< -o $@
 
 bbexec.o: bbexec.c BBC.h
-	$(CXX) -c -O2 $< -o $@
+	$(CXX) -c -O2 -freg-struct-return -ffast-math $< -o $@
 
 bbeval.o: bbeval.c BBC.h
-	$(CXX) -Wno-array-bounds -c -O2 $< -o $@
+	$(CXX) -Wno-array-bounds -c -O2 -freg-struct-return -ffast-math $< -o $@
 
 # TODO: Need bbasmb_x86_32 assembler!!
 bbasmb.o: bbasmb_arm_v6m.c BBC.h

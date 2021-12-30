@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.27a, 22-Nov-2021                                *
+*       Version 1.27a, 21-Dec-2021                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -446,6 +446,10 @@ long long BBC_HasIntersection(st recta, st rectb, st i2, st i3, st i4, st i5, st
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_HasIntersection((const SDL_Rect*) recta, (const SDL_Rect*) rectb); }
 
+long long BBC_IntersectRectAndLine(st rect, st X1, st Y1, st X2, st Y2, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_IntersectRectAndLine((const SDL_Rect*) rect, (int*) X1, (int*) Y1, (int*) X2, (int*) Y2); }
+
 long long BBC_SetHint(st name, st value, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_SetHint((const char*) name, (const char*) value); }
@@ -473,6 +477,14 @@ long long BBC_RWFromFile(st file, st mode, st i2, st i3, st i4, st i5, st i6, st
 long long BBC_ShowSimpleMessageBox(st flgs, st title, st message, st window, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_ShowSimpleMessageBox(flgs, (const char*) title, (const char*) message, (SDL_Window*) window); }
+
+long long BBC_GetPerformanceCounter(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_GetPerformanceCounter(); }
+
+long long BBC_GetPerformanceFrequency(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_GetPerformanceFrequency(); }
 
 long long BBC_malloc(st size, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -570,7 +582,7 @@ long long BBC_emscripten_async_wget(st url, st file, st i2, st i3, st i4, st i5,
 	return 0 ;
 }
 
-#define NSYS 118
+#define NSYS 121
 #define POW2 128 // smallest power-of-2 >= NSYS
 
 static const char *sysname[NSYS] = {
@@ -626,11 +638,14 @@ static const char *sysname[NSYS] = {
 	"SDL_GL_SetSwapInterval",
 	"SDL_GL_SwapWindow",
 	"SDL_GetDisplayUsableBounds",
+	"SDL_GetPerformanceCounter",
+	"SDL_GetPerformanceFrequency",
 	"SDL_GetQueuedAudioSize",
 	"SDL_GetRenderTarget",
 	"SDL_GetTicks",
 	"SDL_GetWindowFlags",
 	"SDL_HasIntersection",
+	"SDL_IntersectRectAndLine",
 	"SDL_LoadBMP_RW",
 	"SDL_LoadWAV_RW",
 	"SDL_LockAudioDevice",
@@ -746,11 +761,14 @@ static void *sysfunc[NSYS] = {
 	BBC_GL_SetSwapInterval,
 	BBC_GL_SwapWindow,
 	BBC_GetDisplayUsableBounds,
+	BBC_GetPerformanceCounter,
+	BBC_GetPerformanceFrequency,
 	BBC_GetQueuedAudioSize,
 	BBC_GetRenderTarget,
 	BBC_GetTicks,
 	BBC_GetWindowFlags,
 	BBC_HasIntersection,
+	BBC_IntersectRectAndLine,
 	BBC_LoadBMP_RW,
 	BBC_LoadWAV_RW,
 	BBC_LockAudioDevice,
