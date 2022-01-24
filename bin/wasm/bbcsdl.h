@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (Emscripten / Web Assembly)          *
-*       Copyright (c) R. T. Russell, 2000-2021                     *
+*       Copyright (c) R. T. Russell, 2000-2022                     *
 *                                                                  *
 *       BBCSDL.H constant definitions                              *
-*       Version 1.25a 08-Oct-2021                                  *
+*       Version 1.28a 23-Jan-2022                                  *
 \******************************************************************/
 
 // System constants :
@@ -143,6 +143,12 @@ typedef struct tagFCB
 	signed char f ;   // bit0: offset<>0, bit7: written<>0
 } FCB, *LPFCB ;
 
+typedef struct tagRND
+{
+	unsigned int l ;
+	unsigned char h ;
+} RND, *LPRND ;
+
 // Variables declared in bbcsdl.c:
 extern SDL_Rect ClipRect ;
 extern int bChanged ;
@@ -160,7 +166,7 @@ extern int stavar[] ;		// Static integer variables
 #define siztrp (*(heapptr *)((char*)stavar + 396))
 #define systrp (*(heapptr *)((char*)stavar + 400))
 #define moutrp (*(heapptr *)((char*)stavar + 404))
-#define prand  (*(unsigned int*)((char*)stavar + 412))	// Pseudo-random number
+#define prand  (*(LPRND)((char*)stavar + 412))		// Pseudo-random number
 #define liston (*(unsigned char *)((char*)stavar + 419))// *FLOAT/*HEX/*LOWERCASE/OPT
 #define path   (*(char**)((char*)stavar + 420))		// File path buffer
 #define keystr (*(char ***)((char*)stavar + 424))	// Pointers to user *KEY strings

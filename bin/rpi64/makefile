@@ -65,7 +65,7 @@ libstb.so: SDL2_rotozoom.o
 	$(CXX) -shared -o libstb.so SDL2_rotozoom.o
 
 bbcsdl: $(OBJ) libstb.so
-	$(CXX) $(OBJ) -lstb -L . \
+	$(CXX) $(OBJ) -lz -lstb -L . \
 	$(SDL_LIB) -o bbcsdl -Wl,-s -Wl,-R,'$$ORIGIN'
 	cp bbcsdl ../../
 	cp libstb.so ../../

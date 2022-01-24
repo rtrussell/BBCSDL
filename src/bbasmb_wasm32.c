@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit BBC BASIC Interpreter (Emscripten / Web Assembly)  *
-*       (c) 2018-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2018-2022  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.27a, 21-Dec-2021                                *
+*       Version 1.28a, 23-Jan-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -39,6 +39,8 @@ typedef struct
 // External routines:
 void error (int, const char *) ;
 void stbi_set_flip_vertically_on_load(int) ;
+unsigned char* stbi_load_gif_from_memory(const unsigned char*, int, int**, int*, int*, int*, int*, int);
+void stbi_image_free(void*);
 float* drmp3_open_file_and_read_f32 (const char*, drmp3_config*, uint64_t *) ;
 void drmp3dec_f32_to_s16 (const float*, int16_t *, int) ;
 void drmp3_free (void*) ;
@@ -298,6 +300,15 @@ long long BBC_SetPaletteColors(st palette, st colors, st first, st ncolors, st i
 long long BBC_stbi_set_flip_vertically_on_load(st flip, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ stbi_set_flip_vertically_on_load(flip); return 0; }
+
+long long BBC_stbi_load_gif_from_memory(st buffer, st len, st delays, st x, st y, st z, st comp, st req_comp,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) stbi_load_gif_from_memory((const unsigned char*) buffer, len, (int**) delays,
+						     (int*) x, (int*) y, (int*) z, (int*) comp, req_comp); }
+
+long long BBC_stbi_image_free(st buffer, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ stbi_image_free((void*) buffer); return 0; }
 
 // 3D (OpenGL) graphics:
 
@@ -582,7 +593,7 @@ long long BBC_emscripten_async_wget(st url, st file, st i2, st i3, st i4, st i5,
 	return 0 ;
 }
 
-#define NSYS 121
+#define NSYS 123
 #define POW2 128 // smallest power-of-2 >= NSYS
 
 static const char *sysname[NSYS] = {
@@ -705,6 +716,8 @@ static const char *sysname[NSYS] = {
 	"gmtime",
 	"localtime",
 	"mktime",
+	"stbi_image_free",
+	"stbi_load_gif_from_memory",
 	"stbi_set_flip_vertically_on_load",
 	"time"} ;
 
@@ -828,6 +841,8 @@ static void *sysfunc[NSYS] = {
 	BBC_gmtime,
 	BBC_localtime,
 	BBC_mktime,
+	BBC_stbi_image_free,
+	BBC_stbi_load_gif_from_memory,
 	BBC_stbi_set_flip_vertically_on_load,
 	BBC_time } ;
 

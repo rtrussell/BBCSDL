@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2022  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.25a, 21-Aug-2021                                *
+*       Version 1.28a, 23-Jan-2022                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -2381,8 +2381,8 @@ int entry (void *immediate)
 	farray = 1 ;				// @hfile%() number of dimensions
 	fasize = MAX_PORTS + MAX_FILES + 4 ;	// @hfile%() number of elements
 
-	prand = (unsigned int) SDL_GetPerformanceCounter() ;	// Seed PRNG
-	*(unsigned char*)(&prand + 1) = (prand == 0) ;
+	prand.l = (unsigned int) SDL_GetPerformanceCounter() ;	// Seed PRNG
+	prand.h = (prand.l == 0) ;
 	rnd () ;				// Randomise !
 
 	table = waves ;

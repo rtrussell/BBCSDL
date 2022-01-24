@@ -16,6 +16,7 @@
 #include "SDL2_gfxPrimitives.h"
 #include "SDL_ttf.h"
 #include "SDL_net.h"
+#include "zlib.h"
 
 #ifdef __WINDOWS__
 #include <windows.h>
@@ -470,9 +471,14 @@ SDL_Event ev ;
 unsigned int *pixels ;
 int pitch ;
 
+#if defined(__WINDOWS__) || defined(__MACOSX__) || defined(__LINUX__)
+	gzclose(gzopen("bbc256x.png", "rw"));
+#endif
+
 #ifdef __WINDOWS__
 	SDL_setenv ("SDL_AUDIODRIVER", "directsound", 1) ;
 #endif
+
 if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER |
 		SDL_INIT_EVENTS | SDL_INIT_JOYSTICK) != 0)
 {

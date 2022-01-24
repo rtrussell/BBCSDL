@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (64-bit)                             *
-*       Copyright (c) R. T. Russell, 2000-2021                     *
+*       Copyright (c) R. T. Russell, 2000-2022                     *
 *                                                                  *
 *       BBCSDL.H constant definitions                              *
-*       Version 1.25a 21-Aug-2021                                  *
+*       Version 1.28a 23-Jan-2022                                  *
 \******************************************************************/
 
 // System constants :
@@ -143,6 +143,12 @@ typedef struct tagFCB
 	signed char f ;   // bit0: offset<>0, bit7: written<>0
 } FCB, *LPFCB ;
 
+typedef struct tagRND
+{
+	unsigned int l ;
+	unsigned char h ;
+} RND, *LPRND ;
+
 // Variables declared in bbcsdl.c:
 extern SDL_Renderer *memhdc ;
 extern SDL_Window *hwndProg ;
@@ -251,7 +257,7 @@ extern unsigned char evtqw ;	// Event queue write pointer
 extern unsigned char flags ;	// Interpreter flags byte
 extern int timoff ;		// TIME offset
 extern int lastick ;		// To test for TIME wrapping
-extern unsigned int prand ;	// Pseudo-random number
+extern RND prand ;		// Pseudo-random number
 extern int iMsg ;		// Event message number
 extern int wParam ;		// Event wParam value
 extern int lParam ;		// Event lParam value

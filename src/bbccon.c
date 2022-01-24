@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                          *
-*       Copyright (C) R. T. Russell, 2021                          *
+*       Copyright (C) R. T. Russell, 2021-2022                     *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.37a, 03-Sep-2021                                 *
+*       Version 0.40a, 23-Jan-2022                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -1453,8 +1453,8 @@ int entry (void *immediate)
 	vflags = UTF8 ;				// Not |= (fails on Linux build)
 #endif
 
-	prand = (unsigned int) GetTicks () ;	/// Seed PRNG
-	*(unsigned char*)(&prand + 1) = (prand == 0) ;
+	prand.l = (unsigned int) GetTicks () ;	/// Seed PRNG
+	prand.h = (prand.l == 0) ;
 	rnd () ;				// Randomise !
 
 	memset (keystr, 0, 256) ;

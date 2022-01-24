@@ -56,4 +56,4 @@ bbdata.o: ../../src/bbdata_x86_64.nas
 
 bbcsdl.exe: $(OBJ)
 	$(CXX) $(OBJ) \
-	-o bbcsdl.exe -lmingw32 -mthreads -mwindows $(SDL_LIB) -Wl,-s -Wl,--export-all-symbols
+	-o bbcsdl.exe -lz -lmingw32 -mthreads -mwindows $(SDL_LIB) -Wl,-s -Wl,--export-all-symbols

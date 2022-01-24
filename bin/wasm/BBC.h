@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (Emscripten / Web Assembly)          *
-*       Copyright (c) R. T. Russell, 2000-2021                     *
+*       Copyright (c) R. T. Russell, 2000-2022                     *
 *                                                                  *
 *       BBC.h constant and variable declarations                   *
-*       Version 1.25a, 08-Oct-2021                                 *
+*       Version 1.28a, 23-Jan-2022                                 *
 \******************************************************************/
 
 // Constants:
@@ -257,6 +257,12 @@ typedef struct __attribute__ ((packed)) __attribute__ ((aligned (4))) tagSTR
 	int l ;
 } STR, *LPSTR ;
 
+typedef struct tagRND
+{
+	unsigned int l ;
+	unsigned char h ;
+} RND, *LPRND ;
+
 // Structure for linked list of string free space
 struct node
 {
@@ -326,7 +332,7 @@ extern int stavar[] ;		// Static integer variables
 #define systrp (*(heapptr *)((char*)stavar + 400))	// Pointer to ON SYS handler
 #define moutrp (*(heapptr *)((char*)stavar + 404))	// Pointer to ON MOUSE handler
 #define errlin (*(heapptr *)((char*)stavar + 408))	// Pointer to error line
-#define prand  (*(unsigned int *)((char*)stavar + 412))	// Pseudo-random number
+#define prand  (*(LPRND)((char*)stavar + 412))		// Pseudo-random number
 #define vwidth (*(unsigned char *)((char*)stavar + 417))// Width for auto-newline
 #define errnum (*(unsigned char *)((char*)stavar + 418))// Error code number
 #define liston (*(unsigned char *)((char*)stavar + 419))// *FLOAT/*HEX/*LOWERCASE/OPT

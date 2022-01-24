@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2022  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.25a, 07-Oct-2021                                *
+*       Version 1.28a, 23-Jan-2022                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -552,13 +552,13 @@ static void float2 (VAR *px, VAR *py)
 // Return a pseudo-random integer:
 unsigned int rnd (void)
 {
-	unsigned int ecx = *(unsigned char*)(&prand + 1) ;
-	unsigned int edx = prand ;
+	unsigned int ecx = prand.h ;
+	unsigned int edx = prand.l ;
 	unsigned int eax = (edx >> 1) | (ecx << 31) ;
-	*(unsigned char*)(&prand + 1) = (ecx & ~1) | (edx & 1) ; // Preserve bits 1-7
+	prand.h = (ecx & ~1) | (edx & 1) ; // Preserve bits 1-7
 	eax = eax ^ (edx << 12) ;
 	edx = eax ^ (eax >> 20) ;
-	prand = edx ;
+	prand.l = edx ;
 	return edx ;
 }
 
@@ -1739,7 +1739,7 @@ VAR item (void)
 
 				if (n == 0)
 				    {
-					unsigned int edx = (prand >> 16) | (prand << 16) ;
+					unsigned int edx = (prand.l >> 16) | (prand.l << 16) ;
 					v.i.t = 1 ; // ARM
 					v.f = (double)edx / 4294967296.0L ;
 				    }
@@ -1754,8 +1754,8 @@ VAR item (void)
 					v.i.n = (rnd() % n) + 1 ;
 				else 
 				    {
-					prand = (unsigned int) n ;
-					*(unsigned char*)(&prand + 1) = (n & 0x80000) == 0 ;
+					prand.l = (unsigned int) n ;
+					prand.h = (n & 0x80000) == 0 ;
 					v.i.n = n ;
 				    }
 				return v ;

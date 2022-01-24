@@ -61,7 +61,7 @@ libstb.dylib: SDL2_rotozoom.o SDL2_gfxPrimitives.o
 	-o libstb.dylib SDL2_rotozoom.o SDL2_gfxPrimitives.o
 
 bbcsdl: $(OBJ) libstb.dylib
-	$(CXX) $(OBJ) -lstb -F/Library/Frameworks -L . \
+	$(CXX) $(OBJ) -lz -lstb -F/Library/Frameworks -L . \
 	-framework SDL2 -framework SDL2_ttf -framework SDL2_net \
 	-framework Foundation -Wl,-headerpad_max_install_names \
 	-o bbcsdl $(SDL_LIB)

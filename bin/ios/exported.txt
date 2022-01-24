@@ -551,6 +551,8 @@ _STBIMG_LoadTextureFromMemory
 _STBIMG_CreateSurface
 _STBIMG_CreateTexture
 _STBIMG_Load_RW_noSeek
+_stbi_image_free
+_stbi_load_gif_from_memory
 _stbi_set_flip_vertically_on_load
 _drmp3_init_file
 _drmp3_init_memory

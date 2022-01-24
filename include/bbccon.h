@@ -1,15 +1,15 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                          *
-*       Copyright (c) R. T. Russell, 2000-2021                     *
+*       Copyright (c) R. T. Russell, 2000-2022                     *
 *                                                                  *
 *       bbccon.h constant definitions                              *
-*       Version v0.39, 25-Nov-2021                                 *
+*       Version v0.40, 23-Jan-2022                                 *
 \******************************************************************/
 
 // System constants :
 
-#define YEAR    "2021"          // Copyright year
-#define VERSION "v0.39"         // Version string
+#define YEAR    "2022"          // Copyright year
+#define VERSION "v0.40"         // Version string
 #ifdef PICO
 #define ACCSLEN 1024  // Must be the same in bbcsdl.h and bbccon.h
 #define DEFAULT_RAM PAGE_OFFSET+0x20000 // Initial amount of RAM to allocate
@@ -120,6 +120,12 @@ typedef struct tagFCB
 	signed char f ;   // bit0: offset<>0, bit7: written<>0
 } FCB, *LPFCB ;
 
+typedef struct tagRND
+{
+	unsigned int l ;
+	unsigned char h ;
+} RND, *LPRND ;
+
 extern char colmsk ; 	// Mask for maximum number of colours
 extern unsigned char vflags ;	// VDU drivers flags byte
 extern signed char scroln ; 	// Scroll counter in paged mode
@@ -175,7 +181,7 @@ extern unsigned char evtqw ;	// Event queue write pointer
 extern unsigned char flags ;	// Interpreter flags byte
 extern int timoff ;		// TIME offset
 extern unsigned int lastick ;	// To test for TIME wrapping
-extern unsigned int prand ;	// Pseudo-random number
+extern RND prand ;		// Pseudo-random number
 extern int iMsg ;		// Event message number
 extern int wParam ;		// Event wParam value
 extern int lParam ;		// Event lParam value
