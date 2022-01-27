@@ -16,12 +16,8 @@ tree:
 	mkdir tree/lib
 	for i in arraylib.bbc classlib.bbc datelib.bbc fnusing.bbc \
 		sortlib.bbc stringlib.bbc utf8lib.bbc xmllib.bbc; \
-		do cp ../../BBCSDL/lib/$$i tree/lib/$$i; done 
-	cp ../../BBCSDL/examples/general/calendar.bbc tree/
-	cp ../../BBCSDL/examples/general/sortdemo.bbc tree/
-	for i in hanoi.bbc sudoku.bbc sudoku.dat; \
-		do cp ../../BBCSDL/examples/games/$$i tree/$$i; done 
-	cp ../../BBCSDL/examples/tools/timing.bbc tree/
+		do cp -v ../../BBCSDL/lib/$$i tree/lib/$$i; done 
+	cp -v ../../console/pico/examples/*.bbc tree/
 
 filesystem.lfs: ../../BBCSDL/lib/* mklfsimage tree
 	rm -f filesystem.lfs
