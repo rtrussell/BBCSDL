@@ -1,12 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2022  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
-*       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.25a, 21-Aug-2021                                *
+*       bbexec2.c: Variable assignment and statement execution    *
+*                  Pico version to minimise stack use             *
+*       Version 1.28a, 11-Jan-2022                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -2188,7 +2189,6 @@ static void xeq_TPRINT (void)
         VAR v;
         unsigned char mode = 0;
         int field = stavar[0] & 0xFF;
-        if (field == 0) field = 10;
 
         while (1)
             {
@@ -2211,9 +2211,9 @@ static void xeq_TPRINT (void)
                 {
                 mode &= ~2;
                 field = stavar[0] & 0xFF;
-                if (field == 0) field = 10;
-                while (vcount % field)
-                    outchr (' ');
+                if (field)
+                    while (vcount % field)
+                        outchr (' ');
                 }
             else if (!format(al))
                 {

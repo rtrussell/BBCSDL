@@ -41,8 +41,8 @@ if (TARGET tinyusb_device)
   else()
     message(STATUS "Using upstream expression evaluation code")
     target_sources(bbcbasic PRIVATE
-      ../../src/bbexec.c
-      ../../src/bbeval.c
+      ../../BBCSDL/src/bbexec.c
+      ../../BBCSDL/src/bbeval.c
       )
   endif()
   if (${STACK_CHECK} GREATER_EQUAL 4)

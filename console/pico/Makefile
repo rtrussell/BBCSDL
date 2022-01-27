@@ -6,9 +6,9 @@ SOURCES= \
 	../../BBCSDL/include/BBC.h \
 	../../BBCSDL/include/version.h \
 	../../BBCSDL/include/bbccon.h \
-    ../../src/bbexec.c \
+    ../../BBCSDL/src/bbexec.c \
+    ../../BBCSDL/src/bbeval.c \
     ../../src/bbexec2.c \
-    ../../src/bbeval.c \
     ../../src/bbeval2.c \
     ../../src/bbccos.c \
     ../../src/bbpico.c \
