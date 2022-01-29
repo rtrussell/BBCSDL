@@ -69,14 +69,22 @@ if (TARGET tinyusb_device)
     ../../m0FaultDispatch
     )
 
-  if ( ${SOUND} )
+  if ( ${SOUND} STREQUAL "I2S")
     message(STATUS "Generate sound using I2S output")
-    target_compile_definitions(bbcbasic PUBLIC -DPICO_SOUND)
+    target_compile_definitions(bbcbasic PUBLIC -DPICO_SOUND=1)
     pico_generate_pio_header(bbcbasic ${CMAKE_CURRENT_LIST_DIR}/../../src/pico/sound.pio)
     target_sources(bbcbasic PRIVATE
       ../../src/sn76489.c
       ../../src/pico/pico_snd.c
       )
+  elseif ( ${SOUND} STREQUAL "PWM")
+    message(STATUS "Generate sound using PWM")
+    target_compile_definitions(bbcbasic PUBLIC -DPICO_SOUND=2)
+    target_sources(bbcbasic PRIVATE
+      ../../src/sn76489.c
+      ../../src/pico/pico_snd.c
+      )
+    target_link_libraries(bbcbasic hardware_pwm)
   endif()
 
   if ( ${LFS} )

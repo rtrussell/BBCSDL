@@ -50,7 +50,7 @@ static bool bInitSnd = false;
 
 #define NOCTAVE 48  // Number of tones per octave
 static const double ftone[NOCTAVE] =
-    {
+    {                   // = 440Hz * 2 ^ ( ( i - 136 ) / 48 )
     61.73541266,        // 0
     62.63337491,        // 1
     63.54439833,        // 2
@@ -102,7 +102,7 @@ static const double ftone[NOCTAVE] =
     };
 
 static const int logamp[128] =
-    {
+    {           // = 0x1FFFFFFF * 10 ^ ( - ( 127 - i ) / 4 / 20 )
     0x00000000,	// 0
     0x00D9F772,	// 1
     0x00E054D2,	// 2

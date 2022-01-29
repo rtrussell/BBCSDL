@@ -1,5 +1,6 @@
 BOARD=pico
 MIN_STACK=N
+SOUND=PWM
 SOURCES= \
     ../../BBCSDL/src/bbmain.c \
     ../../BBCSDL/src/bbdata_arm_32.s \
@@ -39,7 +40,7 @@ build/Makefile: ../../src/pico/CMakeLists.txt Makefile
 	rm -rf build
 	mkdir -p build
 	cd build && PICO_SDK_PATH=$(PICO_SDK_PATH) \
-		cmake -DPICO_BOARD=$(BOARD) -DSTDIO=USB+UART -DLFS=Y -DFAT=N -DSTACK_CHECK=4 \
+		cmake -DPICO_BOARD=$(BOARD) -DSTDIO=USB+UART -DLFS=Y -DFAT=N -DSOUND=$(SOUND) -DSTACK_CHECK=4 \
 			-DMIN_STACK=$(MIN_STACK) -S ../../../src/pico -B .
 
 ../../BBCSDL/include/version.h:

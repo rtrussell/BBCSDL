@@ -24,9 +24,8 @@ There are two somewhat divergent lines of development:
     This is in a fairly advanced state of development.
 
 2.  GUI Version: To be able to use the Pico as a computer programmable in BBC Basic with input
-    by an attached USB keyboard and display on an attached VGA monitor. This
-    development is aimed at a Pico attached to a VGA demonstration board as per
-    chapter 3 of
+    by an attached USB keyboard and display on an attached VGA monitor. This development is
+    aimed at a Pico attached to a VGA demonstration board as per chapter 3 of
     [Hardware design with RP2040](https://datasheets.raspberrypi.org/rp2040/hardware-design-with-rp2040.pdf)
     or the commercial version
     [Pimoroni Pico VGA Demo Base](https://shop.pimoroni.com/products/pimoroni-pico-vga-demo-base).
@@ -73,6 +72,8 @@ To build for hardware other than a Pico (assuming the hardware is supported by t
      $ git clone --recurse-submodules https://github.com/Memotech-Bill/BBCSDL.git
      $ cd console/pico
      $ make BOARD=...
+
+Other options may be specified with the make command if required.
 
 At this point the files bbcbasic.uf2 and filesystem.uf2 should be in the build directory.
 
@@ -125,6 +126,16 @@ The extensions may be disabled again by specifying:
 
     syntax u
 
+#### Sound
+
+By default the console build implements sound output using Pulse Width Modulation (PWM).
+
+If the board definitioun used for the make specifies PICO_AUDIO_PWM_L_PIN and PICO_AUDIO_PWM_R_PIN
+then nominally identical (mono) signals will be output on these two pins. If these are not
+specified (which they are not for a default Pico build) then the PWM output will be on pin 2.
+
+To disable sound (and thereby free one or two GPIO pins) specify SOUND=N with the make command.
+
 #### Serial Input and Output
 
 The two Pico inbuilt serial devices appear in the filesystem as /dev/uart0 and /dev/uart1.
@@ -172,6 +183,8 @@ on a Raspberry Pi with Raspberry Pi OS:
      $ cp -v bbcbasic.uf2 /media/pi/RPI-RP2
 
 Repeat the process for filesystem.uf2
+
+
 
 ### Usage Notes
 
@@ -254,6 +267,20 @@ noted:
 * The first character block overwrites szCmdLine, which has minimal utility for the Pico.
 * PAGE has to be raised (by 256 bytes per block) if more than one block of user defined characters
   is required.
+
+#### Sound
+
+By default the GUI build implements sound output using a DAC chip connected to the Pico via I2S.
+
+The pins used must be specified by PICO_AUDIO_I2S_DATA_PIN and PICO_AUDIO_I2S_CLOCK_PIN_BASE
+(which they are for the default vgaboard).
+
+To use PWM instead of I2S for sound output, specify SOUND=I2S with the make command.
+If the board definitioun used for the make specifies PICO_AUDIO_PWM_L_PIN and PICO_AUDIO_PWM_R_PIN
+then nominally identical (mono) signals will be output on these two pins. If these are not
+specified (which they are not for a BOARD=Pico build) then the PWM output will be on pin 2.
+
+To disable sound (and thereby free one or two GPIO pins) specify SOUND=N with the make command.
 
 #### Serial Input and Output
 

@@ -1,12 +1,12 @@
 /******************************************************************\
- *       BBC BASIC Minimal Console Version                          *
- *       Copyright (C) R. T. Russell, 2021                          *
-
-        Modified 2021 by Eric Olson and Memotech-Bill for
-        Raspberry Pico
-
-        *       bbccon.c Main program, Initialisation, Keyboard handling   *
-        *       Version 0.36a, 22-Aug-2021                                 *
+*       BBC BASIC Minimal Console Version                          *
+*       Copyright (C) R. T. Russell, 2021-2022                     *
+*                                                                  *
+*       Modified 2021 by Eric Olson and Memotech-Bill for          *
+*       Raspberry Pico                                             *
+*                                                                  *
+*       bbpico.c Main program, Initialisation, Keyboard handling   *
+*       Version 0.40a, 23-Jan-2022                                 *
 \******************************************************************/
 
 #ifndef KBD_STDIN
@@ -140,8 +140,10 @@ const char szVersion[] = "BBC BASIC for "PLATFORM
 #ifdef HAVE_DEV
     ", Serial devices"
 #endif
-#ifdef PICO_SOUND
+#if PICO_SOUND == 1
     ", I2S Sound"
+#elif PICO_SOUND == 2
+    ", PWM Sound"
 #endif
 #ifdef MIN_STACK
     ", Min Stack"
@@ -202,7 +204,9 @@ int testkey (int);
 #endif
 
 #ifdef PICO_SOUND
-// Declared in pico_snd.c
+// Defined in snd_pico.c
+void snd_setup (void);
+// Defined in sn76489.c
 int snd_free (int ch);
 #endif
 
@@ -2040,6 +2044,9 @@ void *main_init (int argc, char *argv[])
     waitdone = 1;
 #endif
 	mount ();
+#ifdef PICO_SOUND
+    snd_setup ();
+#endif
 #endif
     int i;
     char *env, *p, *q;
