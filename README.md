@@ -1,4 +1,4 @@
-# BBCSDL
+# PicoBB - Pico BBC BASIC
 
 For the original BBCSDL please go to https://github.com/rtrussell/BBCSDL
 
