@@ -128,7 +128,8 @@ The extensions may be disabled again by specifying:
 
 #### Sound
 
-By default the console build implements sound output using Pulse Width Modulation (PWM).
+Currently, if sound support is required for the console mode version the option SOUND=PWM
+must be specified as part of the make.
 
 If the board definitioun used for the make specifies PICO_AUDIO_PWM_L_PIN and PICO_AUDIO_PWM_R_PIN
 then nominally identical (mono) signals will be output on these two pins. If these are not

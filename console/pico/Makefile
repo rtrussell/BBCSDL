@@ -1,6 +1,6 @@
 BOARD=pico
 MIN_STACK=N
-SOUND=PWM
+SOUND=N
 SOURCES= \
     ../../BBCSDL/src/bbmain.c \
     ../../BBCSDL/src/bbdata_arm_32.s \
