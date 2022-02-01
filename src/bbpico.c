@@ -2025,6 +2025,7 @@ void *main_init (int argc, char *argv[])
 	    gpio_put(LED_PIN, 0);
 	    sleep_ms(500);
 	    }
+    // waitconsole();
     // printf ("BBC Basic main build " __DATE__ " " __TIME__ "\n");
     // sleep_ms(500);
 #if PICO_STACK_CHECK & 0x04

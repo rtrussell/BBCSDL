@@ -137,6 +137,13 @@ static alarm_pool_t *apFast;    // An Alarm Pool with higher priority than defau
 static alarm_id_t idaTick;      // Alarm for updating PWM ratio (in fast pool)
 static alarm_id_t idaFill;      // Alarm for filling snd_buff
 
+#if DEBUG & 0x01
+static int n1 = 0;
+static int n2 = 0;
+static int n3 = 0;
+static int n4 = 0;
+#endif
+
 void snd_setup (void)
     {
     gpio_set_function (PICO_AUDIO_PWM_L_PIN, GPIO_FUNC_PWM);
@@ -170,18 +177,15 @@ void snd_setup (void)
     double fchip = ((double) CLKSTP) * 1E6 / SND_PERIOD;
     snd_freq (fchip);
     nFillMax = (int)(fchip / ( 100.0 * CLKSTP ) + 0.5);
-    apFast = alarm_pool_create (2, 1);
+    apFast = alarm_pool_create (2, 2);
+#if DEBUG & 0x04
+    printf ("snd_setup: fchip = %f, nFillMax = %d\n", fchip, nFillMax);
+    printf ("apFast = %p\n", apFast);
+#endif
     }
 
-int64_t __time_critical_func(snd_tick) (alarm_id_t id, void *user_data)
+static void __time_critical_func(snd_out) (uint uLevel)
     {
-    uint uLevel = 0x80;
-    if ( bSndRun )
-        {
-        uLevel = snd_buff[snd_rd];
-        snd_rd = ( ++snd_rd ) & ( SND_BUFF_LEN - 1 );
-        }
-            
 #ifdef PICO_AUDIO_PWM_R_PIN
     if ( iSliceR == iSliceL )
         {
@@ -195,17 +199,42 @@ int64_t __time_critical_func(snd_tick) (alarm_id_t id, void *user_data)
 #else
     pwm_set_chan_level (iSliceL, iChanL, uLevel);
 #endif
+    }
+
+int64_t __time_critical_func(snd_tick) (alarm_id_t id, void *user_data)
+    {
+    uint uLevel = 0x80;
+#if DEBUG & 0x01
+    ++n1;
+#endif
+    if ( bSndRun )
+        {
+        uLevel = snd_buff[snd_rd];
+        snd_rd = ( ++snd_rd ) & ( SND_BUFF_LEN - 1 );
+        }
+
+    snd_out (uLevel);
     return bSndRun ? - SND_PERIOD : 0;
     }
 
 int64_t __time_critical_func(snd_fill) (alarm_id_t id, void *user_data)
     {
+#if DEBUG & 0x01
+    ++n2;
+    n3 = 0;
+#endif
     while ( snd_wr != snd_rd )
         {
         snd_buff[snd_wr] = ( ( snd_step () >> 8 ) + 0x80 ) & 0xFF;
         snd_wr = ( ++snd_wr ) & ( SND_BUFF_LEN - 1 );
         ++nFill;
+#if DEBUG & 0x01
+        ++n3;
+#endif
         }
+#if DEBUG & 0x01
+    if ( n3 > n4 ) n4 = n3;
+#endif
     if ( nFill >= nFillMax )
         {
         // The following may take more than one tick, hence the snd_buff fifo.
@@ -218,6 +247,9 @@ int64_t __time_critical_func(snd_fill) (alarm_id_t id, void *user_data)
 
 void snd_start (void)
     {
+#if DEBUG & 0x04
+    printf ("snd_start: bSndRun = %d\n", bSndRun);
+#endif
     if ( ! bSndRun )
         {
         nFill = 0;
@@ -225,19 +257,32 @@ void snd_start (void)
         snd_wr = 1;
         snd_buff[0] = 0x80;
         snd_fill (0, NULL);
+#if DEBUG & 0x01
+        n4 = 0;
+#endif
         bSndRun = true;
         idaTick = alarm_pool_add_alarm_in_us (apFast, SND_PERIOD, snd_tick, NULL, true);
         idaFill = add_alarm_in_us (SND_PERIOD, snd_fill, NULL, true);
+#if DEBUG & 0x04
+        printf ("Sound started: idaTick = %d, idaFill = %d\n", idaTick, idaFill);
+#endif
         }
     }
 
 void snd_stop (void)
     {
+#if DEBUG & 0x04
+    printf ("snd_stop: nFill = %d, snd_rd = %d, snd_wr = %d\n", nFill, snd_rd, snd_wr);
+#endif
+#if DEBUG & 0x01
+    printf ("n1 = %d, n2 = %d, n3 = %d, n4 = %d\n", n1, n2, n3, n4);
+#endif
     if ( bSndRun )
         {
         bSndRun = false;
         alarm_pool_cancel_alarm (apFast, idaTick);
         cancel_alarm (idaFill);
+        snd_out (0x80);
         }
     }
 #endif

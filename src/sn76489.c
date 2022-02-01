@@ -626,6 +626,7 @@ void snd_init (void)
     snd_val = 0;
     tempo = 0x45;
     snd_start ();
+    bInitSnd = true;
     }
 
 void snd_term (void)
@@ -641,6 +642,9 @@ void snd_term (void)
 // Disable sound generation:
 void quiet (void)
     {
+#if DEBUG & 0x04
+    printf ("quiet\n");
+#endif
     snd_term ();
     }
 
