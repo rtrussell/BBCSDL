@@ -242,7 +242,7 @@ static void snd_cfg (int iChan, int iTone, int iAmp)
         noise_mode = iTone & 0x07;
         noise_amp = logamp[iAmp & 0x7F];
 #if DEBUG & 0x04
-        printf ("noise_mode = 0x%02X, noise_amp = 0x%08X\n", noise_mode, noise_amp);
+        // printf ("snd_cfd: noise_mode = 0x%02X, noise_amp = 0x%08X\n", noise_mode, noise_amp);
 #endif
         }
     else
@@ -250,7 +250,8 @@ static void snd_cfg (int iChan, int iTone, int iAmp)
         snd_tone[iChan].reload = tonediv[iTone];
         snd_tone[iChan].amp = logamp[iAmp & 0x7F];
 #if DEBUG & 0x04
-        printf ("amp = 0x%08X, reload = 0x%03X\n", snd_tone[iChan - 1].amp, snd_tone[iChan - 1].reload);
+        if ( iChan == 1 ) printf ("snd_cfd: iTone = %d, iAmp = %d, amp = 0x%08X, reload = 0x%03X\n",
+            iTone, iAmp, snd_tone[iChan].amp, snd_tone[iChan].reload);
 #endif
         }
     }
@@ -407,7 +408,7 @@ static void snd_pop (int ch)
         else
             {
 #if DEBUG & 0x01
-            printf ("Pop queue: durn = %d, amp = %d, pitch = %d\n",
+            if ( ch == 1 ) printf ("Pop queue: durn = %d, amp = %d, pitch = %d\n",
                 pdef->durn, pdef->amp, pdef->pitch);
 #endif
             if ( pdef->durn == 0xFF ) durn[ch] = -1;
@@ -415,14 +416,14 @@ static void snd_pop (int ch)
             if ( pdef->amp == (int8_t) 0x80 )
                 {
 #if DEBUG & 0x01
-                printf ("Hold previous note\n");
+                if ( ch == 1 ) printf ("Hold previous note\n");
 #endif
                 if ( penv[ch] ) psd->easect[ch] = AS_RELEASE;
                 }
             else if ( pdef->amp <= 0 )
                 {
 #if DEBUG & 0x01
-                printf ("Fixed amplitude and pitch\n");
+                if ( ch == 1 ) printf ("Fixed amplitude and pitch\n");
 #endif
                 penv[ch] = NULL;
                 psd->eenvel[ch] = -8 * pdef->amp;
@@ -430,21 +431,21 @@ static void snd_pop (int ch)
                 }
             else
                 {
+                penv[ch] = &senv[(pdef->amp - 1) & 0x0F];
+                psd->escale[ch] = 1;
+                psd->ecount[ch] = 0;
+                psd->epsect[ch] = 0;
+                psd->easect[ch] = AS_ATTACK;
+                psd->eenvel[ch] = 0;
+                psd->epitch[ch] = pdef->pitch;
 #if DEBUG & 0x01
-                printf ("Envelope %d: ntick = %d, ip = %d %d %d, np = %d %d %d, ia = %d %d %d %d, la = %d %d %d %d\n",
+                if ( ch == 1 ) printf ("Envelope %d: ntick = %d, ip = %d %d %d, np = %d %d %d, ia = %d %d %d %d, la = %d %d %d %d\n",
                     (pdef->amp - 1) & 0x0F, penv[ch]->ntick,
                     penv[ch]->ip[0], penv[ch]->ip[1], penv[ch]->ip[2],
                     penv[ch]->np[0], penv[ch]->np[1], penv[ch]->np[2],
                     penv[ch]->ia[0], penv[ch]->ia[1], penv[ch]->ia[2], penv[ch]->ia[3],
                     penv[ch]->la[0], penv[ch]->la[1], penv[ch]->la[2], penv[ch]->la[3]);
 #endif
-                penv[ch] = &senv[(pdef->amp - 1) & 0x0F];
-                psd->escale[ch] = 0;
-                psd->ecount[ch] = 0;
-                psd->epsect[ch] = 0;
-                psd->easect[ch] = AS_ATTACK;
-                psd->eenvel[ch] = 0;
-                psd->epitch[ch] = pdef->pitch;
                 }
             if ( ++psd->sndqr[ch] >= LEN_SNDQUE ) psd->sndqr[ch] = 0;
             }
@@ -475,6 +476,9 @@ void snd_process (void)
     {
     for (int ch = 0; ch < NCHAN; ++ch)
         {
+#if DEBUG & 0x01
+        if ( ch == 1 ) printf ("snd_process: ch = %d, durn[ch] = %d, escale = %d\n", ch, durn[ch], psd->escale[ch]);
+#endif
         if ( durn[ch] == 0 )
             {
             if ( ! penv[ch] ) psd->eenvel[ch] = 0;
@@ -487,7 +491,7 @@ void snd_process (void)
 #if DEBUG & 0x01
             if ( durn[ch] == 0 )
                 {
-                printf ("End of sound on channel %d: cnt = %d, min = %d, max = %d\n",
+                if ( ch == 1 ) printf ("End of sound on channel %d: cnt = %d, min = %d, max = %d\n",
                     ch, snd_cnt, snd_min, snd_max);
                 snd_cnt = 0;
                 snd_min = 0;
@@ -516,13 +520,13 @@ void snd_process (void)
                 if ( stage < 3 )
                     {
 #if DEBUG & 0x02
-                    printf ("Pitch %d, step %d\n", psd->epitch[ch], penv[ch]->ip[stage]);
+                    if ( ch == 1 ) printf ("Pitch %d, step %d\n", psd->epitch[ch], penv[ch]->ip[stage]);
 #endif
                     psd->epitch[ch] += penv[ch]->ip[stage];
                     if ( ++psd->ecount[ch] >= penv[ch]->np[stage] )
                         {
 #if DEBUG & 0x01
-                        printf ("End of pitch stage %d\n", psd->epsect[ch]);
+                        if ( ch == 1 ) printf ("End of pitch stage %d\n", psd->epsect[ch]);
 #endif
                         ++psd->epsect[ch];
                         psd->ecount[ch] = 0;
@@ -533,7 +537,7 @@ void snd_process (void)
                 int step = penv[ch]->ia[stage];
                 int target = penv[ch]->la[stage];
 #if DEBUG & 0x02
-                printf ("Amplitude %d, step %d\n", amp, step);
+                if ( ch == 1 ) printf ("Stage = %d, amplitude %d, step %d, target = %d\n", stage, amp, step, target);
 #endif
                 amp += step;
                 if ( amp < 0 )
@@ -547,7 +551,7 @@ void snd_process (void)
                         || (( step < 0 ) && ( amp <= target )))
                         {
 #if DEBUG & 0x01
-                        printf ("End of amplitude stage %d\n", psd->easect[ch]);
+                        if ( ch == 1 ) printf ("End of amplitude stage %d\n", psd->easect[ch]);
 #endif
                         ++psd->easect[ch];
                         amp = target;
