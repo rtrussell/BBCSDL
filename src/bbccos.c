@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                         *
-*       Copyright (C) R. T. Russell, 2021                         *
+*       Copyright (C) R. T. Russell, 2022                         *
 *                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.40a, 02-Dec-2021                                *
+*       Version 0.41a, 03-Feb-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -37,7 +37,7 @@ typedef dispatch_source_t timer_t ;
 #endif
 
 #undef MAX_PATH
-#define NCMDS 39	// number of OSCLI commands
+#define NCMDS 42	// number of OSCLI commands
 #define POWR2 32	// largest power-of-2 less than NCMDS
 #ifdef PICO
 #define COPYBUFLEN 512	// length of buffer used for *COPY command
@@ -89,7 +89,7 @@ static char *cmds[NCMDS] = {
 		"help", "hex", "input", "key", "list", "load", "lock", "lowercase",
 		"md", "mkdir", "output", "quit", "rd", "refresh",
 		"ren", "rename", "rmdir", "run", "save", "spool", "spoolon",
-		"timer", "tv", "type", "unlock" } ;
+		"stereo", "tempo", "timer", "tv", "type", "unlock", "voice" } ;
 
 enum {
 		BYE, CD, CHDIR, COPY, DEL, DELETE, DIRCMD,
@@ -97,7 +97,7 @@ enum {
 		HELP, HEX, INPUT, KEY, LIST, LOAD, LOCK, LOWERCASE,
 		MD, MKDIR, OUTPUT, QUIT, RD, REFRESH,
 		REN, RENAME, RMDIR, RUN, SAVE, SPOOL, SPOOLON,
-		TIMER, TV, TYPE, UNLOCK } ;
+		STEREO, TEMPO, TIMER, TV, TYPE, UNLOCK, VOICE } ;
 
 // Change to a new screen mode:
 static void newmode (short wx, short wy, short cx, short cy, short nc, signed char bc) 
@@ -668,7 +668,7 @@ void oscli (char *cmd)
 			if (dstfile == NULL)
 			    {
 				fclose (srcfile) ;
-				error (189, "Couldn't close file") ;
+				error (189, "Couldn't create file") ;
 			    }
 			p = malloc (COPYBUFLEN) ;
 			if (p == NULL)
@@ -1144,6 +1144,29 @@ void oscli (char *cmd)
 			    }
 			while (h) ;
 			fclose (srcfile) ;
+			return ;
+
+		case STEREO:
+			b = 0 ;
+			n = 0 ;
+			sscanf (p, "%i,%i", &b, &n) ;
+			b &= 3 ;
+			smix[b]     = 0x4000 - (n << 7) ;
+			smix[b + 4] = 0x4000 + (n << 7) ;
+			return ;
+
+		case TEMPO:
+			n = 0 ;
+			sscanf (p, "%i", &n) ;
+			if (((n & 0x3F) <= MAX_TEMPO) && ((n & 0x3F) > 0))
+				tempo = n ;
+			return ;
+
+		case VOICE:
+			b = 0 ;
+			n = 0 ;
+			sscanf (p, "%i,%i", &b, &n) ;
+			voices[b & 3] = n & 7 ;
 			return ;
 		} ;
 
