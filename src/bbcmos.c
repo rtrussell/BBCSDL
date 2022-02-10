@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.28a, 23-Jan-2022                                *
+*       Version 1.28a, 09-Feb-2022                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -1857,7 +1857,8 @@ static unsigned char note (unsigned char mask)
 					if (ampl <= 0)
 					    {
 						epitch[ch] = 0 ; // silence
-						if (ch == 0) eenvel[ch] = 0 ;
+						if ((ch == 0) && (tempo < 128))
+							eenvel[ch] = 0 ;
 					    }
 					al += SOUNDQE ;
 					if (al >= SOUNDQL)
@@ -1917,7 +1918,7 @@ static void tone (short **pbuffer)
 					signed char target = *(ebx + al + 11) ; // target level
 					signed char level = elevel[ch] ; // current level
 					level += step ; // adjust level
-					if ((level < 0) && (step > 0)) level = 127 ;
+					if ((level <= 0) && (step > 0)) level = 127 ;
 					if ((level < 0) && (step < 0)) level = 0 ;
 					elevel[ch] = level ; // update level
 					if (((step < 0) && (level <= target)) ||

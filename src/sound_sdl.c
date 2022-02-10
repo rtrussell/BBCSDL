@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       sound_sdl.c  BBCSDL-like sound (runs in second core)      *
-*       Version 0.12, 06-Feb-2022                                 *
+*       Version 0.13, 09-Feb-2022                                 *
 *                                                                 *
 *       Supports stereo PCM audio with a 16 kHz sampling rate and *
 *       ~13-bit samples (10-bit linear plus 8-fold over-sampling) *
@@ -16,6 +16,7 @@
 #define __USE_GNU
 #include <stdio.h>
 #include "bbccon.h"
+#include "pico.h"
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/irq.h"  // interrupts
@@ -24,8 +25,16 @@
 
 void trap(void) ;
  
-#define AUDIO_PIN_L 28  // you can change these to whatever you like...
-#define AUDIO_PIN_R 27  // ...except that they must not differ by 16
+#ifdef PICO_AUDIO_PWM_L_PIN
+#define AUDIO_PIN_L    PICO_AUDIO_PWM_L_PIN
+#else
+#define AUDIO_PIN_L    28
+#endif
+#ifdef PICO_AUDIO_PWM_R_PIN
+#define AUDIO_PIN_R    PICO_AUDIO_PWM_R_PIN
+#else
+#define AUDIO_PIN_R    27
+#endif
 #define AUDIO_CHUNK 160 // number of samples for 10 milliseconds at 16 kHz
 #define AUDIO_TOTAL AUDIO_CHUNK * 3 // total buffer size = 3 chunks
 
@@ -2737,7 +2746,8 @@ static unsigned char note (unsigned char mask)
 					if (ampl <= 0)
 					    {
 						epitch[ch] = 0 ; // silence
-						if (ch == 0) eenvel[ch] = 0 ;
+						if ((ch == 0) && (tempo < 128))
+							eenvel[ch] = 0 ;
 					    }
 					al += SOUNDQE ;
 					if (al >= SOUNDQL)
@@ -2796,7 +2806,7 @@ static void tone (short *buffer)
 					signed char target = *(ebx + al + 11) ; // target level
 					signed char level = elevel[ch] ; // current level
 					level += step ; // adjust level
-					if ((level < 0) && (step > 0)) level = 127 ;
+					if ((level <= 0) && (step > 0)) level = 127 ;
 					if ((level < 0) && (step < 0)) level = 0 ;
 					elevel[ch] = level ; // update level
 					if (((step < 0) && (level <= target)) ||

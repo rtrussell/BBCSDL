@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2022  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.22b, 29-May-2021                                *
+*       Version 1.28a, 10-Feb-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -16,7 +16,9 @@
 #include "SDL2_gfxPrimitives.h"
 #include "SDL_ttf.h"
 #include "SDL_net.h"
+#if defined(__WINDOWS__) || defined(__MACOSX__) || defined(__LINUX__)
 #include "zlib.h"
+#endif
 
 #ifdef __WINDOWS__
 #include <windows.h>
@@ -472,7 +474,7 @@ unsigned int *pixels ;
 int pitch ;
 
 #if defined(__WINDOWS__) || defined(__MACOSX__) || defined(__LINUX__)
-	gzclose(gzopen("bbc256x.png", "rw"));
+	gzclose(gzopen("bbc256x.png", "rb"));
 #endif
 
 #ifdef __WINDOWS__
