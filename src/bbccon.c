@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2021-2022                     *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.40a, 23-Jan-2022                                 *
+*       Version 0.41a, 03-Mar-2022                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -40,6 +40,7 @@ BOOL WINAPI K32EnumProcessModules (HANDLE, HMODULE*, DWORD, LPDWORD) ;
 #include <pthread.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include "dlfcn.h"
 #define myftell ftell
 #define myfseek fseek
@@ -1199,7 +1200,11 @@ void *osopen (int type, char *p)
 	if (file == NULL)
 		return NULL ;
 
+#ifdef _WIN32
+	if (strchr (path+3, ':'))
+#else
 	if (0 == memcmp (path, "/dev", 4))
+#endif
 	    {
 		first = 1 ;
 		last = MAX_PORTS ;
@@ -1300,6 +1305,14 @@ unsigned char osbget (void *chan, int *peof)
 	unsigned char byte = 0 ;
 	if (peof != NULL)
 		*peof = 0 ;
+#ifdef _WIN32
+	if (chan <= (void *)MAX_PORTS)
+	    {
+		intptr_t file = _get_osfhandle (fileno (lookup (chan))) ;
+		ReadFile ((HANDLE) file, &byte, 1, NULL, NULL) ;
+		return byte ;
+	    }
+#endif
 	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
 	    {
 		int index = (size_t) chan - MAX_PORTS - 1 ;
@@ -1328,6 +1341,14 @@ unsigned char osbget (void *chan, int *peof)
 // Write a byte:
 void osbput (void *chan, unsigned char byte)
 {
+#ifdef _WIN32
+	if (chan <= (void *) MAX_PORTS)
+	    {
+		intptr_t file = _get_osfhandle (fileno (lookup (chan))) ;
+		WriteFile ((HANDLE) file, &byte, 1, NULL, NULL) ;
+		return ;
+	    }
+#endif
 	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
 	    {
 		int index = (size_t) chan - MAX_PORTS - 1 ;
@@ -1391,8 +1412,22 @@ void setptr (void *chan, long long ptr)
 // Get file size:
 long long getext (void *chan)
 {
-	long long newptr = getptr (chan) ;
 	FILE *file = lookup (chan) ;
+	if (chan <= (void *)MAX_PORTS)
+	    {
+#ifdef _WIN32
+		COMSTAT cs = {0} ;
+		ClearCommError ((HANDLE) _get_osfhandle (fileno (file)), NULL, &cs) ;
+		return cs.cbInQue ;
+#elif defined(__linux__) || defined(__APPLE__)
+		int waiting = 0 ;
+		ioctl (fileno (file), FIONREAD, &waiting) ;
+		return waiting ;
+#else
+		return 0 ;
+#endif
+	    }
+	long long newptr = getptr (chan) ;
 	myfseek (file, 0, SEEK_CUR) ;
 	long long ptr = myftell (file) ;
 	myfseek (file, 0, SEEK_END) ;

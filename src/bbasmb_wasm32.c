@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.28a, 23-Jan-2022                                *
+*       Version 1.29a, 28-Feb-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -485,6 +485,14 @@ long long BBC_RWFromFile(st file, st mode, st i2, st i3, st i4, st i5, st i6, st
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) SDL_RWFromFile((const char*) file, (const char*) mode); }
 
+long long BBC_RWread(st context, st ptr, st size, st maxnum, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_RWread((SDL_RWops*)context, (void*)ptr, size, maxnum); }
+
+long long BBC_RWwrite(st context, st ptr, st size, st num, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_RWwrite((SDL_RWops*)context, (void*)ptr, size, num); }
+
 long long BBC_ShowSimpleMessageBox(st flgs, st title, st message, st window, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_ShowSimpleMessageBox(flgs, (const char*) title, (const char*) message, (SDL_Window*) window); }
@@ -593,7 +601,7 @@ long long BBC_emscripten_async_wget(st url, st file, st i2, st i3, st i4, st i5,
 	return 0 ;
 }
 
-#define NSYS 123
+#define NSYS 125
 #define POW2 128 // smallest power-of-2 >= NSYS
 
 static const char *sysname[NSYS] = {
@@ -668,6 +676,8 @@ static const char *sysname[NSYS] = {
 	"SDL_QueueAudio",
 	"SDL_RWFromFile",
 	"SDL_RWFromMem",
+	"SDL_RWread",
+	"SDL_RWwrite",
 	"SDL_RemoveTimer",
 	"SDL_RenderClear",
 	"SDL_RenderCopy",
@@ -793,6 +803,8 @@ static void *sysfunc[NSYS] = {
 	BBC_QueueAudio,
 	BBC_RWFromFile,
 	BBC_RWFromMem,
+	BBC_RWread,
+	BBC_RWwrite,
 	BBC_RemoveTimer,
 	BBC_RenderClear,
 	BBC_RenderCopy,

@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2022  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.26a, 14-Oct-2021                                *
+*       Version 1.29a, 15-Feb-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1494,7 +1494,7 @@ static void plotns (unsigned char al, int cx, int cy)
 
 	case 9:		// PLOT 72-79, Fill left & right while background
 		grawin (&lx, &px, &ly, &py) ;
-		flooda (col, bakgnd >> 8, cx, cy, lx, px, cy, cy + pixely) ;
+		flooda (col, bakgnd >> 8, cx, cy, lx, px, cy, cy + (pixely & 0xFFFF)) ;
 		break ;
 
 	case 10:	// PLOT 80-87, Plot and fill triangle
@@ -1509,7 +1509,7 @@ static void plotns (unsigned char al, int cx, int cy)
 
 	case 11:	// PLOT 88-95, Fill right until background
 		grawin (&lx, &px, &ly, &py) ;
-		floodb (col, bakgnd >> 8, cx, cy, cx, px, cy, cy + pixely) ;
+		floodb (col, bakgnd >> 8, cx, cy, cx, px, cy, cy + (pixely & 0xFFFF)) ;
 		break ;
 
 	case 12:	// PLOT 96-103, Plot & fill rectangle
@@ -1526,7 +1526,7 @@ static void plotns (unsigned char al, int cx, int cy)
 
 	case 13:	// PLOT 104-111, Fill left & right until foreground
 		grawin (&lx, &px, &ly, &py) ;
-		floodb (col, forgnd >> 8, cx, cy, lx, px, cy, cy + pixely) ;
+		floodb (col, forgnd >> 8, cx, cy, lx, px, cy, cy + (pixely & 0xFFFF)) ;
 		break ;
 
 	case 14:	// PLOT 112-119, Plot & fill parallelogram
@@ -1543,7 +1543,7 @@ static void plotns (unsigned char al, int cx, int cy)
 
 	case 15:	// PLOT 120-127, Fill right while foreground
 		grawin (&lx, &px, &ly, &py) ;
-		flooda (col, forgnd >> 8, cx, cy, cx, px, cy, cy + pixely) ;
+		flooda (col, forgnd >> 8, cx, cy, cx, px, cy, cy + (pixely & 0xFFFF)) ;
 		break ;
 
 	case 16:	// PLOT 128-135, Flood fill while background

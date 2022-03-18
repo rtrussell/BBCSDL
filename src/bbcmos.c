@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.28a, 09-Feb-2022                                *
+*       Version 1.29a, 03-Mar-2022                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -20,6 +20,12 @@
 #include "SDL2/SDL.h"
 #include "SDL_ttf.h"
 #include "bbcsdl.h"
+
+#if defined __WINDOWS__
+#include <windows.h>
+#elif defined(__LINUX__) || defined(__MACOSX__)
+#include <sys/ioctl.h>
+#endif
 
 #if defined __WINDOWS__ || defined __EMSCRIPTEN__
 void *dlsym (void *, const char *) ;
@@ -2143,7 +2149,11 @@ void *osopen (int type, char *p)
 	if (file == NULL)
 		return NULL ;
 
+#ifdef __WINDOWS__
+	if (strchr (path+3, ':'))
+#else
 	if (0 == memcmp (path, "/dev", 4))
+#endif
 	    {
 		first = 1 ;
 		last = MAX_PORTS ;
@@ -2231,6 +2241,14 @@ unsigned char osbget (void *chan, int *peof)
 	unsigned char byte = 0 ;
 	if (peof != NULL)
 		*peof = 0 ;
+#ifdef __WINDOWS__
+	if (chan <= (void *)MAX_PORTS)
+	    {
+		SDL_RWops *handle = lookup (chan) ;
+		ReadFile (handle->hidden.windowsio.h, &byte, 1, NULL, NULL) ;
+		return byte ;
+	    }
+#endif
 	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
 	    {
 		int index = (size_t) chan - MAX_PORTS - 1 ;
@@ -2259,6 +2277,14 @@ unsigned char osbget (void *chan, int *peof)
 // Write a byte:
 void osbput (void *chan, unsigned char byte)
 {
+#ifdef __WINDOWS__
+	if (chan <= (void *) MAX_PORTS)
+	    {
+		SDL_RWops *handle = lookup (chan) ;
+		WriteFile (handle->hidden.windowsio.h, &byte, 1, NULL, NULL) ;
+		return ;
+	    }
+#endif
 	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
 	    {
 		int index = (size_t) chan - MAX_PORTS - 1 ;
@@ -2321,8 +2347,22 @@ void setptr (void *chan, long long ptr)
 // Get file size:
 long long getext (void *chan)
 {
-	long long newptr = getptr (chan) ;
 	SDL_RWops *file = lookup (chan) ;
+	if (chan <= (void *)MAX_PORTS)
+	    {
+#ifdef __WINDOWS__
+		COMSTAT cs = {0} ;
+		ClearCommError (file->hidden.windowsio.h, NULL, &cs) ;
+		return cs.cbInQue ;
+#elif defined(__LINUX__) || defined(__MACOSX__)
+		int waiting = 0 ;
+		ioctl (fileno (file->hidden.stdio.fp), FIONREAD, &waiting) ;
+		return waiting ;
+#else
+		return 0 ;
+#endif
+	    }
+	long long newptr = getptr (chan) ;
 	long long ptr = SDL_RWseek (file, 0, RW_SEEK_CUR) ;
 	long long size = SDL_RWseek (file, 0, RW_SEEK_END) ;
 	if ((ptr == -1) || (size == -1))
