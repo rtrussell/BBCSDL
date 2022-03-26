@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.29a, 15-Feb-2022                                *
+*       Version 1.29a, 24-Mar-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1180,6 +1180,7 @@ static void minit (signed char bc)
 		txtfor = 0 ;
 		bakgnd = colmsk << 8 ;
 		txtbak = colmsk ;
+		palette[(int) colmsk] = 0xFFFFFFFF ;
 	    }
 
 	vflags &= ~UFONT ;
@@ -1664,9 +1665,12 @@ static void plot (char code, short xs, short ys)
 
 	if ((code & BIT2) != 0)
 	    {
-		*((unsigned char*)&pixelx + 3) = 0 ;
-		*((unsigned char*)&pixely + 3) = 0 ;
-		ascale (&xpos, &ypos) ;
+		xpos += origx ;
+		ypos += origy ;
+		*((unsigned char*)&pixelx + 3) = xpos & 1 ;
+		*((unsigned char*)&pixely + 3) = ypos & 1 ;
+		xpos = xpos >> 1 ;
+		ypos = sizey - 1 - (ypos >> 1) ;
 	    }
 	else
 	    {
@@ -1809,10 +1813,20 @@ static void defchr (unsigned char n, unsigned char a, unsigned char b,
 		break ;
 
 	case 1:		// cursor on/off
-		if (a)
-			cursa &= ~BIT5 ;
-		else
+		switch (a)
+		{
+		case 0:
 			cursa |= BIT5 ;
+			break ;
+		case 1:
+			cursa &= ~BIT5 ;
+			break ;
+		case 128:
+			cursa |= BIT7 ;
+			break ;
+		case 129:
+			cursa &= ~BIT7 ;
+		}
 		break ;
 
 	case 7:		// text scroll

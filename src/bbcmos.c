@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.29a, 03-Mar-2022                                *
+*       Version 1.29a, 24-Mar-2022                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -1498,7 +1498,8 @@ void osline (char *buffer)
 			int i ;
 			oswrch (23) ;
 			oswrch (1) ;
-			for (n = 8 ; n != 0 ; n--)
+			oswrch (128) ;
+			for (n = 7 ; n != 0 ; n--)
 				oswrch (0) ;
 			while (*p != 0x0D)
 			    {
@@ -1519,7 +1520,7 @@ void osline (char *buffer)
 			    }
 			oswrch (23) ;
 			oswrch (1) ;
-			oswrch (1) ;
+			oswrch (129) ;
 			for (n = 7 ; n != 0 ; n--)
 				oswrch (0) ;
 		    }
