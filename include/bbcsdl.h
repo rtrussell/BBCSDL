@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2000-2022                     *
 *                                                                  *
 *       BBCSDL.H constant definitions                              *
-*       Version 1.28a 23-Jan-2022                                  *
+*       Version 1.29a 03-Apr-2022                                  *
 \******************************************************************/
 
 // System constants :
@@ -178,15 +178,15 @@ extern int texty ; 	// Text caret y-position (pixels)
 extern TTF_Font *hfont ;// Handle of current font
 extern SDL_Rect *hrect ;// Pointer to clipping rect
 
-extern short forgnd ; 	// Graphics foreground colour/action
-extern short bakgnd ;	// Graphics background colour/action
+extern unsigned short forgnd ; 	// Graphics foreground colour/action
+extern unsigned short bakgnd ;	// Graphics background colour/action
 
 extern unsigned char cursa ; 	// Start (top) line of caret
 extern unsigned char cursb ; 	// Finish (bottom) line of caret
-extern char txtfor ; 	// Text foreground colour index
-extern char txtbak ; 	// Text background colour index
+extern unsigned char txtfor ; 	// Text foreground colour index
+extern unsigned char txtbak ; 	// Text background colour index
 extern signed char modeno ; 	// Mode number (can be -1)
-extern char colmsk ; 	// Mask for maximum number of colours
+extern unsigned char colmsk ; 	// Mask for maximum number of colours
 extern unsigned char vflags ;	// VDU drivers flags byte
 extern signed char scroln ; 	// Scroll counter in paged mode
 

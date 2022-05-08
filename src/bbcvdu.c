@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.29a, 24-Mar-2022                                *
+*       Version 1.30a, 03-Apr-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1214,7 +1214,7 @@ static void gcol (char al, signed char ah)
 // Set default palette and colours:
 static void rescol (void)
 {
-	int i, n = (colmsk & (NUMCOLOURS - 1)) + 1 ;
+	int i, n = colmsk + 1 ;
 	unsigned int *p ;
 	switch (n)
 	{
@@ -1228,7 +1228,7 @@ static void rescol (void)
 		p = coltab ;
 	}
 	for (i = 0; i < n; i++)
-		palette[i] = p[i] ;
+		palette[i] = p[i & (NUMCOLOURS - 1)] ;
 
 	txtfor = colmsk & 7 ;
 	txtbak = 0 ;

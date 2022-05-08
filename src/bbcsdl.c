@@ -6,13 +6,14 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.28a, 10-Feb-2022                                *
+*       Version 1.30a, 16-Apr-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include "SDL2_gfxPrimitives.h"
 #include "SDL_ttf.h"
 #include "SDL_net.h"
@@ -65,6 +66,7 @@ unsigned int DIRoff = 19 ; // Used by Android x86-32 build
 #define GL_TEXTURE_MIN_FILTER	0x2801
 #define GL_NEAREST		0x2600
 #define GL_LINEAR		0x2601
+#define GL_SCISSOR_TEST         0x0C11
 
 // Program constants:
 #define SCREEN_WIDTH  640
@@ -166,6 +168,7 @@ void (*glDisableBBC) (int) ;
 void (*glTexParameteriBBC) (int, int, int) ;
 #endif
 void (*SDL_RenderFlushBBC) (SDL_Renderer*) ;
+void SetErrorBBC (void) { SDL_SetError ("OS error %i", errno) ; }
 
 static SDL_Window * window ;
 static SDL_Renderer *renderer ;
@@ -226,6 +229,15 @@ static void *mymap (unsigned int size)
 }
 #endif
 
+static int BBC_PushEvent(SDL_Event* event)
+{
+	int ret ;
+	SDL_LockMutex (Mutex) ;
+	ret = SDL_PushEvent (event) ;
+	SDL_UnlockMutex (Mutex) ;
+	return ret ;
+}
+
 static Uint32 BlinkTimerCallback(Uint32 interval, void *param)
 {
 #if defined __ANDROID__ || defined __IPHONEOS__
@@ -234,7 +246,9 @@ static Uint32 BlinkTimerCallback(Uint32 interval, void *param)
 		SDL_Event event = {0} ;
 		event.type = SDL_USEREVENT ;
 		event.user.code = EVT_OSK ;
-		SDL_PushEvent(&event) ;
+		SDL_AtomicIncRef ((SDL_atomic_t*) &nUserEv) ;
+		while (BBC_PushEvent(&event) < 0)
+			SDL_Delay (1) ;
 	    }
 #endif
 	if (flags & KILL)
@@ -259,10 +273,9 @@ Uint32 UserTimerCallback(Uint32 interval, void *param)
 	event.type = SDL_USEREVENT ;
 	event.user.code = WMU_TIMER ;
 
-	SDL_AtomicAdd ((SDL_atomic_t*)&nUserEv, 1) ; // Before PushEvent
-	SDL_LockMutex (Mutex) ;
-	SDL_PushEvent(&event) ;
-	SDL_UnlockMutex (Mutex) ;
+	SDL_AtomicIncRef ((SDL_atomic_t*)&nUserEv) ; // Before PushEvent
+	while (BBC_PushEvent(&event) < 0)
+		SDL_Delay(1) ;
 	return(interval) ;
 }
 
@@ -644,10 +657,14 @@ SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255) ;
 #endif
 SDL_RenderClear(renderer) ;
 
-if (sizex < sizey)
+if (sizex < sizey * 5 / 8)
 	backbutton.w = sizex / 10 ;
+else if (sizey < sizex * 5 / 8)
+ 	backbutton.w = sizey / 10 ;
+else if (sizex < sizey)
+	backbutton.w = sizex / 24 ;
 else
-	backbutton.w = sizey / 10 ;
+	backbutton.w = sizey / 24 ;
 backbutton.h = backbutton.w ;
 buttexture = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_ABGR8888, 
 				SDL_TEXTUREACCESS_STREAMING, 32, 32) ;
@@ -882,6 +899,9 @@ if (argc >= 2)
 	strcpy (szAutoRun, "lib/autorun.bbc") ;
 #endif
 
+// Mutex (before first SDL_PeepEvents and timer creation):
+Mutex = SDL_CreateMutex () ;
+
 SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 SDL_PumpEvents () ;
 if (SDL_PeepEvents (&ev, 1, SDL_GETEVENT, SDL_DROPFILE, SDL_DROPFILE))
@@ -958,18 +978,13 @@ UserTimerID = SDL_AddTimer(250, UserTimerCallback, 0) ;
 // Caret timer:
 BlinkTimerID = SDL_AddTimer(400, BlinkTimerCallback, 0) ;
 
-// Semaphores and mutexes:
+// Semaphores:
 Sema4 = SDL_CreateSemaphore (0) ;
 Idler = SDL_CreateSemaphore (0) ;
-Mutex = SDL_CreateMutex () ;
 
 // Copies of window and renderer:
 hwndProg = window ;
 memhdc = renderer ;
-
-// Start interpreter thread:
-
-Thread = SDL_CreateThread(entry, "Interpreter", (void *) immediate) ;
 
 // Get global keyboard state:
 keystate = SDL_GetKeyboardState(NULL) ;
@@ -980,6 +995,10 @@ SDL_SetEventFilter(myEventFilter, 0) ;
 #else
 SDL_AddEventWatch(myEventFilter, 0) ;
 #endif
+
+// Start interpreter thread:
+while ((Thread = SDL_CreateThread(entry, "Interpreter", (void *) immediate)) == NULL)
+	SDL_Delay(1) ;
 
 // Main polling loop:
 #ifdef __EMSCRIPTEN__
@@ -1010,11 +1029,20 @@ static int maintick (void)
 	SDL_Event ev ;
 
 	DestRect.x = -panx * scale ;
-	DestRect.y = -pany * scale ;
 	DestRect.w = sizex * scale ;
-	DestRect.h = sizey * scale ;
 #if defined __ANDROID__ || defined __IPHONEOS__
 	DestRect.x += (winx - DestRect.w) >> 1 ;
+#endif
+#ifdef __IPHONEOS__
+	if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
+		backbutton.y = 0 ;
+	else
+		backbutton.y = 50 ; // Move down to avoid status bar
+	DestRect.y = -pany * scale + backbutton.y ;
+	DestRect.h = sizey * scale - backbutton.y ;
+#else
+	DestRect.y = -pany * scale ;
+	DestRect.h = sizey * scale ;
 #endif
 
 #define PAINT1 (((unsigned int)(now - lastpaint) >= PACER) && (nUserEv < MAXEV)) // Time window
@@ -1043,6 +1071,9 @@ static int maintick (void)
 
 		SDL_SetRenderTarget(renderer, NULL) ;
 		SDL_SetRenderDrawColor (renderer, 0, 0, 0, 255) ;
+#ifdef __IPHONEOS__
+		glDisableBBC (GL_SCISSOR_TEST) ;
+#endif
 		SDL_RenderClear (renderer) ;
 		if (glTexParameteriBBC)
 		    {
@@ -1574,6 +1605,19 @@ static int maintick (void)
 				// Signal 'restored from background'
 				putevt (siztrp, WM_SIZE, 0, (winy << 16) | winx) ; 
 				flags |= ALERT ;
+			}
+			break ;
+
+		case SDL_RENDER_DEVICE_RESET:
+			{
+				SDL_Texture **p ;
+				SDL_GL_GetDrawableSize (window, &sizex, &sizey) ;
+				int size = MAX (sizex, sizey) ;
+				SDL_SetRenderTarget(renderer, SDL_CreateTexture(renderer, 
+					SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_TARGET,
+					MAX(size,XSCREEN), MAX(size,YSCREEN))) ;
+				for (p = TTFcache; p < TTFcache + 65536; p++)
+					*p = NULL ;
 			}
 			break ;
 		}

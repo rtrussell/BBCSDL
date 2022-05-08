@@ -3331,7 +3331,7 @@ void gfxPrimitivesSetFont(const void *fontdata, Uint32 cw, Uint32 ch)
 	}
 }
 
-const void *gfxPrimitivesGetFont()
+const void *gfxPrimitivesGetFont(void)
 {
 	return currentFontdata;
 }
@@ -4213,7 +4213,7 @@ int thickLineRGBA(SDL_Renderer *renderer, Sint16 x1, Sint16 y1, Sint16 x2, Sint1
 	/* Special case: thick "point" */
 	if ((x1 == x2) && (y1 == y2)) {
 		wh = width / 2;
-		return boxRGBA(renderer, x1 - wh, y1 - wh, x2 + width, y2 + width, r, g, b, a);		
+		return boxRGBA(renderer, x1 - wh, y1 - wh, x2 + wh, y2 + wh, r, g, b, a);		
 	}
 
 	/*
