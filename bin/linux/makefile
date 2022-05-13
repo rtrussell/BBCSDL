@@ -6,12 +6,14 @@
 # sudo apt-get install libsdl2-ttf-2.0-0
 # sudo apt-get install libsdl2-net-2.0-0
 # sudo apt-get install nasm
+# sudo apt-get install pkg-config
 
-SDL_LIB = -L/usr/include -lSDL2 -lSDL2main -lSDL2_ttf -lSDL2_net -ldl -lm
+SDL_LIB = $(shell pkg-config --libs sdl2 SDL2_ttf SDL2_net) -lSDL2main -ldl -lm
+SDL_CFLAGS = $(shell pkg-config --cflags sdl2 SDL2_ttf SDL2_net)
 LBITS := $(shell getconf LONG_BIT)
 
 VPATH = ../../src ../../include
-CXX = gcc -Wall -I ../../include
+CXX = gcc -Wall -I ../../include $(SDL_CFLAGS) $(CFLAGS)
 
 OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
       bbcvdu.o bbcvtx.o flood.o bbdata.o bbcsdl.o \
@@ -68,6 +70,6 @@ libstb.so: SDL2_rotozoom.o
 
 bbcsdl: $(OBJ) libstb.so
 	$(CXX) $(OBJ) -lz -lstb -L . \
-	-o bbcsdl $(SDL_LIB) -Wl,-s -Wl,-R,'$$ORIGIN'
+	-o bbcsdl $(SDL_LIB) -Wl,-s -Wl,-R,'$$ORIGIN' $(LDFLAGS)
 	cp bbcsdl ../../
 	cp libstb.so ../../
