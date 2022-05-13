@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.30a, 16-Apr-2022                                *
+*       Version 1.31a, 13-May-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -564,8 +564,8 @@ if (SDLNet_Init() == -1)
 
 // Setting quality to "linear" can break flood-fill, affecting 'jigsaw.bbc' etc.
 #if defined __ANDROID__ || defined __IPHONEOS__
-	SDL_SetHint ("SDL_RENDER_BATCHING", "1") ;
 	SDL_SetHint (SDL_HINT_RENDER_DRIVER, "opengles") ;
+	SDL_SetHint ("SDL_RENDER_BATCHING", "1") ;
 	SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "nearest") ;
 	SDL_SetHint ("SDL_TV_REMOTE_AS_JOYSTICK", "0") ;
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES) ;
@@ -574,8 +574,8 @@ if (SDLNet_Init() == -1)
 	SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 6) ;
 	SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 5) ;
 #else
-	SDL_SetHint ("SDL_RENDER_BATCHING", "1") ;
 	SDL_SetHint (SDL_HINT_RENDER_DRIVER, "opengl") ;
+	SDL_SetHint ("SDL_RENDER_BATCHING", "1") ;
 	SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "nearest") ;
 	SDL_SetHint ("SDL_MOUSE_FOCUS_CLICKTHROUGH", "1") ; 
 #endif

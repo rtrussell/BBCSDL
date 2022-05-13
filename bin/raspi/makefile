@@ -9,7 +9,7 @@
 SDL_LIB = -L/usr/lib/ -lSDL2 -lSDL2main -lSDL2_ttf -lSDL2_net -ldl -lm
 
 VPATH = ../../src ../../include
-CXX = gcc -Wall -I ../../include
+CXX = gcc -Wall -pthread -I ../../include
 CXXFLAGS = -march=armv7-a -mthumb -munaligned-access -mfloat-abi=hard -c
 
 OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \

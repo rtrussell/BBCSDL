@@ -6,7 +6,7 @@
 SDL_LIB = -L/usr/include -ldl -lm
 
 VPATH = ../../src ../../include
-CXX = gcc -Wall -mmacosx-version-min=10.6 -I ../../include
+CXX = gcc -Wall -pthread -mmacosx-version-min=10.6 -I ../../include
 
 OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
       bbcvdu.o bbcvtx.o flood.o bbdata.o bbcsdl.o \

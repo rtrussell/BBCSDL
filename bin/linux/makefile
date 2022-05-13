@@ -11,7 +11,7 @@ SDL_LIB = -L/usr/include -lSDL2 -lSDL2main -lSDL2_ttf -lSDL2_net -ldl -lm
 LBITS := $(shell getconf LONG_BIT)
 
 VPATH = ../../src ../../include
-CXX = gcc -Wall -I ../../include
+CXX = gcc -Wall -pthread -I ../../include
 
 OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
       bbcvdu.o bbcvtx.o flood.o bbdata.o bbcsdl.o \
