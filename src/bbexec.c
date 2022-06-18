@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.28a, 11-Jan-2022                                *
+*       Version 1.31a, 11-Jun-2022                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -214,9 +214,10 @@ void storen (VAR v, void *ptr, unsigned char type)
 			if (v.i.t == 0)
 				v.f = v.i.n ;
 			v.d.d = v.f ;
-			// *(int *)ptr = (int) v.s.p ;
-			// *(int *)((char *)ptr + 4) = v.s.l ;
-			memcpy (ptr, &v.s.p, 8) ; // may be unaligned
+			if ((v.s.l == 0x7FF00000) || (v.s.l == 0xFFF00000))
+				error (20, NULL) ; // 'Number too big'
+			USTORE(ptr, v.s.p) ;
+			USTORE((char *)ptr + 4, v.s.l) ;
 			}
 			break ;
 
