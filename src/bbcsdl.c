@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.31a, 13-May-2022                                *
+*       Version 1.32a, 25-Jun-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1505,15 +1505,15 @@ static int maintick (void)
 				switch (ev.button.button)
 				    {
 					case SDL_BUTTON_LEFT :
-					putevt (moutrp, WM_LBUTTONDOWN, 1, y << 16 | x) ;
+					putevt (moutrp, WM_LBUTTONDOWN, 1, y << 16 | (x & 0xFFFF)) ;
 					break ;
 
 					case SDL_BUTTON_MIDDLE :
-					putevt (moutrp, WM_MBUTTONDOWN, 16, y << 16 | x) ;
+					putevt (moutrp, WM_MBUTTONDOWN, 16, y << 16 | (x & 0xFFFF)) ;
 					break ;
 
 					case SDL_BUTTON_RIGHT :
-					putevt (moutrp, WM_RBUTTONDOWN, 2, y << 16 | x) ;
+					putevt (moutrp, WM_RBUTTONDOWN, 2, y << 16 | (x & 0xFFFF)) ;
 					break ;
 				    }
 				flags |= ALERT ;
@@ -1528,7 +1528,7 @@ static int maintick (void)
 				int x = (ev.tfinger.x * winx - DestRect.x) * sizex / DestRect.w ;
 				int y = (ev.tfinger.y * winy - DestRect.y) * sizey / DestRect.h ;
 
-				putevt (moutrp, ev.type, ev.tfinger.fingerId, y << 16 | x) ;
+				putevt (moutrp, ev.type, ev.tfinger.fingerId, y << 16 | (x & 0xFFFF)) ;
 				flags |= ALERT ;
 			}
 			break ;
@@ -1541,7 +1541,7 @@ static int maintick (void)
 				int y = (ev.mgesture.y * ptsy - DestRect.y) * sizey / DestRect.h ;
 				int z = ev.mgesture.dDist * 0x10000 ;
 
-				putevt (systrp, ev.type, z, y << 16 | x) ;
+				putevt (systrp, ev.type, z, y << 16 | (x & 0xFFFF)) ;
 				flags |= ALERT ;
 				break ;
 			}

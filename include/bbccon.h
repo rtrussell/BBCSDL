@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2000-2022                     *
 *                                                                  *
 *       bbccon.h constant definitions                              *
-*       Version v0.41, 03-Feb-2022                                 *
+*       Version v0.42, 22-Jul-2022                                 *
 \******************************************************************/
 
 // System constants :
@@ -130,7 +130,7 @@ typedef struct tagRND
 	unsigned char h ;
 } RND, *LPRND ;
 
-extern char colmsk ; 	// Mask for maximum number of colours
+extern unsigned char colmsk ; 	// Mask for maximum number of colours
 extern unsigned char vflags ;	// VDU drivers flags byte
 extern signed char scroln ; 	// Scroll counter in paged mode
 extern unsigned char cmcflg ;
