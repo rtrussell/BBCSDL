@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.30a, 08-Apr-2022                                *
+*       Version 1.33a, 14-Oct-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -496,11 +496,7 @@ void oscli (char *cmd)
 					liston |= BIT0 ;
 					break ;
 				case 80:
-#if defined __arm__ || defined __aarch64__
-					error (255, "Unsupported") ;
-#else
 					liston |= (BIT0 + BIT1) ;
-#endif
 					break ;
 				default:
 					error (254, "Bad command") ;

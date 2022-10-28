@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2022                         *
 *                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.41a, 03-Feb-2022                                *
+*       Version 0.42a, 14-Oct-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -799,11 +799,7 @@ void oscli (char *cmd)
 					liston |= BIT0 ;
 					break ;
 				case 80:
-#if defined __arm__ || defined __aarch64__
-					error (255, "Unsupported") ;
-#else
 					liston |= (BIT0 + BIT1) ;
-#endif
 					break ;
 				default:
 					error (254, "Bad command") ;
