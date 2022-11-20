@@ -1,0 +1,19 @@
+﻿•    BBC BASIC is the programming language originally specified and adopted by the British Broadcasting Corporation for its groundbreaking Computer Literacy Project of the early 1980s.
+
+BBC BASIC for SDL 2.0 is an advanced cross-platform implementation which will run on Windows®, MacOS®, Linux® (x86), Raspberry Pi OS™, Android™, iOS® and in a browser.
+
+The Android, iOS and in-browser editions have a simplified user interface.  To run a program, navigate to the appropriate folder (games, general, graphics, physics, sounds or tools) and tap/click on the program's name.
+
+To exit a program and return to the main menu, tap on the [<] (back) button or press the Escape key.  In iOS the soft [<] button may not always be displayed but tapping in the top-left corner should still work.
+
+To create a new program, first navigate to the @usr$ folder then long-press or right-click below the list of files and select New file from the context menu.  Alternatively create a new folder under @usr$ and put your program there.
+
+To edit a program, long-press or right-click on the program's name and select Edit from the context menu.  To exit the editor tap on the [<] button or press the Escape key. You cannot edit the supplied example programs.
+
+In Android and iOS the contents of the @usr$ folder may be accessed from a desktop computer using a USB connection, or from the Files app in iOS.
+
+It is inevitable that from time to time BBC BASIC will crash (for example abort with an untrapped error), especially if you are testing and debugging your own programs. If this happens it will not damage your device or other apps, but it will be necessary to close BBC BASIC and open it again.
+
+BBC BASIC for SDL 2.0 is the Copyright © 2022 of R.T.Russell.  The program and other materials are provided 'as is' and without any guarantee as to their quality or suitability.  Although they are thought to be free from serious bugs, and it is highly unlikely that they could do any harm to other software or systems, there is NO warranty that they will not and their use is at your own risk. 
+
+The supplied example programs and libraries remain the Copyright © 2001-2022 of R.T.Russell and others, but you may incorporate them in whole or in part within your own programs so long as any copyright notice is retained.
