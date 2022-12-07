@@ -47,6 +47,15 @@ LOCAL_CFLAGS := -munaligned-access -fsigned-char
 
 endif
 
+ifeq ($(TARGET_ARCH),arm64)
+
+LOCAL_SRC_FILES := bbdata_arm_64.s bbmain.c bbexec.c bbeval.c bbcmos.c.neon bbccli.c bbcvdu.c \
+	bbcvtx.c flood.c bbcsdl.c bbasmb_arm_64.c SDL2_gfxPrimitives.c SDL2_rotozoom.c sort.c
+
+LOCAL_CFLAGS := -fsigned-char
+
+endif
+
 LOCAL_SHARED_LIBRARIES := SDL2 SDL2_ttf SDL2_net Box2D
 
 include $(BUILD_SHARED_LIBRARY)

@@ -7,6 +7,7 @@
 *       Version 0.01, 27 May 2021                                 *
 *       Version 0.02, 12 Jul 2021                                 *
 *       Version 0.03, 08 Nov 2021                                 *
+*       Version 0.04, 06 Dec 2022                                 *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -669,6 +670,7 @@ static int validated_N_immr_imms( long long imm, unsigned word_data )
     // Check the immediate value against the pattern generated
     if (word_data)
         {
+        int i;
         // 32-bit value
         unsigned n = imm & 0xffffffff;
         unsigned steps = 0;
@@ -699,7 +701,7 @@ static int validated_N_immr_imms( long long imm, unsigned word_data )
         unsigned pattern = 0xffffffff >> (32 - pattern_size + bits0) ;
         unsigned check = pattern;
 
-        for (int i = pattern_size; i < 32; i += pattern_size) {
+        for (i = pattern_size; i < 32; i += pattern_size) {
             check = (check << pattern_size) | pattern;
         }
 
@@ -717,6 +719,7 @@ static int validated_N_immr_imms( long long imm, unsigned word_data )
         }
     else
         {
+        int i;
         // 64-bit value
         unsigned long long n = imm;
         unsigned steps = 0;
@@ -747,7 +750,7 @@ static int validated_N_immr_imms( long long imm, unsigned word_data )
         unsigned long long pattern = 0xffffffffffffffffull >> (64 - pattern_size + bits0) ;
         unsigned long long check = pattern;
 
-        for (int i = pattern_size; i < 64; i += pattern_size) {
+        for (i = pattern_size; i < 64; i += pattern_size) {
             check = (check << pattern_size) | pattern;
         }
 
