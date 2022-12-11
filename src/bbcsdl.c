@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.32a, 25-Jun-2022                                *
+*       Version 1.34a, 11-Dec-2022                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -83,6 +83,7 @@ unsigned int DIRoff = 19 ; // Used by Android x86-32 build
 
 // Performance tuning parameters:
 #define POLLT 2  // Poll for approaching vSync every 2 milliseconds 
+#define FGDLY 50 // Wait 50 * POLLT ms after returning to foreground
 #define BUSYT 40 // Busy-wait for 40 ms after last user output event
 #define PACER 12 // 12 ms 'processing time' per frame (max. ~75 fps)
 #define MAXEV 10 // Don't refresh display if > 10 waiting events ...
@@ -283,6 +284,8 @@ static Uint32 PollTimerCallback(Uint32 interval, void *param)
 {
 	if (!SDL_SemValue(Idler))
 		SDL_SemPost (Idler) ;
+	if (bBackground < 0)
+		bBackground++ ;
 	return interval ;
 }
 
@@ -450,11 +453,6 @@ static int myEventFilter(void* userdata, SDL_Event* pev)
 		case SDL_APP_WILLENTERBACKGROUND:
 		case SDL_APP_DIDENTERBACKGROUND:
 		bBackground = 1 ;
-		break ;
-
-		case SDL_APP_DIDENTERFOREGROUND:
-		bBackground = 0 ;
-		bChanged = 1 ;
 		break ;
 	    }
 
@@ -1049,7 +1047,7 @@ static int maintick (void)
 #define PAINT2 (reflag & 1) // Interpreter thread is waiting for refresh (vSync)
 #define PAINT3 ((unsigned int)(now - lastpaint) >= MAXFP) // Fallback minimum frame rate
 
-	if ((reflag != 2) && (PAINT1 || PAINT2 || PAINT3) && 
+	if ((reflag != 2) && (PAINT1 || PAINT2 || PAINT3) && (bBackground == 0) &&
 	    (bChanged || (reflag & 1) || (textx != oldtextx) || (texty != oldtexty)))
 	    {
 		SDL_Rect SrcRect ;
@@ -1600,6 +1598,8 @@ static int maintick (void)
 			break ;
 
 		case SDL_APP_DIDENTERFOREGROUND:
+			bBackground = -FGDLY ;
+			bChanged = 1 ;
 			if (siztrp)
 			{
 				// Signal 'restored from background'
@@ -1610,12 +1610,12 @@ static int maintick (void)
 
 		case SDL_RENDER_DEVICE_RESET:
 			{
+				int w, h ;
 				SDL_Texture **p ;
-				SDL_GL_GetDrawableSize (window, &sizex, &sizey) ;
-				int size = MAX (sizex, sizey) ;
+				SDL_GL_GetDrawableSize (window, &w, &h) ;
 				SDL_SetRenderTarget(renderer, SDL_CreateTexture(renderer, 
 					SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_TARGET,
-					MAX(size,XSCREEN), MAX(size,YSCREEN))) ;
+					MAX(MAX(w,h),XSCREEN), MAX(MAX(w,h),YSCREEN))) ;
 				for (p = TTFcache; p < TTFcache + 65536; p++)
 					*p = NULL ;
 			}
