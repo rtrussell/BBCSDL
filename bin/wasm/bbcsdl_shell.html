@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Emscripten-Generated Code</title>
+    <style>
+      body {
+        font-family: arial;
+        margin: 0;
+        padding: none;
+      }
+
+      .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
+      div.emscripten { text-align: center; }      
+      div.emscripten_border { border: 1px solid black; }
+      /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
+      canvas.emscripten { border: 0px none; background-color: black; }
+
+      #emscripten_logo {
+        display: inline-block;
+        margin: 0;
+      }
+
+      .spinner {
+        height: 30px;
+        width: 30px;
+        margin: 0;
+        margin-top: 20px;
+        margin-left: 20px;
+        display: inline-block;
+        vertical-align: top;
+
+        -webkit-animation: rotation .8s linear infinite;
+        -moz-animation: rotation .8s linear infinite;
+        -o-animation: rotation .8s linear infinite;
+        animation: rotation 0.8s linear infinite;
+
+        border-left: 5px solid rgb(235, 235, 235);
+        border-right: 5px solid rgb(235, 235, 235);
+        border-bottom: 5px solid rgb(235, 235, 235);
+        border-top: 5px solid rgb(120, 120, 120);
+        
+        border-radius: 100%;
+        background-color: rgb(189, 215, 46);
+      }
+
+      @-webkit-keyframes rotation {
+        from {-webkit-transform: rotate(0deg);}
+        to {-webkit-transform: rotate(360deg);}
+      }
+      @-moz-keyframes rotation {
+        from {-moz-transform: rotate(0deg);}
+        to {-moz-transform: rotate(360deg);}
+      }
+      @-o-keyframes rotation {
+        from {-o-transform: rotate(0deg);}
+        to {-o-transform: rotate(360deg);}
+      }
+      @keyframes rotation {
+        from {transform: rotate(0deg);}
+        to {transform: rotate(360deg);}
+      }
+
+      #status {
+        display: inline-block;
+        vertical-align: top;
+        margin-top: 30px;
+        margin-left: 20px;
+        font-weight: bold;
+        color: rgb(120, 120, 120);
+      }
+
+      #progress {
+        height: 20px;
+        width: 300px;
+      }
+
+      #controls {
+        display: inline-block;
+        float: right;
+        vertical-align: top;
+        margin-top: 30px;
+        margin-right: 20px;
+      }
+
+      #output {
+        width: 100%;
+        height: 200px;
+        margin: 0 auto;
+        margin-top: 10px;
+        border-left: 0px;
+        border-right: 0px;
+        padding-left: 0px;
+        padding-right: 0px;
+        display: block;
+        background-color: black;
+        color: white;
+        font-family: 'Lucida Console', Monaco, monospace;
+        outline: none;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="https://www.bbcbasic.co.uk/bbcsdl/">
+<img src=
+"data:image/png;base64,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"
+width="320" height="64"></a>
+
+    <div class="spinner" id='spinner'></div>
+    <div class="emscripten" id="status">Downloading...</div>
+
+<span id='controls'>
+</span>
+
+    <div class="emscripten">
+      <progress value="0" max="100" id="progress" hidden=1></progress>
+    </div>
+
+    
+    <div class="emscripten_border">
+      <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+    </div>
+    <textarea id="output" rows="8"></textarea>
+
+    <script type='text/javascript'>
+      var statusElement = document.getElementById('status');
+      var progressElement = document.getElementById('progress');
+      var spinnerElement = document.getElementById('spinner');
+
+      var Module = {
+        preRun: [],
+        postRun: [],
+        print: (function() {
+          var element = document.getElementById('output');
+          if (element) element.value = ''; // clear browser cache
+          return function(text) {
+            if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+            // These replacements are necessary if you render to raw HTML
+            //text = text.replace(/&/g, "&amp;");
+            //text = text.replace(/</g, "&lt;");
+            //text = text.replace(/>/g, "&gt;");
+            //text = text.replace('\n', '<br>', 'g');
+            console.log(text);
+            if (element) {
+              element.value += text + "\n";
+              element.scrollTop = element.scrollHeight; // focus on bottom
+            }
+          };
+        })(),
+        printErr: function(text) {
+          if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+          console.error(text);
+        },
+        canvas: (function() {
+          var canvas = document.getElementById('canvas');
+
+          // As a default initial behavior, pop up an alert when webgl context is lost. To make your
+          // application robust, you may want to override this behavior before shipping!
+          // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
+          canvas.addEventListener("webglcontextlost", function(e) { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
+
+          return canvas;
+        })(),
+        setStatus: function(text) {
+          if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+          if (text === Module.setStatus.last.text) return;
+          var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          if (m && now - Module.setStatus.last.time < 30) return; // if this is a progress update, skip it if too soon
+          Module.setStatus.last.time = now;
+          Module.setStatus.last.text = text;
+          if (m) {
+            text = m[1];
+            progressElement.value = parseInt(m[2])*100;
+            progressElement.max = parseInt(m[4])*100;
+            progressElement.hidden = false;
+            spinnerElement.hidden = false;
+          } else {
+            progressElement.value = null;
+            progressElement.max = null;
+            progressElement.hidden = true;
+            if (!text) spinnerElement.style.display = 'none';
+          }
+          statusElement.innerHTML = text;
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: function(left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+         // Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+        }
+      };
+      Module.setStatus('Downloading...');
+      window.onerror = function(event) {
+        // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
+        Module.setStatus('Exception thrown, see JavaScript console');
+        spinnerElement.style.display = 'none';
+        Module.setStatus = function(text) {
+          if (text) Module.printErr('[post-exception status] ' + text);
+        };
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>
