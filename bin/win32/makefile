@@ -1,10 +1,10 @@
 # Update these paths as necessary to match your installation
-SDL_LIB = -LC:/SDL2-2.0.10/i686-w64-mingw32/lib -lSDL2main -lSDL2 \
-          -LC:/SDL2_ttf-2.0.15/i686-w64-mingw32/lib -lSDL2_ttf \
-          -LC:/SDL2_net-2.0.1/i686-w64-mingw32/lib -lSDL2_net 
-SDL_INCLUDE = -IC:/SDL2-2.0.10/i686-w64-mingw32/include/ \
-          -IC:/SDL2_ttf-2.0.15/i686-w64-mingw32/include/ \
-          -IC:/SDL2_net-2.0.1/i686-w64-mingw32/include/ 
+SDL_LIB = -LC:/SDL2-2.26.2/i686-w64-mingw32/lib -lSDL2main -lSDL2 \
+          -LC:/SDL2_ttf-2.20.1/i686-w64-mingw32/lib -lSDL2_ttf \
+          -LC:/SDL2_net-2.2.0/i686-w64-mingw32/lib -lSDL2_net 
+SDL_INCLUDE = -IC:/SDL2-2.26.2/i686-w64-mingw32/include/ \
+          -IC:/SDL2_ttf-2.20.1/i686-w64-mingw32/include/ \
+          -IC:/SDL2_net-2.2.0/i686-w64-mingw32/include/ 
 
 VPATH = ../../src ../../include
 CXX = gcc -Wall -I ../../include

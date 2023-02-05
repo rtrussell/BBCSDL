@@ -378,6 +378,7 @@ _SDL_RenderDrawRectsF
 _SDL_RenderFillRectF
 _SDL_RenderFillRectsF
 _SDL_RenderFlush
+_SDL_RenderGeometry
 _SDL_RenderGetClipRect
 _SDL_RenderGetIntegerScale
 _SDL_RenderGetLogicalSize
@@ -538,10 +539,14 @@ _TTF_SetFontHinting
 _TTF_SetFontKerning
 _TTF_SetFontOutline
 _TTF_SetFontStyle
+_TTF_SetFontScriptName
+_TTF_SetFontDirection
 _TTF_SizeText
 _TTF_SizeUNICODE
 _TTF_SizeUTF8
 _TTF_WasInit
+_TTF_GetFreeTypeVersion
+_TTF_GetHarfBuzzVersion
 _STBIMG_Load
 _STBIMG_Load_RW
 _STBIMG_LoadFromMemory

@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2022  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.29a, 24-Mar-2022                                *
+*       Version 1.34a, 25-Jan-2023                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -895,9 +895,13 @@ void reset (void)
 static int BBC_PushEvent(SDL_Event* event)
 {
 	int ret ;
+#ifdef MUTEX
 	SDL_LockMutex (Mutex) ;
+#endif
 	ret = SDL_PushEvent (event) ;
+#ifdef MUTEX
 	SDL_UnlockMutex (Mutex) ;
+#endif
 	return ret ;
 }
 

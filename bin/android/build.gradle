@@ -8,29 +8,38 @@ else {
 }
 
 android {
-    compileSdkVersion 26
+    namespace 'com.rtrussell.bbcbasic'
+    compileSdkVersion 31
     defaultConfig {
         if (buildAsApplication) {
             applicationId "com.rtrussell.bbcbasic"
         }
-        ndkVersion "16.1.4479499"
         minSdkVersion 16
-        targetSdkVersion 26
-        versionCode 100
-        versionName "1.10a"
+        targetSdkVersion 31
+        versionCode 134
+        versionName "1.34a"
         externalNativeBuild {
             ndkBuild {
                 arguments "APP_PLATFORM=android-16"
                 abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
             }
+            // cmake {
+            //     arguments "-DANDROID_APP_PLATFORM=android-16", "-DANDROID_STL=c++_static"
+            //     // abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            //     abiFilters 'arm64-v8a'
+            // }
         }
     }
     buildTypes {
         release {
             debuggable true
             minifyEnabled false
-            useProguard false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+    applicationVariants.all { variant ->
+        tasks["merge${variant.name.capitalize()}Assets"]
+            .dependsOn("externalNativeBuild${variant.name.capitalize()}")
     }
     if (!project.hasProperty('EXCLUDE_NATIVE_LIBS')) {
         sourceSets.main {
@@ -40,19 +49,22 @@ android {
             ndkBuild {
                 path 'jni/Android.mk'
             }
+            // cmake {
+            //     path 'jni/CMakeLists.txt'
+            // }
         }
        
     }
     lintOptions {
         abortOnError false
     }
-
+    
     if (buildAsLibrary) {
         libraryVariants.all { variant ->
             variant.outputs.each { output ->
                 def outputFile = output.outputFile
                 if (outputFile != null && outputFile.name.endsWith(".aar")) {
-                    def fileName = "org.libsdl.app.aar";
+                    def fileName = "com.rtrussell.bbcbasic.aar";
                     output.outputFile = new File(outputFile.parent, fileName);
                 }
             }

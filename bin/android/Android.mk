@@ -20,14 +20,14 @@ SDL_PATH := ../SDL
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(SDL_PATH)/include
 
-LOCAL_LDLIBS := -lGLESv1_CM -lGLESv2 -llog
+LOCAL_LDLIBS := -lGLESv1_CM -lGLESv2 -lOpenSLES -llog -landroid
 
 ifeq ($(TARGET_ARCH),x86)
 
 LOCAL_SRC_FILES := bbcvdu.c bbcvtx.c flood.c bbcsdl.c SDL2_gfxPrimitives.c SDL2_rotozoom.c
 
 LOCAL_STATIC_LIBRARIES := libbbc-prebuilt
-LOCAL_LDLIBS += -Wl,--no-warn-shared-textrel
+LOCAL_LDLIBS += -Wl,-znotext
 
 endif
 

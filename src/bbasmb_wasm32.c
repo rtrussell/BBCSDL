@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit BBC BASIC Interpreter (Emscripten / Web Assembly)  *
-*       (c) 2018-2022  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2018-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.29a, 28-Feb-2022                                *
+*       Version 1.34a, 26-Jan-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -248,6 +248,11 @@ long long BBC_RenderDrawLine(st renderer, st x1, st y1, st x2, st y2, st i5, st 
 long long BBC_RenderDrawLines(st renderer, st points, st count, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_RenderDrawLines((SDL_Renderer*) renderer, (const SDL_Point*) points, count); }
+
+long long BBC_RenderGeometry(st renderer, st texture, st vertices, st num_ver, st indices, st num_ind, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_RenderGeometry((SDL_Renderer*) renderer, (SDL_Texture*) texture,
+		       (const SDL_Vertex*) vertices, num_ver, (const int*) indices, num_ind); }
 
 long long WASM_RenderReadPixels(st renderer, st rect, st format, st pixels, st pitch, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -601,7 +606,7 @@ long long BBC_emscripten_async_wget(st url, st file, st i2, st i3, st i4, st i5,
 	return 0 ;
 }
 
-#define NSYS 125
+#define NSYS 126
 #define POW2 128 // smallest power-of-2 >= NSYS
 
 static const char *sysname[NSYS] = {
@@ -691,6 +696,7 @@ static const char *sysname[NSYS] = {
 	"SDL_RenderFillRect",
 	"SDL_RenderFillRects",
 	"SDL_RenderFlush",
+	"SDL_RenderGeometry",
 	"SDL_RenderReadPixels",
 	"SDL_RenderSetClipRect",
 	"SDL_SetColorKey",
@@ -818,6 +824,7 @@ static void *sysfunc[NSYS] = {
 	BBC_RenderFillRect,
 	BBC_RenderFillRects,
 	BBC_RenderFlush,
+	BBC_RenderGeometry,
 	WASM_RenderReadPixels,
 	WASM_RenderSetClipRect,
 	BBC_SetColorKey,

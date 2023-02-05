@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2022  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.34a, 11-Dec-2022                                *
+*       Version 1.34a, 25-Jan-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -150,7 +150,9 @@ SDL_TimerID BlinkTimerID ;
 SDL_Event UserEvent ; // Used by Android x86-32 build
 SDL_Joystick * Joystick = NULL ;
 SDL_sem * Sema4 ;
+#ifdef MUTEX
 SDL_mutex * Mutex ;
+#endif
 SDL_sem * Idler ;
 int bBackground = 0 ;
 int bYield = 0 ;
@@ -233,9 +235,13 @@ static void *mymap (unsigned int size)
 static int BBC_PushEvent(SDL_Event* event)
 {
 	int ret ;
+#ifdef MUTEX
 	SDL_LockMutex (Mutex) ;
+#endif
 	ret = SDL_PushEvent (event) ;
+#ifdef MUTEX
 	SDL_UnlockMutex (Mutex) ;
+#endif
 	return ret ;
 }
 
@@ -415,8 +421,9 @@ static void ShutDown ()
 	bBackground = 0 ;     // Worker thread may be waiting on bBackground
 	SDL_WaitThread (Thread, &i) ;
 	SDL_DestroySemaphore (Sema4) ;
+#ifdef MUTEX
 	SDL_DestroyMutex (Mutex) ; 
-
+#endif
 	SDL_RemoveTimer(PollTimerID) ;
 	SDL_RemoveTimer(UserTimerID) ;
 	SDL_RemoveTimer(BlinkTimerID) ;
@@ -437,9 +444,13 @@ static void ShutDown ()
 static int BBC_PeepEvents(SDL_Event* ev, int nev, SDL_eventaction action, Uint32 min, Uint32 max)
 {
 	int ret ;
+#ifdef MUTEX
 	SDL_LockMutex (Mutex) ;
+#endif
 	ret = SDL_PeepEvents (ev, nev, action, min, max) ;
+#ifdef MUTEX
 	SDL_UnlockMutex (Mutex) ;
+#endif
 	return ret ;
 }
 
@@ -456,7 +467,7 @@ static int myEventFilter(void* userdata, SDL_Event* pev)
 		break ;
 	    }
 
-#ifdef __EMSCRIPTEN__
+#if defined __EMSCRIPTEN__ && defined MUTEX
 	if ((pev->type == SDL_USEREVENT) || (pev->type == SDL_WINDOWEVENT))
 		return 1;
 	BBC_PeepEvents (pev, 1, SDL_ADDEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT) ;
@@ -705,13 +716,21 @@ SDL_SetTextureBlendMode(buttexture, SDL_BLENDMODE_BLEND) ;
 		userRAM = (char*) VirtualAlloc (pstrVirtual, DEFAULT_RAM,
 						MEM_COMMIT, PAGE_EXECUTE_READWRITE) ;
 
-#elif defined __APPLE__ || defined __EMSCRIPTEN__
+#elif defined __APPLE__
 
 	while ((MaximumRAM > DEFAULT_RAM) &&
 			((void*)-1 == (userRAM = mmap ((void *)0x10000000, MaximumRAM, 
 						PROT_EXEC | PROT_READ | PROT_WRITE, 
 						MAP_PRIVATE | MAP_ANON, -1, 0))) &&
 			((void*)-1 == (userRAM = mmap ((void *)0x10000000, MaximumRAM, 
+						PROT_READ | PROT_WRITE, 
+						MAP_PRIVATE | MAP_ANON, -1, 0))))
+		MaximumRAM /= 2 ;
+
+#elif defined __EMSCRIPTEN__
+
+	while ((MaximumRAM > DEFAULT_RAM) &&
+			((void*)-1 == (userRAM = mmap ((void *)0, MaximumRAM, 
 						PROT_READ | PROT_WRITE, 
 						MAP_PRIVATE | MAP_ANON, -1, 0))))
 		MaximumRAM /= 2 ;
@@ -897,8 +916,10 @@ if (argc >= 2)
 	strcpy (szAutoRun, "lib/autorun.bbc") ;
 #endif
 
+#ifdef MUTEX
 // Mutex (before first SDL_PeepEvents and timer creation):
 Mutex = SDL_CreateMutex () ;
+#endif
 
 SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 SDL_PumpEvents () ;
@@ -988,7 +1009,7 @@ memhdc = renderer ;
 keystate = SDL_GetKeyboardState(NULL) ;
 
 // Set up to monitor enter/exit background events:
-#ifdef __EMSCRIPTEN__
+#if defined __EMSCRIPTEN__ && defined MUTEX
 SDL_SetEventFilter(myEventFilter, 0) ;
 #else
 SDL_AddEventWatch(myEventFilter, 0) ;
@@ -1109,9 +1130,13 @@ static int maintick (void)
 
 	if ((unsigned int)(now - lastpump) >= PUMPT)
 	    {
+#ifdef MUTEX
 		SDL_LockMutex (Mutex) ;
+#endif
 		SDL_PumpEvents() ;
+#ifdef MUTEX
 		SDL_UnlockMutex (Mutex) ;
+#endif
 		lastpump = SDL_GetTicks() ;
 	    }
 

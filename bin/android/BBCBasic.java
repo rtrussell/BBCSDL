@@ -8,7 +8,7 @@ public class BBCBasic extends SDLActivity
         return new String[] {
             "c++_shared",
             "Box2D",
-            "hidapi",
+            // "hidapi",
             "SDL2",
             // "SDL2_image",
             // "SDL2_mixer",
