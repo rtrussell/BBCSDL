@@ -14,6 +14,7 @@ android {
         if (buildAsApplication) {
             applicationId "com.rtrussell.bbcbasic"
         }
+        ndkVersion "16.1.4479499"
         minSdkVersion 16
         targetSdkVersion 31
         versionCode 134
