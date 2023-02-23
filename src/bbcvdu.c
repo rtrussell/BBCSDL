@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2022  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.30a, 03-Apr-2022                                *
+*       Version 1.34b, 18-Feb-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -395,7 +395,7 @@ static void blit (int dstx, int dsty, int srcx, int srcy, int w, int h, int bg)
 }
 
 // Flood fill WHILE colour = specified target
-static void flooda (char col, char tar, int cx, int cy, int vl, int vr, int vt, int vb)
+static void flooda (unsigned char col, unsigned char tar, int cx, int cy, int vl, int vr, int vt, int vb)
 {
 	unsigned int *p ;
 	SDL_Texture *tex ;
@@ -418,7 +418,7 @@ static void flooda (char col, char tar, int cx, int cy, int vl, int vr, int vt, 
 }
 
 // Flood fill UNTIL colour = specified target
-static void floodb (char col, char tar, int cx, int cy, int vl, int vr, int vt, int vb)
+static void floodb (unsigned char col, unsigned char tar, int cx, int cy, int vl, int vr, int vt, int vb)
 {
 	unsigned int *p ;
 	SDL_Texture *tex ;
@@ -1659,7 +1659,7 @@ static void plotns (unsigned char al, int cx, int cy)
 	bChanged = 1 ;
 }
 
-static void plot (char code, short xs, short ys)
+static void plot (unsigned char code, short xs, short ys)
 {
 	int xpos = xs, ypos = ys ;
 
@@ -1748,7 +1748,7 @@ static void colour (signed char al)
 //VDU 19, l, p, 0, 0, 0 - SET PHYSICAL COLOUR
 //VDU 19, l,-1, r, g, b (rgb: 6-bits)
 //VDU 19, l,16, R, G, B (RGB: 8-bits)
-static void setpal (char n, signed char m, unsigned char r, unsigned char g, unsigned char b)
+static void setpal (unsigned char n, signed char m, unsigned char r, unsigned char g, unsigned char b)
 {
 	switch (m)
 	{
@@ -1953,7 +1953,7 @@ static void origin (short x, short y)
 
 //VDU 31,x,y - POSITION CURSOR
 //Co-ords are relative to text viewport
-static void tabxy(char x, char y)
+static void tabxy(unsigned char x, unsigned char y)
 {
 	int px = x ;
 	int py = y ;

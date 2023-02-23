@@ -4,6 +4,6 @@ If you get a build failure like:
 
 build the individual ports separately using:
 
-embuilder build sdl2
+embuilder build sdl2-mt
 embuilder build sdl2_net
 embuilder build sdl2_ttf

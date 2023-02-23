@@ -17,4 +17,11 @@ public class BBCBasic extends SDLActivity
             "main"
         };
     }
+
+    /**
+     * Override so that BBC2APK can set orientation in manifest
+     */
+    public void setOrientationBis(int w, int h, boolean resizable, String hint)
+    {
+    }
 }

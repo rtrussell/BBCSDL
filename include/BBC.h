@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (32-bits or 64-bits)                 *
-*       Copyright (c) R. T. Russell, 2000-2022                     *
+*       Copyright (c) R. T. Russell, 2000-2023                     *
 *                                                                  *
 *       BBC.h constant, variable and structure declarations        *
-*       Version 1.28a, 23-Jan-2022                                 *
+*       Version 1.34b, 20-Feb-2023                                 *
 \******************************************************************/
 
 // Constants:
@@ -232,7 +232,7 @@ typedef struct tagPARM
 // to force the type word (.i.t or .s.t member) to a value other than 0 or -1. 
 typedef union __attribute__ ((packed)) __attribute__ ((aligned (4))) tagVAR
 {
-#if defined(__arm__) || defined(__aarch64__) || defined(__EMSCRIPTEN__)
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__
 	double f ;
 #else
         long double f ;

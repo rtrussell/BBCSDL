@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.34a, 25-Jan-2023                                *
+*       Version 1.34b, 21-Feb-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -531,7 +531,8 @@ if (platform < 0x2000200)
 #endif
 #ifdef __ANDROID__
 	platform |= 3 ;
-	fullscreen = 1 ;
+	if (!SDL_IsChromebook())
+		fullscreen = 1 ;
 #endif
 #ifdef __IPHONEOS__
 	platform |= 4 ;
