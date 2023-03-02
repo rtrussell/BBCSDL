@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.34a, 25-Jan-2023                                *
+*       Version 1.34c, 01-Mar-2023                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -3326,7 +3326,7 @@ VAR xeq (void)
 				PARM parm ;
 				void *ptr = NULL ;
 				unsigned char type = 0 ;
-				parm.f[0] = 0.0 ;
+				parm.f[0] = -1.7e308 ;
 				parm.i[0] = 0 ;
 
 				if (v.s.t == -1)

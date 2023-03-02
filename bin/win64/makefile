@@ -16,13 +16,13 @@ OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
 all: bbcsdl.exe
 
 bbmain.o: bbmain.c BBC.h
-	$(CXX) -c -O2 -freg-struct-return -ffast-math $< -o $@
+	$(CXX) -c -O2 -freg-struct-return -ffast-math -fno-finite-math-only $< -o $@
 
 bbexec.o: bbexec.c BBC.h
-	$(CXX) -c -O2 -freg-struct-return -ffast-math $< -o $@
+	$(CXX) -c -O2 -freg-struct-return -ffast-math -fno-finite-math-only $< -o $@
 
 bbeval.o: bbeval.c BBC.h
-	$(CXX) -Wno-array-bounds -c -O2 -freg-struct-return -ffast-math $< -o $@
+	$(CXX) -Wno-array-bounds -c -O2 -freg-struct-return -ffast-math -fno-finite-math-only $< -o $@
 
 bbasmb.o: bbasmb_x86_64.c BBC.h
 	$(CXX) -c -Os $< -o $@

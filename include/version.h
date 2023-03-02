@@ -1,6 +1,6 @@
 #define YEAR    "2023"          // Copyright year
-#define VERSION "1.34b"         // Version string
-#define VER_RES 1,34,2,00       // For VERSIONINFO resource
+#define VERSION "1.34c"         // Version string
+#define VER_RES 1,34,3,00       // For VERSIONINFO resource
 #define DEFAULT_RAM PAGE_OFFSET+0x200000 // Initial amount of RAM to allocate
 #ifdef __EMSCRIPTEN__
 #define MAXIMUM_RAM 0x1000000   // Maximum amount of RAM to allocate

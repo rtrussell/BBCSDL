@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.34b, 18-Feb-2023                                *
+*       Version 1.34c, 01-Mar-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -2378,7 +2378,7 @@ long long apicall_ (long long (*APIfunc) (size_t, size_t, size_t, size_t, size_t
 			      size_t, size_t, size_t, size_t, size_t, size_t), PARM *p)
 {
 #ifdef ARMHF
-	if (p->f[0] == 0.0)
+	if (p->f[0] == -1.7e308)
 		memcpy (&p->f[0], &p->i[0], 48) ;
 	if ((void*) APIfunc == (void*) SDL_RenderCopyEx) 
 	    {
@@ -2408,7 +2408,7 @@ double fltcall_ (double (*APIfunc) (size_t, size_t, size_t, size_t, size_t, size
 			      size_t, size_t, size_t, size_t, size_t, size_t), PARM *p)
 {
 #ifdef ARMHF
-	if (p->f[0] == 0.0)
+	if (p->f[0] == -1.7e308)
 		memcpy (&p->f[0], &p->i[0], 48) ;
 	if ((void*) APIfunc == (void*) SDL_RenderCopyEx) 
 	    {
