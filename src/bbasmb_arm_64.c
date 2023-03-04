@@ -1575,7 +1575,7 @@ void assemble (void)
                                 }
                             int imm = (void *) (size_t) expri () - PC ;
                             if ((((imm >> 28) != 0 && (imm >> 28) != -1) || (0 != (imm & 3))) && (liston & BIT5))
-                                error (8, "Label is not within 128MB of the instruction, or is not word aliigned" ) ;
+                                error (1, "Label is not within 128MB of the instruction, or is not word aliigned" ) ;
                             instruction |= (imm & 0xffffffc) >> 2;
                             }
                         }
