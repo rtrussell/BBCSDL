@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2021  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.27a, 28-Dec-2021                                *
+*       Version 1.35a, 15-Mar-2023                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -333,7 +333,7 @@ void error (int code, const char * msg)
 	if (code != 0)
 		longjmp (env, code) ;
 	faterr (msg) ;
-	longjmp (env, -1) ;
+	longjmp (env, ~512) ;
 }
 
 // Return next non-space character (handling line continuation)
@@ -1507,15 +1507,21 @@ int basic (void *ecx, void *edx, void *prompt)
 	if (errcode < 0)
 		return ~errcode ;
 
-	if ((errcode > 0) && (errcode < 256))
+	if (errcode)
 	    {
 		esp = (heapptr *)((himem + (size_t) zero) & -4) ;
-		if (errtrp && (autonum == 0))
+		if (errtrp && (autonum == 0) && (errcode < 256))
 		    {
 			esi = errtrp + (signed char *) zero ;
 			prompt = NULL ;
 			if (onersp != NULL)
 				esp = onersp ;
+		    }
+		else if (errcode == 256)
+		    {
+			if (prompt == (void *) -1)
+				return (errcode) ;
+			prompt = (void *) 1 ;
 		    }
 		else
 		    {
@@ -1531,15 +1537,15 @@ int basic (void *ecx, void *edx, void *prompt)
 				text (accs) ;
 			    }
 			crlf () ;
+			if (prompt == (void *) -1)
+				return (errcode) ;
 			prompt = (void *) 1 ;
 			autonum = 0 ;
 			autoinc = 0 ;
 		    }
 	    }
-	else if (errcode)
-		prompt = (void *) 1 ;
 
-	while (prompt)
+	while (prompt == (void *) 1)
 	    {
 		int n = 0 ;
 		unsigned short lino = 0 ;

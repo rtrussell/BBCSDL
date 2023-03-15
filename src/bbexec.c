@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.34c, 01-Mar-2023                                *
+*       Version 1.35a, 11-Mar-2023                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -1651,8 +1651,6 @@ VAR xeq (void)
 					datptr = search (vpage + (signed char *) zero, TDATA) -
 							(signed char *) zero ;
 
-				if ((int) datptr == 0)
-					error (42, NULL) ; // 'Out of DATA'
 				break ;
 
 /************************************ CALL *************************************/
@@ -1949,9 +1947,9 @@ VAR xeq (void)
 				    {
 					unsigned char type ;
 					void *ptr ;
-					signed char *edx = datptr + (signed char *) zero ;
-					if (edx == NULL)
+					if ((int) datptr == NULL - (void *) zero)
 						error (42, NULL) ; // 'Out of DATA'
+					signed char *edx = datptr + (signed char *) zero ;
 					while (1)
 					    {
 						signed char al = *edx++ ;

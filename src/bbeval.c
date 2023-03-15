@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.34b, 20-Feb-2023                                *
+*       Version 1.35a, 13-Mar-2023                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -984,7 +984,6 @@ VAR item (void)
 {
 	VAR v ;
 	signed char al = nxt () ;
-	errno = 0 ;
 	esi++ ;
 	switch (al)
 	    {
@@ -1454,6 +1453,7 @@ VAR item (void)
 
 		case TSIN:
 			v = itemf () ;
+			errno = 0 ;
 			v.f = sinl (v.f) ;
 			break ;
 
@@ -1461,6 +1461,7 @@ VAR item (void)
 
 		case TCOS:
 			v = itemf () ;
+			errno = 0 ;
 			v.f = cosl (v.f) ;
 			break ;
 
@@ -1468,6 +1469,7 @@ VAR item (void)
 
 		case TTAN:
 			v = itemf () ;
+			errno = 0 ;
 			v.f = tanl (v.f) ;
 			break ;
 
@@ -1475,6 +1477,7 @@ VAR item (void)
 
 		case TASN:
 			v = itemf () ;
+			errno = 0 ;
 			v.f = asinl (v.f) ;
 			break ;
 
@@ -1482,6 +1485,7 @@ VAR item (void)
 
 		case TACS:
 			v = itemf () ;
+			errno = 0 ;
 			v.f = acosl (v.f) ;
 			break ;
 
@@ -1489,6 +1493,7 @@ VAR item (void)
 
 		case TATN:
 			v = itemf () ;
+			errno = 0 ;
 			v.f = atanl (v.f) ;
 			break ;
 
@@ -1526,18 +1531,16 @@ VAR item (void)
 
 		case TEXP:
 			v = itemf () ;
+			errno = 0 ;
 			v.f = expl (v.f) ;
-			if (isinf (v.f))
-				error (24, NULL) ; // 'Exponent range'
 			break ;
 
 /************************************* LN **************************************/
 
 		case TLN:
 			v = itemf () ;
+			errno = 0 ;
 			v.f = logl (v.f) ;
-			if (isnan (v.f) || isinf (v.f))
-				error (22, NULL) ; // 'Logarithm range'
 			break ;
 
 /************************************* LOG *************************************/
@@ -1563,6 +1566,7 @@ VAR item (void)
 
 		case TSQR:
 			v = itemf () ;
+			errno = 0 ;
 			v.f = sqrtl (v.f) ;
 			break ;
 
@@ -2203,6 +2207,8 @@ VAR item (void)
 			error (22, NULL) ; // 'Logarithm range'
 		else if (al == TSQR)
 			error (21, NULL) ; // 'Negative root'
+		else if (al == TEXP)
+			error (24, NULL) ; // 'Exponent range'
 		else
 			error (20, NULL) ; // 'Number too big'
 	    }

@@ -1,15 +1,15 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                          *
-*       Copyright (c) R. T. Russell, 2000-2022                     *
+*       Copyright (c) R. T. Russell, 2000-2023                     *
 *                                                                  *
 *       bbccon.h constant definitions                              *
-*       Version v0.42, 22-Jul-2022                                 *
+*       Version v0.42, 11-Mar-2023                                 *
 \******************************************************************/
 
 // System constants :
 
-#define YEAR    "2022"          // Copyright year
-#define VERSION "v0.41"         // Version string
+#define YEAR    "2023"          // Copyright year
+#define VERSION "v0.42"         // Version string
 #ifdef PICO
 #define ACCSLEN 1024  // Must be the same in bbcsdl.h and bbccon.h
 #define DEFAULT_RAM PAGE_OFFSET+0x20000 // Initial amount of RAM to allocate
