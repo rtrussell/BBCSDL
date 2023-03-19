@@ -1,0 +1,67 @@
+# On OpenBSD install SDL 2.0 and NASM from ports:
+# doas pkg_add sdl2 sdl2-ttf sdl2-net nasm
+
+SDL_LIB := $(shell pkg-config --libs sdl2 SDL2_ttf SDL2_net) -lm
+LBITS := 64
+
+VPATH = ../../src ../../include
+CXX = cc -Wall -pthread -I ../../include -I/usr/local/include
+
+OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
+      bbcvdu.o bbcvtx.o flood.o bbdata.o bbcsdl.o \
+      bbasmb.o SDL2_gfxPrimitives.o
+
+all: bbcsdl
+
+bbmain.o: bbmain.c BBC.h
+	$(CXX) -c -O2 -ffast-math -fno-finite-math-only $< -o $@
+
+bbexec.o: bbexec.c BBC.h
+	$(CXX) -c -O2 -ffast-math -fno-finite-math-only $< -o $@
+
+bbeval.o: bbeval.c BBC.h
+	$(CXX) -Wno-array-bounds -c -O2 -ffast-math -fno-finite-math-only $< -o $@
+
+bbasmb.o: bbasmb_x86_64.c BBC.h
+	$(CXX) -c -Os $< -o $@
+
+bbcmos.o: bbcmos.c bbcsdl.h
+	$(CXX) -Wno-array-bounds -c -msse2 -O2 $< -o $@
+
+bbccli.o: bbccli.c bbcsdl.h
+	$(CXX) -Wno-unused-result -c -Os $< -o $@
+
+bbcvdu.o: bbcvdu.c bbcsdl.h
+	$(CXX) -c -Os $< -o $@
+
+bbcvtx.o: bbcvtx.c bbcsdl.h
+	$(CXX) -c -O3 $< -o $@
+
+bbcsdl.o: bbcsdl.c bbcsdl.h version.h
+	$(CXX) -Wno-unused-result -c -O2 $< -o $@
+
+SDL2_gfxPrimitives.o: SDL2_gfxPrimitives.c SDL2_gfxPrimitives.h
+	$(CXX) -c -O2 $< -o $@
+
+SDL2_rotozoom.o: SDL2_rotozoom.c SDL2_rotozoom.h SDL2_gfxPrimitives.h SDL_stbimage.h stb_image.h dr_mp3.h
+	$(CXX) -c -Os -fPIC $< -o $@
+
+flood.o: flood.c
+	$(CXX) -c -O3 $< -o $@
+
+ifeq ($(LBITS),64)
+bbdata.o: ../../src/bbdata_x86_64.nas
+	nasm -f elf64 -s ../../src/bbdata_x86_64.nas -o bbdata.o
+else
+bbdata.o: ../../src/bbdata_x86_32.nas
+	nasm -f elf32 -s ../../src/bbdata_x86_32.nas -o bbdata.o
+endif
+
+libstb.so: SDL2_rotozoom.o
+	$(CXX) -shared -o libstb.so SDL2_rotozoom.o
+
+bbcsdl: $(OBJ) libstb.so
+	$(CXX) $(OBJ) -lz -lstb -L . \
+	-o bbcsdl $(SDL_LIB) -Wl,-z,wxneeded -Wl,-z,origin -Wl,-s -Wl,-R,'$$ORIGIN'
+	cp bbcsdl ../../
+	cp libstb.so ../../

@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <libgen.h>
 #include "SDL2_gfxPrimitives.h"
 #include "SDL_ttf.h"
 #include "SDL_net.h"
@@ -43,6 +44,10 @@ BOOL WINAPI K32EnumProcessModules (HANDLE, HMODULE*, DWORD, LPDWORD) ;
 #include <sys/mman.h>
 #define PLATFORM "MacOS"
 int GetTempPath(size_t, char *) ;
+#endif
+#ifdef __OpenBSD__
+#include <sys/mman.h>
+#define PLATFORM "OpenBSD"
 #endif
 #ifdef __ANDROID__
 #include <sys/mman.h>
@@ -526,7 +531,7 @@ if (platform < 0x2000200)
 #ifdef __LINUX__
 	platform |= 1 ;
 #endif
-#ifdef __MACOSX__
+#if defined __MACOSX__ || defined __OpenBSD__
 	platform |= 2 ;
 #endif
 #ifdef __ANDROID__
@@ -717,7 +722,7 @@ SDL_SetTextureBlendMode(buttexture, SDL_BLENDMODE_BLEND) ;
 		userRAM = (char*) VirtualAlloc (pstrVirtual, DEFAULT_RAM,
 						MEM_COMMIT, PAGE_EXECUTE_READWRITE) ;
 
-#elif defined __APPLE__
+#elif defined __APPLE__ || defined __OpenBSD__
 
 	while ((MaximumRAM > DEFAULT_RAM) &&
 			((void*)-1 == (userRAM = mmap ((void *)0x10000000, MaximumRAM, 
@@ -798,7 +803,7 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 	WideCharToMultiByte (CP_UTF8, 0, widepath, -1, szTempDir, 256, NULL, NULL) ;
 #endif
 
-#ifdef __LINUX__
+#if defined __LINUX__ || defined __OpenBSD__
 	strcpy (szTempDir, SDL_GetPrefPath("tmp", "")) ;
 	*(szTempDir + strlen(szTempDir) - 1) = 0 ;
 	mkdir (szTempDir, 0777) ;
@@ -814,6 +819,14 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 	strcat (szTempDir, "/tmp/") ;
 	mkdir (szTempDir, 0777) ;
 #endif
+
+	char *base_path = SDL_GetBasePath () ;
+	if (base_path == NULL)
+	    {
+		base_path = SDL_malloc(MAX_PATH);
+		realpath(dirname(argv[0]), base_path);
+		strcat(base_path, "/");
+	    }
 
 #ifdef __IPHONEOS__
 	strcpy (szTempDir, SDL_GetPrefPath("BBCBasic", "tmp")) ;
@@ -836,7 +849,7 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 #ifdef __IPHONEOS__
 	useGPA = 1 ;
 	strcpy (szUserDir, SDL_GetPrefPath("BBCBasic", "usr")) ;
-	strcpy (szLibrary, SDL_GetBasePath()) ;
+	strcpy (szLibrary, base_path) ;
 	strcat (szLibrary, "lib/") ;
 
 	p = strstr (szUserDir, "/Library/") ;
@@ -847,7 +860,7 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 	    }
 #else
 	strcpy (szUserDir, SDL_GetPrefPath("BBCBasic", "")) ;
-	strcpy (szLibrary, SDL_GetBasePath()) ;
+	strcpy (szLibrary, base_path) ;
 
 	char *p ;
 	*(szUserDir + strlen(szUserDir) - 1) = 0 ;
@@ -878,7 +891,7 @@ if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NU
 	if ((argc == 1) || (*argv[1] == '-'))
 	{
 		char *q ;
-		strcpy (szAutoRun, SDL_GetBasePath()) ;
+		strcpy (szAutoRun, base_path) ;
 		q = szAutoRun + strlen (szAutoRun) ;
 		p = strrchr (argv[0], '/') ;
 		if (p == NULL) p = strrchr (argv[0], '\\') ;
@@ -909,7 +922,7 @@ if (argc >= 2)
 	}
 
 #ifdef __IPHONEOS__
-	strcpy (szAutoRun, SDL_GetBasePath()) ;
+	strcpy (szAutoRun, base_path) ;
 	strcat (szAutoRun, "autorun.bbc") ;
 #endif
 

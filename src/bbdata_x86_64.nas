@@ -14,7 +14,7 @@ SOUNDQL         EQU     5*SOUNDQE ; Number of bytes per channel
 	GLOBAL	stavar,lc,oc,pc,dynvar,fnptr,proptr,prand
 	GLOBAL	accs,buff,vpage,flist,lomem,pfree,himem
 	GLOBAL	errtxt,onersp,errtrp,datptr,curlin,errlin
-	GLOBAL	tracen,random,vcount,vwidth,errnum,liston,tmps
+	GLOBAL	tracen,vcount,vwidth,errnum,liston,tmps
 ;
 	GLOBAL	path,keystr,keybdq,keyptr,spchan,exchan,tweak
 	GLOBAL	fcbtab,timoff,usrchr,soundq,envels,waves,libase
