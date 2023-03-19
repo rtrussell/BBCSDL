@@ -15,6 +15,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <errno.h>
 #include "bbccon.h"
 #define HISTORY 100  // Number of items in command history
 #define ESCTIME 200  // Milliseconds to wait for escape sequence
@@ -60,6 +61,12 @@ typedef dispatch_source_t timer_t ;
 dispatch_queue_t timerqueue ;
 #undef PLATFORM
 #define PLATFORM "MacOS"
+#endif
+
+#ifdef __OpenBSD__
+#undef PLATFORM
+#define PLATFORM "OpenBSD"
+#include <sys/time.h>
 #endif
 
 #undef MAX_PATH
@@ -198,7 +205,9 @@ void *myThread (void *parm)
 	do
 	    {
 		nread = read (STDIN_FILENO, &ch, 1) ;
-		if (nread)
+		if (nread == -1 && errno == EINTR)
+			nread = 0;
+		if (nread > 0)
 			while (putinp (ch) == 0)
 				usleep (1) ;
 		else
@@ -1636,6 +1645,61 @@ void SystemIO (int flag)
 }
 #endif
 
+#ifdef __OpenBSD__
+static void UserTimerProc (int sig)
+{
+	if (timtrp)
+		putevt (timtrp, WM_TIMER, 0, 0) ;
+	flags |= ALERT ; // Always, for periodic ESCape detection
+}
+
+timer_t StartTimer (int period)
+{
+	struct sigaction sig ;
+        struct itimerval it;
+
+	it.it_interval.tv_usec = (period % 1000) * 1000 ;
+	it.it_interval.tv_sec = (period / 1000) ;
+	it.it_value = it.it_interval ;
+
+	sig.sa_handler = (void *) &UserTimerProc ;
+	sigemptyset (&sig.sa_mask) ;
+        sigaddset (&sig.sa_mask, SIGALRM) ;
+	sig.sa_flags = 0 ;
+	sigaction (SIGALRM, &sig, NULL) ;
+	setitimer (ITIMER_REAL, &it, NULL) ;
+	// XXX: Only 1 timer is supported...
+	return 0 ;
+}
+
+void StopTimer (timer_t timerid)
+{
+	struct itimerval it ;
+	getitimer (ITIMER_REAL, &it) ;
+	timerclear (&it.it_interval) ;
+	timerclear (&it.it_value) ;
+	setitimer (ITIMER_REAL, &it, NULL) ;
+}
+
+void SystemIO (int flag)
+{
+	struct termios tmp ;
+	tcgetattr (STDIN_FILENO, &tmp) ;
+	if (flag)
+	    {
+		tmp.c_lflag |= ISIG ;
+		tmp.c_oflag |= OPOST ;
+	    }
+	else
+	    {
+		tmp.c_lflag &= ~ISIG ;
+		tmp.c_oflag &= ~OPOST ;
+	    }
+	tcsetattr (STDIN_FILENO, TCSAFLUSH, &tmp) ;
+}
+
+#endif
+
 static void SetLoadDir (char *path)
 {
 	char temp[MAX_PATH] ;
@@ -1713,7 +1777,7 @@ pthread_t hThread = 0 ;
 
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__OpenBSD__)
 static struct termios orig_termios ;
 pthread_t hThread = NULL ;
 
