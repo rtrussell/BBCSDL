@@ -28,5 +28,5 @@ bbdata.o: ../../../BBCSDL/src/bbdata_x86_64.nas
 
 bbcbasic: $(OBJ)
 	$(CXX) $(OBJ) -L . -L/usr/include -lm -pthread \
-	-o bbcbasic -Wl,-s -Wl,-R,'$$ORIGIN'
+	-o bbcbasic -Wl,-s -Wl,-z,wxneeded
 	cp bbcbasic ../../
