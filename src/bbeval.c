@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.35a, 13-Mar-2023                                *
+*       Version 1.35a, 22-Mar-2023                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1

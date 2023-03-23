@@ -32,7 +32,7 @@ bbasmb.o: bbasmb_x86_64.c BBC.h
 	$(CXX) -c -Os $< -o $@
 
 bbcmos.o: bbcmos.c bbcsdl.h
-	$(CXX) -Wno-array-bounds -c -msse2 -O2 $< -o $@
+	$(CXX) -Wno-unused-result -Wno-array-bounds -c -msse2 -O2 $< -o $@
 
 bbccli.o: bbccli.c bbcsdl.h
 	$(CXX) -Wno-unused-result -c -Os $< -o $@

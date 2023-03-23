@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2021-2023                     *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.42a, 11-Mar-2023                                 *
+*       Version 0.43a, 23-Mar-2023                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -1304,14 +1304,16 @@ unsigned char osbget (void *chan, int *peof)
 	unsigned char byte = 0 ;
 	if (peof != NULL)
 		*peof = 0 ;
-#ifdef _WIN32
 	if (chan <= (void *)MAX_PORTS)
 	    {
+#ifdef _WIN32
 		intptr_t file = _get_osfhandle (fileno (lookup (chan))) ;
 		ReadFile ((HANDLE) file, &byte, 1, NULL, NULL) ;
+#else
+		read (fileno (lookup (chan)), &byte, 1) ;
+#endif
 		return byte ;
 	    }
-#endif
 	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
 	    {
 		int index = (size_t) chan - MAX_PORTS - 1 ;
@@ -1340,14 +1342,16 @@ unsigned char osbget (void *chan, int *peof)
 // Write a byte:
 void osbput (void *chan, unsigned char byte)
 {
-#ifdef _WIN32
 	if (chan <= (void *) MAX_PORTS)
 	    {
+#ifdef _WIN32
 		intptr_t file = _get_osfhandle (fileno (lookup (chan))) ;
 		WriteFile ((HANDLE) file, &byte, 1, NULL, NULL) ;
+#else
+		write (fileno (lookup (chan)), &byte, 1) ;
+#endif
 		return ;
 	    }
-#endif
 	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
 	    {
 		int index = (size_t) chan - MAX_PORTS - 1 ;

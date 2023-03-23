@@ -7,13 +7,14 @@
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.34a, 25-Jan-2023                                *
+*       Version 1.34d, 23-Mar-2023                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
 #define __USE_GNU
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <time.h>
 #include <math.h>
 #include <setjmp.h>
@@ -2246,14 +2247,16 @@ unsigned char osbget (void *chan, int *peof)
 	unsigned char byte = 0 ;
 	if (peof != NULL)
 		*peof = 0 ;
-#ifdef __WINDOWS__
 	if (chan <= (void *)MAX_PORTS)
 	    {
-		SDL_RWops *handle = lookup (chan) ;
-		ReadFile (handle->hidden.windowsio.h, &byte, 1, NULL, NULL) ;
+		SDL_RWops *file = lookup (chan) ;
+#ifdef __WINDOWS__
+		ReadFile (file->hidden.windowsio.h, &byte, 1, NULL, NULL) ;
+#else
+		read (fileno (file->hidden.stdio.fp), &byte, 1) ;
+#endif
 		return byte ;
 	    }
-#endif
 	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
 	    {
 		int index = (size_t) chan - MAX_PORTS - 1 ;
@@ -2282,14 +2285,16 @@ unsigned char osbget (void *chan, int *peof)
 // Write a byte:
 void osbput (void *chan, unsigned char byte)
 {
-#ifdef __WINDOWS__
 	if (chan <= (void *) MAX_PORTS)
 	    {
-		SDL_RWops *handle = lookup (chan) ;
-		WriteFile (handle->hidden.windowsio.h, &byte, 1, NULL, NULL) ;
+		SDL_RWops *file = lookup (chan) ;
+#ifdef __WINDOWS__
+		WriteFile (file->hidden.windowsio.h, &byte, 1, NULL, NULL) ;
+#else
+		write (fileno (file->hidden.stdio.fp), &byte, 1) ;
+#endif
 		return ;
 	    }
-#endif
 	if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
 	    {
 		int index = (size_t) chan - MAX_PORTS - 1 ;

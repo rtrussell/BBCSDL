@@ -31,7 +31,7 @@ bbasmb.o: bbasmb_arm_64.c BBC.h
 	$(CXX) $(CXXFLAGS) -Os $< -o $@
 
 bbcmos.o: bbcmos.c bbcsdl.h
-	$(CXX) -Wno-array-bounds $(CXXFLAGS) -O2 $< -o $@
+	$(CXX) -Wno-unused-result -Wno-array-bounds $(CXXFLAGS) -O2 $< -o $@
 
 bbccli.o: bbccli.c bbcsdl.h
 	$(CXX) -Wno-unused-result $(CXXFLAGS) -Os $< -o $@
