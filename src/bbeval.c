@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.35a, 22-Mar-2023                                *
+*       Version 1.35b, 30-Mar-2023                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -987,6 +987,25 @@ VAR item (void)
 	esi++ ;
 	switch (al)
 	    {
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		auto void nestedFN(void);
+		auto void nestedUSR(void);
+		auto void nestedPTR(void);
+		auto void nestedGETS(void);
+		auto void nestedLOG(void);
+		auto void nestedMOD(void);
+		auto void nestedSUM(void);
+		auto void nestedMID(void);
+		auto void nestedADDR(void);
+		auto void nestedEVAL(void);
+		auto void nestedLEFT(void);
+		auto void nestedTINT(void);
+		auto void nestedINSTR(void);
+		auto void nestedPOINT(void);
+		auto void nestedRIGHT(void);
+		auto void nestedSTRING(void);
+		auto VAR nesteddefault(void);
+#endif
 
 /************************* Parenthesised expression ****************************/
 
@@ -1000,6 +1019,10 @@ VAR item (void)
 /************************************* FN **************************************/
 
 		case TFN:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedFN();
+		void __attribute__ ((noinline)) nestedFN(void)
+#endif
 			{
 			int errcode = 0 ;
 			jmp_buf savenv ;
@@ -1030,6 +1053,10 @@ VAR item (void)
 /************************************* USR *************************************/
 
 		case TUSR:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedUSR();
+		void __attribute__ ((noinline)) nestedUSR(void)
+#endif
 			{
 			int (*func) (int,int,int,int,int,int) ;
 			size_t n = itemi () ;
@@ -1090,6 +1117,11 @@ VAR item (void)
 /************************************* PTR *************************************/
 
 		case TPTRR:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedPTR();
+		void __attribute__ ((noinline)) nestedPTR(void)
+#endif
+		    {
 			if (*esi == '(')
 			    {
 				void *ptr ;
@@ -1118,36 +1150,28 @@ VAR item (void)
 				v.i.t = 0 ;
 				v.i.n = getptr (n) ;
 			    }
-			return v ;
+		    }
+		return v ;
 
 /************************************* EXT *************************************/
 
 		case TEXTR:
-			{
-			void *n = channel () ;
 			v.i.t = 0 ;
-			v.i.n = getext (n) ;
-			}
+			v.i.n = getext (channel ()) ;
 			return v ;
 
 /************************************* EOF *************************************/
 
 		case TEOF:
-			{
-			void *n = channel () ;
 			v.i.t = 0 ;
-			v.i.n = geteof (n) ;
-			}
+			v.i.n = geteof (channel ()) ;
 			return v ;
 
 /************************************ BGET *************************************/
 
 		case TBGET:
-			{
-			void *n = channel () ;
 			v.i.t = 0 ;
-			v.i.n = osbget (n, NULL) ;
-			}
+			v.i.n = osbget (channel (), NULL) ;
 			return v ;
 
 /************************************ PAGE *************************************/
@@ -1233,7 +1257,7 @@ VAR item (void)
 			if (*esi == '(')
 			    {
 				esi++ ;
-				VAR v = exprs () ;
+				v = exprs () ;
 				braket () ;
 				if (v.s.l > ((char *)esp - (char *)zero - pfree - STACK_NEEDED))
 					error (0, NULL) ; // 'No room'
@@ -1255,6 +1279,7 @@ VAR item (void)
 /************************************* GET *************************************/
 
 		case TGET:
+			{
 			if (*esi == '(')
 			    {
 				int x, y ;
@@ -1265,15 +1290,23 @@ VAR item (void)
 				braket () ;
 				v.i.n = vgetc (x, y) ;
 				v.i.t = 0 ;
-				return v ;
 			    }
-			v.i.n = osrdch () ;
-			v.i.t = 0 ;
+			else
+			    {
+				v.i.n = osrdch () ;
+				v.i.t = 0 ;
+			    }
+			}
 			return v ;
 
 /************************************ GET$ *************************************/
 
 		case TGETS:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedGETS();
+		void __attribute__ ((noinline)) nestedGETS(void)
+#endif
+		    {
 			if (*esi == '#')
 			    {
 				char *p ;
@@ -1312,9 +1345,8 @@ VAR item (void)
 				v.s.p = pfree ;
 				v.s.l = p - (char *) zero - pfree ;
 				v.s.p = moves ((STR *) &v, 0) - (char *) zero ;
-				return v ;
 			    }
-			if (*esi == '(')
+			else if (*esi == '(')
 			    {
 				int c, x, y ;
 				esi++ ;
@@ -1330,13 +1362,16 @@ VAR item (void)
 					v.s.l = 0 ;
 				else
 					v.s.l = strlen (accs) ;
-				return v ;
 			    }
-			*accs = osrdch () ;
-			v.s.t = -1 ;
-			v.s.p = accs - (char *) zero ;
-			v.s.l = 1 ;
-			return v ;
+			else
+			    {
+				*accs = osrdch () ;
+				v.s.t = -1 ;
+				v.s.p = accs - (char *) zero ;
+				v.s.l = 1 ;
+			    }
+		    }
+		return v ;
 
 /************************************ INKEY ************************************/
 
@@ -1382,6 +1417,10 @@ VAR item (void)
 /************************************ TINT *************************************/
 
 		case TTINT:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedTINT();
+		void __attribute__ ((noinline)) nestedTINT(void)
+#endif
 			{
 			int p, x, y ;
 			if (*esi++ != '(')
@@ -1399,6 +1438,10 @@ VAR item (void)
 /*********************************** TPOINT ************************************/
 
 		case TPOINT:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedPOINT();
+		void __attribute__ ((noinline)) nestedPOINT(void)
+#endif
 			{
 			int p, x, y ;
 			x = expri () ;
@@ -1500,32 +1543,26 @@ VAR item (void)
 /************************************* DEG *************************************/
 
 		case TDEG:
-			{
-			VAR xdeg ;
 #if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__
-			xdeg.i.n = 0x404CA5DC1A63C1F8L ;
-			xdeg.i.t = 1 ;
+			v.i.n = 0x404CA5DC1A63C1F8L ;
+			v.i.t = 1 ;
 #else
-			xdeg.i.n = 0xE52EE0D31E0FBDC3L ;
-			xdeg.i.t = 0x4004 ;
+			v.i.n = 0xE52EE0D31E0FBDC3L ;
+			v.i.t = 0x4004 ;
 #endif
-			return math (itemf(), '*', xdeg) ;
-			}
+			return math (itemf(), '*', v) ;
 
 /************************************* RAD *************************************/
 
 		case TRAD:
-			{
-			VAR xrad ;
 #if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__
-			xrad.i.n = 0x3F91DF46A2529D39L ;
-			xrad.i.t = 1 ;
+			v.i.n = 0x3F91DF46A2529D39L ;
+			v.i.t = 1 ;
 #else
-			xrad.i.n = 0x8EFA351294E9C8AEL ;
-			xrad.i.t = 0x3FF9 ;
+			v.i.n = 0x8EFA351294E9C8AEL ;
+			v.i.t = 0x3FF9 ;
 #endif
-			return math (itemf(), '*', xrad) ;
-			}
+			return math (itemf(), '*', v) ;
 
 /************************************* EXP *************************************/
 
@@ -1546,6 +1583,10 @@ VAR item (void)
 /************************************* LOG *************************************/
 
 		case TLOG:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedLOG();
+		void __attribute__ ((noinline)) nestedLOG(void)
+#endif
 			{
 			VAR loge ;
 #if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__
@@ -1559,8 +1600,9 @@ VAR item (void)
 			v.f = logl (v.f );
 			if (isnan (v.f) || isinf (v.f))
 				error (22, NULL) ; // 'Logarithm range'
-			return math (v, '*', loge) ;
+			v = math (v, '*', loge) ;
 			}
+			return v ;
 
 /************************************* SQR *************************************/
 
@@ -1573,6 +1615,10 @@ VAR item (void)
 /************************************* MOD *************************************/
 
 		case TMOD:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedMOD();
+		void __attribute__ ((noinline)) nestedMOD(void)
+#endif
 			{
 			int i, count ;
 			unsigned char type ;
@@ -1606,6 +1652,10 @@ VAR item (void)
 /************************************* SUM *************************************/
 
 		case TSUM:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedSUM();
+		void __attribute__ ((noinline)) nestedSUM(void)
+#endif
 			{
 			VAR x ;
 			int count ;
@@ -1708,12 +1758,13 @@ VAR item (void)
 			v = itemf () ;
 			v.f = floorl (v.f) ;
 			tmp = v.f ;
-			if (v.f != tmp)
-				return v ;
-			v.i.n = tmp ;
-			v.i.t = 0 ;
-			return v ;
+			if (v.f == tmp)
+			    {
+				v.i.n = tmp ;
+				v.i.t = 0 ;
+			    }
 			}
+			return v ;
 
 /************************************* NOT *************************************/
 
@@ -1770,15 +1821,17 @@ VAR item (void)
 /************************************* VAL *************************************/
 
 		case TVAL:
-			{
 			v = items () ;
 			fixs (v) ;
 			return val () ;
-			}
 
 /************************************ EVAL *************************************/
 
 		case TEVAL:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedEVAL();
+		void __attribute__ ((noinline)) nestedEVAL(void)
+#endif
 			{
 			signed char *oldesi ;
 			heapptr *oldesp ;
@@ -1793,8 +1846,8 @@ VAR item (void)
 			v = expr () ;
 			esi = oldesi ;
 			esp = oldesp ;
-			return v ;
 			}
+			return v ;
 
 /************************************ STR$ *************************************/
 
@@ -1828,6 +1881,10 @@ VAR item (void)
 /************************************ MID$ *************************************/
 
 		case TMID:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedMID();
+		void __attribute__ ((noinline)) nestedMID(void)
+#endif
 			{
 			heapptr *oldesp ;
 			char * tmp ;
@@ -1860,20 +1917,25 @@ VAR item (void)
 				esp = oldesp ;
 				v.s.p = 0 ;
 				v.s.l = 0 ;
-				return v ;
 			    }
-
-			v.s.p = (char *) esp - (char *) zero + s - 1 ;
-			v.s.l = n ;
-			tmp = moves ((STR*) &v, 0) ;
-			esp = oldesp ;
-			v.s.p = tmp - (char *) zero ;
+			else
+			    {
+				v.s.p = (char *) esp - (char *) zero + s - 1 ;
+				v.s.l = n ;
+				tmp = moves ((STR*) &v, 0) ;
+				esp = oldesp ;
+				v.s.p = tmp - (char *) zero ;
+			    }
 			}
 			return v ;
 
 /*********************************** LEFT$ *************************************/
 
 		case TLEFT:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedLEFT();
+		void __attribute__ ((noinline)) nestedLEFT(void)
+#endif
 			{
 			heapptr *oldesp ;
 			char * tmp ;
@@ -1885,28 +1947,33 @@ VAR item (void)
 				braket () ;
 				if (v.s.l)
 					v.s.l -= 1 ;
-				return v ;
 			    }
+			else
+			    {
+				esi++ ;
+				oldesp = pushs (v) ;
+				n = expri () ;
+				braket () ;
 
-			esi++ ;
-			oldesp = pushs (v) ;
-			n = expri () ;
-			braket () ;
+				if ((n < 0) || (n > v.s.l))
+					n = v.s.l ;
 
-			if ((n < 0) || (n > v.s.l))
-				n = v.s.l ;
-
-			v.s.p = (char *) esp - (char *) zero ;
-			v.s.l = n;
-			tmp = moves ((STR*) &v, 0) ;
-			esp = oldesp ;
-			v.s.p = tmp - (char *) zero ;
+				v.s.p = (char *) esp - (char *) zero ;
+				v.s.l = n;
+				tmp = moves ((STR*) &v, 0) ;
+				esp = oldesp ;
+				v.s.p = tmp - (char *) zero ;
+			    }
 			}
 			return v ;
 
 /*********************************** RIGHT$ ************************************/
 
 		case TRIGHT:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedRIGHT();
+		void __attribute__ ((noinline)) nestedRIGHT(void)
+#endif
 			{
 			heapptr *oldesp ;
 			char * tmp ;
@@ -1921,28 +1988,33 @@ VAR item (void)
 					v.s.p += (int)v.s.l - 1 ;
 					v.s.l = 1 ;
 				    }
-				return v ;
 			    }
+			else
+			    {
+				esi++ ;
+				oldesp = pushs (v) ;
+				n = expri () ;
+				braket () ;
 
-			esi++ ;
-			oldesp = pushs (v) ;
-			n = expri () ;
-			braket () ;
+				if ((n < 0) || (n > v.s.l))
+					n = v.s.l ;
 
-			if ((n < 0) || (n > v.s.l))
-				n = v.s.l ;
-
-			v.s.p = (char *) esp - (char *) zero + v.s.l - n ;
-			v.s.l = n;
-			tmp = moves ((STR*) &v, 0) ;
-			esp = oldesp ;
-			v.s.p = tmp - (char *) zero ;
+				v.s.p = (char *) esp - (char *) zero + v.s.l - n ;
+				v.s.l = n;
+				tmp = moves ((STR*) &v, 0) ;
+				esp = oldesp ;
+				v.s.p = tmp - (char *) zero ;
+			    }
 			}
 			return v ;
 
 /*********************************** STRING$ ***********************************/
 
 		case TSTRING:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedSTRING();
+		void __attribute__ ((noinline)) nestedSTRING(void)
+#endif
 			{
 			char *tmp, *p ;
 			long long size, n = expri () ;
@@ -1953,22 +2025,28 @@ VAR item (void)
 			    {
 				v.s.p = 0 ;
 				v.s.l = 0 ;
-				return v ;
 			    }
-			size = n * v.s.l ;
-			if (size > 0x7FFFFFFF)
-				error (19, NULL) ; // 'String too long'
-			tmp = alloct (size) ;
-			for (p = tmp ; n-- ; p += v.s.l)
-				memcpy (p, v.s.p + zero , v.s.l) ;
-			v.s.p = tmp - (char *) zero ;
-			v.s.l = size ;
+			else
+			    {
+				size = n * v.s.l ;
+				if (size > 0x7FFFFFFF)
+					error (19, NULL) ; // 'String too long'
+				tmp = alloct (size) ;
+				for (p = tmp ; n-- ; p += v.s.l)
+					memcpy (p, v.s.p + zero , v.s.l) ;
+				v.s.p = tmp - (char *) zero ;
+				v.s.l = size ;
+			    }
 			}
 			return v ;
 
 /*********************************** INSTR *************************************/
 
 		case TINSTR:
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedINSTR();
+		void __attribute__ ((noinline)) nestedINSTR(void)
+#endif
 			{
 			heapptr *oldesp ;
 			int n = 0 ;
@@ -1994,25 +2072,25 @@ VAR item (void)
 				v.i.t = 0 ;
 				v.i.n = 0 ;
 				esp = oldesp ;
-				return v ;
 			    }
-
-			p = x.s.p + n + (char *) zero ;
-			while (p != NULL)
+			else
 			    {
-				if (0 == memcmp (p, v.s.p + zero, v.s.l))
+				p = x.s.p + n + (char *) zero ;
+				n = 0 ;
+				while (p != NULL)
 				    {
-					v.i.t = 0 ;
-					v.i.n = p - (char *) zero - x.s.p + 1 ;
-					esp = oldesp ;
-					return v ;
+					if (0 == memcmp (p, v.s.p + zero, v.s.l))
+					    {
+						n = p - (char *) zero - x.s.p + 1 ;
+						break ;
+					    }
+					p = memchr (p + 1, *(v.s.p + (char *) zero),
+							x.s.p + x.s.l - v.s.l + (char *) zero - p) ;
 				    }
-				p = memchr (p + 1, *(v.s.p + (char *) zero),
-						x.s.p + x.s.l - v.s.l + (char *) zero - p) ;
+				v.i.t = 0 ;
+				v.i.n = n ;
+				esp = oldesp ;
 			    }
-			v.i.t = 0 ;
-			v.i.n = 0 ;
-			esp = oldesp ;
 			}
 			return  v ;
 
@@ -2079,8 +2157,8 @@ VAR item (void)
 			if ((liston & BIT2) == 0)
 				v.i.n = (v.i.n << 32) >> 32 ;
 			v.i.t = 0 ;
-			return v ;
 			}
+			return v ;
 
 /****************************** Binary constant ********************************/
 
@@ -2099,8 +2177,8 @@ VAR item (void)
 				v.i.n = (v.i.n << 32) >> 32 ;
 			v.i.t = 0 ;
 			esi-- ;
-			return v ;
 			}
+			return v ;
 
 /********************************* Unary plus **********************************/
 
@@ -2130,13 +2208,17 @@ VAR item (void)
 /***************************** Address-of operator *****************************/
 
 		case '^':
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		nestedADDR();
+		void __attribute__ ((noinline)) nestedADDR(void)
+#endif
 			{
 			unsigned char type ;
 			void *ptr = getput (&type) ;
 			v.i.t = 0 ;
 			v.i.n = (size_t) ptr ;
-			return v ;
 			}
+			return v ;
 
 /************************ Decimal constant or variable *************************/
 
@@ -2144,6 +2226,10 @@ VAR item (void)
 			esi-- ;
 			if (((al >= '0') && (al <= '9')) || (al == '.'))
 				return con() ;
+#if defined (REDUCE_STACK_SIZE) && defined(__GNUC__) && !defined(__llvm__)
+		return nesteddefault();
+		VAR __attribute__ ((noinline)) nesteddefault(void)
+#endif
 			{
 			unsigned char type ;
 			signed char *savesi = esi ;
