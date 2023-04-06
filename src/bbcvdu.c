@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.34c, 01-Mar-2023                                *
+*       Version 1.35a, 31-Mar-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1384,7 +1384,7 @@ static void qmove (char code)
 static void plotns (unsigned char al, int cx, int cy)
 {
 	int style = 0 ;
-	unsigned char rop = 0, col = 0 ;
+	unsigned char rop = 5, col = 0 ;
 	int lx, ly, px, py ;
 	short vx[4], vy[4] ;
 	SDL_Rect rect ;

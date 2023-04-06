@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.35b, 30-Mar-2023                                *
+*       Version 1.35a, 04-Apr-2023                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -1811,7 +1811,7 @@ VAR xeq (void)
 				else
 				    {
 					ISTORE(newtop, 0xF8000005) ;
-					*(newtop + 4) = 0x0D ;
+					*(short *)(newtop + 4) = 0x0D ;
 					check () ;
 					esp -= STRIDE ;
 					*(void **)esp = esi ;

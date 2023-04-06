@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.34b, 21-Feb-2023                                *
+*       Version 1.35a, 04-Apr-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1043,6 +1043,7 @@ static int maintick (void)
 	static unsigned int lastpaint, lastusrev, lastpump ;
 	unsigned int now = SDL_GetTicks () ;
 	float scale = (float)(zoom) / 32768.0 ; // must be float
+	float yscale = scale ;
 	SDL_GetWindowSize (window, &ptsx, &ptsy) ;
 	SDL_GL_GetDrawableSize (window, &winx, &winy) ;
 	SDL_Rect caret ;
@@ -1060,6 +1061,7 @@ static int maintick (void)
 		backbutton.y = 50 ; // Move down to avoid status bar
 	DestRect.y = -pany * scale + backbutton.y ;
 	DestRect.h = sizey * scale - backbutton.y ;
+	yscale = (float)DestRect.h / (float)sizey ;
 #else
 	DestRect.y = -pany * scale ;
 	DestRect.h = sizey * scale ;
@@ -1084,9 +1086,9 @@ static int maintick (void)
 		oldtexty = texty ;
 		int careton = blink && (cursa < 32) ;
 		caret.x = (textx - offsetx) * scale + DestRect.x ;
-		caret.y = (texty - offsety + cursa) * scale + DestRect.y ;
+		caret.y = (texty - offsety + cursa) * yscale + DestRect.y ;
 		if (cursx) caret.w = cursx * scale ; else caret.w = charx * scale ;
-		caret.h = (cursb - cursa) * scale ;
+		caret.h = (cursb - cursa) * yscale ;
 		if (caret.h < 0) caret.h = 0 ; 
 
 		SDL_SetRenderTarget(renderer, NULL) ;
@@ -1637,13 +1639,18 @@ static int maintick (void)
 		case SDL_RENDER_DEVICE_RESET:
 			{
 				int w, h ;
-				SDL_Texture **p ;
+				SDL_Texture **p, *t = SDL_GetRenderTarget (renderer) ;
 				SDL_GL_GetDrawableSize (window, &w, &h) ;
+				if (t != NULL) SDL_DestroyTexture (t) ;
 				SDL_SetRenderTarget(renderer, SDL_CreateTexture(renderer, 
 					SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_TARGET,
 					MAX(MAX(w,h),XSCREEN), MAX(MAX(w,h),YSCREEN))) ;
 				for (p = TTFcache; p < TTFcache + 65536; p++)
-					*p = NULL ;
+					if (*p != NULL)
+					{
+						SDL_DestroyTexture (*p) ;
+						*p = NULL ;
+					}
 			}
 			break ;
 		}
