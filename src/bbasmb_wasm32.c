@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.34a, 26-Jan-2023                                *
+*       Version 1.36a, 30-Jul-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -353,7 +353,7 @@ long long BBC_GL_SetSwapInterval(st interval, st i1, st i2, st i3, st i4, st i5,
 
 long long BBC_GL_SwapWindow(st window, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
-	{ SDL_GL_SwapWindow((SDL_Window*) window); bYield = 1; return 0; }
+	{ glFinish(); bYield = 1; return 0; }
 
 // Audio:
 
@@ -448,6 +448,10 @@ long long BBC_GetTicks(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_GetTicks(); }
 
+long long BBC_GetTicks64(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_GetTicks64(); }
+
 long long BBC_AddTimer(st interval, st callback, st param, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_AddTimer(interval, (SDL_TimerCallback) callback, (void *) param); }
@@ -525,6 +529,10 @@ long long BBC_memcpy(st dest, st src, st n, st i3, st i4, st i5, st i6, st i7,
 long long BBC_memset(st dest, st c, st n, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) SDL_memset((void*) dest, c, n); }
+
+long long BBC_TTF_GetFontKerningSizeGlyphs(st font, st prev_index, st index, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return TTF_GetFontKerningSizeGlyphs((TTF_Font *) font, prev_index, index); }
 
 long long BBC_TTF_Linked_Version(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -606,8 +614,7 @@ long long BBC_emscripten_async_wget(st url, st file, st i2, st i3, st i4, st i5,
 	return 0 ;
 }
 
-#define NSYS 126
-#define POW2 128 // smallest power-of-2 >= NSYS
+#define NSYS 128
 
 static const char *sysname[NSYS] = {
 	"B2D_GetProcAddress",
@@ -667,6 +674,7 @@ static const char *sysname[NSYS] = {
 	"SDL_GetQueuedAudioSize",
 	"SDL_GetRenderTarget",
 	"SDL_GetTicks",
+	"SDL_GetTicks64",
 	"SDL_GetWindowFlags",
 	"SDL_HasIntersection",
 	"SDL_IntersectRectAndLine",
@@ -723,6 +731,7 @@ static const char *sysname[NSYS] = {
 	"SDL_memset",
 	"STBIMG_Load",
 	"STBIMG_LoadTexture",
+	"TTF_GetFontKerningSizeGlyphs",
 	"TTF_Linked_Version",
 	"asctime",
 	"drmp3_free",
@@ -795,6 +804,7 @@ static void *sysfunc[NSYS] = {
 	BBC_GetQueuedAudioSize,
 	BBC_GetRenderTarget,
 	BBC_GetTicks,
+	BBC_GetTicks64,
 	BBC_GetWindowFlags,
 	BBC_HasIntersection,
 	BBC_IntersectRectAndLine,
@@ -851,6 +861,7 @@ static void *sysfunc[NSYS] = {
 	BBC_memset,
 	BBC_STBIMG_Load,
 	BBC_STBIMG_LoadTexture,
+	BBC_TTF_GetFontKerningSizeGlyphs,
 	BBC_TTF_Linked_Version,
 	BBC_asctime,
 	BBC_drmp3_free,
@@ -867,15 +878,19 @@ static void *sysfunc[NSYS] = {
 
 void *dlsym (void *handle, const char *symbol)
 {
-	int b = 0, h = POW2, r = 0 ;
+	int h = NSYS, l = 0, m, r ;
 	do
 	    {
-		h /= 2 ;
-		if (((b + h) < NSYS) && ((r = strcmp (symbol, sysname[b + h])) >= 0))
-			b += h ;
+		m = (l + h) / 2 ;
+		r = strcmp (symbol, sysname[m]) ;
+		if (r == 0)
+			return sysfunc[m] ; 
+		if (r > 0)
+			l = m + 1 ;
+		else
+			h = m ;
 	    }
-	while (h) ;
-	if (r == 0) return sysfunc[b] ;
+	while (l < h) ;
 	return NULL ;
 }
 
@@ -1103,7 +1118,6 @@ long long BBC_glDeleteFramebuffers(st num, st framebuffers, st i2, st i3, st i4,
 	{ glDeleteFramebuffers(num, (const GLuint*) framebuffers); return 0; }
 
 #define GLNSYS 54
-#define GLPOW2 64 // smallest power-of-2 >= GLNSYS
 
 static const char *GLname[GLNSYS] = {
 	"glActiveTexture",
@@ -1220,14 +1234,18 @@ static void *GLfunc[GLNSYS] = {
 long long BBC_GL_GetProcAddress(st symbol, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 {
-	int b = 0, h = GLPOW2, r = 0 ;
+	int h = GLNSYS, l = 0, m, r ;
 	do
 	    {
-		h /= 2 ;
-		if (((b + h) < GLNSYS) && ((r = strcmp ((const char*) symbol, GLname[b + h])) >= 0))
-			b += h ;
+ 		m = (l + h) / 2 ;
+		r = strcmp ((const char*) symbol, GLname[m]) ;
+		if (r == 0)
+			return (intptr_t) GLfunc[m] ; 
+		if (r > 0)
+			l = m + 1 ;
+		else
+			h = m ;
 	    }
-	while (h) ;
-	if (r == 0) return (intptr_t) GLfunc[b] ;
+	while (l < h) ;
 	return 0 ;
 }

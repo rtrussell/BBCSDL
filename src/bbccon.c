@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2021-2023                     *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.43a, 23-Mar-2023                                 *
+*       Version 0.44a, 25-Jul-2023                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -19,7 +19,7 @@
 #define HISTORY 100  // Number of items in command history
 #define ESCTIME 200  // Milliseconds to wait for escape sequence
 #define QRYTIME 1000 // Milliseconds to wait for cursor query response
-#define QSIZE 16     // Twice longest expected escape sequence
+#define QSIZE 32     // Twice longest expected escape sequence
 
 #ifdef _WIN32
 #include <windows.h>

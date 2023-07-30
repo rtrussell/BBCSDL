@@ -196,6 +196,7 @@ _SDL_GetTextureColorMod
 _SDL_GetThreadID
 _SDL_GetThreadName
 _SDL_GetTicks
+_SDL_GetTicks64
 _SDL_GetTouchDevice
 _SDL_GetTouchFinger
 _SDL_GetVersion
@@ -512,6 +513,7 @@ _TTF_FontHeight
 _TTF_FontLineSkip
 _TTF_GetFontHinting
 _TTF_GetFontKerning
+_TTF_GetFontKerningSizeGlyphs
 _TTF_GetFontOutline
 _TTF_GetFontStyle
 _TTF_GlyphIsProvided

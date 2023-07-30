@@ -411,7 +411,7 @@ static int lookup (char **arr, int num)
     return i ;
 }
 
-static enum mnemonics lookup_mnemonic()
+static enum mnemonics lookup_mnemonic(void)
 {
     const char *code = (const char *)esi;
     int n ;
@@ -474,7 +474,7 @@ static enum mnemonics lookup_mnemonic()
 
 static char *shift_types[] = { "LSL", "LSR", "ASR", "ROR" };
 
-static int shift_type()
+static int shift_type(void)
 {
     int found = lookup( shift_types, 4 ) ;
     if (found < 0)
@@ -551,7 +551,7 @@ struct addressing {
     long long imm;
 };
 
-static struct addressing read_addressing()
+static struct addressing read_addressing(void)
 {
     struct addressing result = { .mode = NO_OFFSET };
 
@@ -632,7 +632,7 @@ static inline unsigned long long rotl64( unsigned long long n )
     return (n & 0x8000000000000000ull) ? (n << 1) | 1 : (n << 1) ;
 }
 
-static int validated_condition()
+static int validated_condition(void)
 {
     static char *conditions[] = { "EQ", "NE", "CS", "HS", "CC", "LO", "MI", "PL", "VS", "VC", "HI", "LS", "GE", "LT", "GT", "LE", "AL", "NV" };
     static int code[] = { 0, 1, 2, 2, 3, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
@@ -800,7 +800,7 @@ static int validated_imm12( int imm, int alignment )
     return ((imm >> alignment) & 0xfff) ;
 }
 
-static unsigned validated_number_0_to_15()
+static unsigned validated_number_0_to_15(void)
 {
     int result;
     char al;
@@ -828,7 +828,7 @@ static unsigned validated_number_0_to_15()
     return result;
 }
 
-static unsigned validated_system_register()
+static unsigned validated_system_register(void)
 {
     unsigned result = 0;
     char al ;

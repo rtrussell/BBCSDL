@@ -1,9 +1,9 @@
 # Update these paths as necessary to match your installation
 SDL_LIB = -LC:/SDL2-2.26.2/x86_64-w64-mingw32/lib -lSDL2main -lSDL2 \
-          -LC:/SDL2_ttf-2.20.1/x86_64-w64-mingw32/lib -lSDL2_ttf \
+          -LC:/SDL2_ttf-2.20.2/x86_64-w64-mingw32/lib -lSDL2_ttf \
           -LC:/SDL2_net-2.2.0/x86_64-w64-mingw32/lib -lSDL2_net 
 SDL_INCLUDE = -IC:/SDL2-2.26.2/x86_64-w64-mingw32/include/ \
-          -IC:/SDL2_ttf-2.20.1/x86_64-w64-mingw32/include/ \
+          -IC:/SDL2_ttf-2.20.2/x86_64-w64-mingw32/include/ \
           -IC:/SDL2_net-2.2.0/x86_64-w64-mingw32/include/
 
 VPATH = ../../src ../../include

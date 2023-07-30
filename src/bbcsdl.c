@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.35a, 04-Apr-2023                                *
+*       Version 1.36a, 22-Jul-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -286,6 +286,7 @@ Uint32 UserTimerCallback(Uint32 interval, void *param)
 	return(interval) ;
 }
 
+#ifndef __EMSCRIPTEN__
 static Uint32 PollTimerCallback(Uint32 interval, void *param)
 {
 	if (!SDL_SemValue(Idler))
@@ -294,6 +295,7 @@ static Uint32 PollTimerCallback(Uint32 interval, void *param)
 		bBackground++ ;
 	return interval ;
 }
+#endif
 
 static void UserAudioCallback(void* userdata, Uint8* stream, int len)
 {
@@ -333,6 +335,36 @@ int blocksize = AUDIOLEN * (tempo & 0x3F) ;
 	    }
 
 	return;
+}
+
+SDL_Texture *MakeBackButton(SDL_Renderer *renderer)
+{
+	unsigned int *pixels ;
+	int i, pitch ;
+	SDL_Texture *buttexture = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_ABGR8888, 
+						     SDL_TEXTUREACCESS_STREAMING, 32, 32) ;
+	SDL_LockTexture (buttexture, NULL, (void **)&pixels, &pitch) ;
+	for (i = 0; i < 32 * 32; i++)
+		*(pixels + i) = 0xC0FFFFFF ; // background
+	for (i = 5; i < 16; i++)
+	    {
+		*(pixels + i*32 - i -  7) = 0xE0E0A090 ; // arrow
+		*(pixels + i*32 - i -  8) = 0xFFFF4020 ; // arrow
+		*(pixels + i*32 - i -  9) = 0xFFFF4020 ; // arrow
+		*(pixels + i*32 - i - 10) = 0xFFFF4020 ; // arrow
+		*(pixels + i*32 - i - 11) = 0xE0E0A090 ; // arrow
+	    }
+	for (i--; i < 32 - 5; i++)
+	    {
+		*(pixels + i*32 + i -  6) = 0xE0E0A090 ; // arrow
+		*(pixels + i*32 + i -  7) = 0xFFFF4020 ; // arrow
+		*(pixels + i*32 + i -  8) = 0xFFFF4020 ; // arrow
+		*(pixels + i*32 + i -  9) = 0xFFFF4020 ; // arrow
+		*(pixels + i*32 + i - 10) = 0xE0E0A090 ; // arrow
+	    }
+	SDL_UnlockTexture (buttexture) ;
+	SDL_SetTextureBlendMode(buttexture, SDL_BLENDMODE_BLEND) ;
+	return buttexture ;
 }
 
 static Uint32 FlipCaret(SDL_Renderer *renderer, SDL_Rect *rect)
@@ -409,7 +441,7 @@ static void SetDir (char *newpath)
 #endif
 }
 
-static void ShutDown ()
+static void ShutDown (void)
 {
 	int i ;
 
@@ -424,7 +456,9 @@ static void ShutDown ()
 #ifdef MUTEX
 	SDL_DestroyMutex (Mutex) ; 
 #endif
+#ifndef _EMSCRIPTEN__
 	SDL_RemoveTimer(PollTimerID) ;
+#endif
 	SDL_RemoveTimer(UserTimerID) ;
 	SDL_RemoveTimer(BlinkTimerID) ;
 
@@ -456,8 +490,10 @@ static int BBC_PeepEvents(SDL_Event* ev, int nev, SDL_eventaction action, Uint32
 
 static int myEventFilter(void* userdata, SDL_Event* pev)
 {
+#ifndef _EMSCRIPTEN_
 	if (!SDL_SemValue(Idler))
 		SDL_SemPost (Idler) ;
+#endif
 
 	switch (pev->type)
 	    {
@@ -486,14 +522,11 @@ int main(int argc, char* argv[])
 {
 int i ;
 size_t immediate ;
-int fullscreen = 0, fixedsize = 0, hidden = 0, borderless = 0 ;
+int fullscreen = 0, fixedsize = 0, hidden = 0, highdpi = 0, borderless = 0 ;
 SDL_RWops *ProgFile ;
 const SDL_version *TTFversion ;
 SDL_version SDLversion ;
 SDL_Event ev ;
-
-unsigned int *pixels ;
-int pitch ;
 
 #if defined(__WINDOWS__) || defined(__MACOSX__) || defined(__LINUX__)
 	gzclose(gzopen("bbc256x.png", "rb"));
@@ -595,6 +628,7 @@ for (i = 1; i < argc; i++)
 	fixedsize |= (NULL != strstr (argv[i], "-fixedsize")) ;
 	fullscreen |= (NULL != strstr (argv[i], "-fullscreen")) ;
 	borderless |= (NULL != strstr (argv[i], "-borderless")) ;
+	highdpi |= (NULL != strstr (argv[i], "-highdpi")) ;
 	hidden |= (NULL != strstr (argv[i], "-hidden")) ;
 }
 
@@ -609,6 +643,7 @@ window = SDL_CreateWindow("BBCSDL",  SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENT
 				(fixedsize ? 0 : SDL_WINDOW_RESIZABLE) | 
 				(fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) | 
 				(borderless ? SDL_WINDOW_BORDERLESS : 0) | 
+				(highdpi ? SDL_WINDOW_ALLOW_HIGHDPI : 0) | 
 				(hidden ? SDL_WINDOW_HIDDEN : 0)) ;
 if (window == NULL)
 {
@@ -676,29 +711,7 @@ else if (sizex < sizey)
 else
 	backbutton.w = sizey / 24 ;
 backbutton.h = backbutton.w ;
-buttexture = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_ABGR8888, 
-				SDL_TEXTUREACCESS_STREAMING, 32, 32) ;
-SDL_LockTexture (buttexture, NULL, (void **)&pixels, &pitch) ;
-for (i = 0; i < 32 * 32; i++)
-	*(pixels + i) = 0xC0FFFFFF ; // background
-for (i = 5; i < 16; i++)
-    {
-	*(pixels + i*32 - i -  7) = 0xE0E0A090 ; // arrow
-	*(pixels + i*32 - i -  8) = 0xFFFF4020 ; // arrow
-	*(pixels + i*32 - i -  9) = 0xFFFF4020 ; // arrow
-	*(pixels + i*32 - i - 10) = 0xFFFF4020 ; // arrow
-	*(pixels + i*32 - i - 11) = 0xE0E0A090 ; // arrow
-    }
-for (i--; i < 32 - 5; i++)
-    {
-	*(pixels + i*32 + i -  6) = 0xE0E0A090 ; // arrow
-	*(pixels + i*32 + i -  7) = 0xFFFF4020 ; // arrow
-	*(pixels + i*32 + i -  8) = 0xFFFF4020 ; // arrow
-	*(pixels + i*32 + i -  9) = 0xFFFF4020 ; // arrow
-	*(pixels + i*32 + i - 10) = 0xE0E0A090 ; // arrow
-    }
-SDL_UnlockTexture (buttexture) ;
-SDL_SetTextureBlendMode(buttexture, SDL_BLENDMODE_BLEND) ;
+buttexture = MakeBackButton (renderer) ;
 
 #if defined __WINDOWS__
 	// Allocate the program buffer
@@ -989,8 +1002,10 @@ zoom = 32768 ; // normalised 1.0
 DestRect.w = sizex ; // Prevent crash if MOUSE used too soon
 DestRect.h = sizey ;
 
+#ifndef __EMSCRIPTEN__
 // Poll timer:
 PollTimerID = SDL_AddTimer(POLLT, PollTimerCallback, 0) ;
+#endif
 
 // 4 Hz timer:
 UserTimerID = SDL_AddTimer(250, UserTimerCallback, 0) ;
@@ -1000,7 +1015,9 @@ BlinkTimerID = SDL_AddTimer(400, BlinkTimerCallback, 0) ;
 
 // Semaphores:
 Sema4 = SDL_CreateSemaphore (0) ;
+#ifndef __EMSCRIPTEN__
 Idler = SDL_CreateSemaphore (0) ;
+#endif
 
 // Copies of window and renderer:
 hwndProg = window ;
@@ -1022,7 +1039,7 @@ while ((Thread = SDL_CreateThread(entry, "Interpreter", (void *) immediate)) == 
 
 // Main polling loop:
 #ifdef __EMSCRIPTEN__
-    emscripten_set_main_loop(mainloop, -1, 1);
+    emscripten_set_main_loop(mainloop, 0, 1);
 #else
 while (running)
     {
@@ -1651,6 +1668,7 @@ static int maintick (void)
 						SDL_DestroyTexture (*p) ;
 						*p = NULL ;
 					}
+				buttexture = MakeBackButton (renderer) ;
 			}
 			break ;
 		}

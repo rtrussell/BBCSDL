@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.35b, 30-Mar-2023                                *
+*       Version 1.36a, 24-Jun-2023                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -842,7 +842,9 @@ VAR val (void)
 	while (*esi == ' ') esi++ ;
 	if (*esi == '-')
 	    {
-		VAR z = {0} ;
+		VAR z ;
+		z.i.n = 0 ;
+		z.i.t = 0 ;
 		esi++ ;
 		v = math (z, '-', con ()) ;
 	    }

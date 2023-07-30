@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.35a, 31-Mar-2023                                *
+*       Version 1.36a, 06-Jul-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -2390,13 +2390,18 @@ long long apicall_ (long long (*APIfunc) (size_t, size_t, size_t, size_t, size_t
 			volatile double e, volatile double f, volatile double g, volatile double h)
 	{
 		long long result ;
-#ifdef _WIN32
+#ifdef __WIN64__
+		static void* savesp ;
+		asm ("mov %%rsp,%0" : "=m" (savesp)) ;
+#elif defined _WIN32
 		static void* savesp ;
 		asm ("mov %%esp,%0" : "=m" (savesp)) ;
 #endif
 		result = APIfunc (p->i[0], p->i[1], p->i[2], p->i[3], p->i[4], p->i[5],
 				p->i[6], p->i[7], p->i[8], p->i[9], p->i[10], p->i[11]) ;
-#ifdef _WIN32
+#ifdef __WIN64__
+		asm ("mov %0,%%rsp" : : "m" (savesp)) ;
+#elif defined _WIN32
 		asm ("mov %0,%%esp" : : "m" (savesp)) ;
 #endif
 		return result ;
@@ -2420,13 +2425,18 @@ double fltcall_ (double (*APIfunc) (size_t, size_t, size_t, size_t, size_t, size
 			volatile double e, volatile double f, volatile double g, volatile double h)
 	{
 		double result ;
-#ifdef _WIN32
+#ifdef __WIN64__
+		static void* savesp ;
+		asm ("mov %%rsp,%0" : "=m" (savesp)) ;
+#elif defined _WIN32
 		static void* savesp ;
 		asm ("mov %%esp,%0" : "=m" (savesp)) ;
 #endif
 		result = APIfunc (p->i[0], p->i[1], p->i[2], p->i[3], p->i[4], p->i[5],
 				p->i[6], p->i[7], p->i[8], p->i[9], p->i[10], p->i[11]) ;
-#ifdef _WIN32
+#ifdef __WIN64__
+		asm ("mov %0,%%rsp" : : "m" (savesp)) ;
+#elif defined _WIN32
 		asm ("mov %0,%%esp" : : "m" (savesp)) ;
 #endif
 		return result ;
