@@ -13,7 +13,7 @@ OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
       bbcvdu.o bbcvtx.o flood.o bbdata.o bbcsdl.o \
       bbasmb.o SDL2_gfxPrimitives.o SDL2_rotozoom.o
 
-all: bbcsdl.exe
+all: bbcsdl.exe sdlrun.exe
 
 bbmain.i: bbmain.c BBC.h
 	$(CXX) -E $< > bbmain.i
@@ -68,4 +68,11 @@ bbcsdl.exe: $(OBJ)
 	$(CXX) $(OBJ) \
 	-o bbcsdl.exe -lz -lmingw32 -lpsapi -mthreads -mwindows $(SDL_LIB) -Wl,-s -Wl,--export-all-symbols
 
+sdlrun.o: sdlrun.c
+	$(CXX) -Wall -c -O2 $< -o $@
 
+unpack.o: unpack.nas
+	nasm --prefix _ -f win32 -s unpack.nas -o unpack.o
+
+sdlrun.exe: sdlrun.o unpack.o
+	$(CXX) sdlrun.o unpack.o -o sdlrun.exe -lmingw32 -mwindows -Wl,-s 
