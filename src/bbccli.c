@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2022  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.33a, 14-Oct-2022                                *
+*       Version 1.37a, 09-Aug-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -91,7 +91,7 @@ char *setup (char *dst, char *src, char *ext, char term, unsigned char *pflag)
 	while (1)
 	{
 		char ch = *src++ ;
-		if ((ch == ',') || (ch == 0x0D) || (ch == term))
+		if (((ch == ',') && (term == ' ')) || (ch == 0x0D) || (ch == term))
 			break ;
 		flag |= BIT0 ;			// Flag filename
 		if (ch == '.')

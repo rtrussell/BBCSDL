@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                         *
-*       Copyright (C) R. T. Russell, 2022                         *
+*       Copyright (C) R. T. Russell, 2023                         *
 *                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.42a, 14-Oct-2022                                *
+*       Version 0.45a, 12-Aug-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -441,7 +441,7 @@ char *setup (char *dst, char *src, char *ext, char term, unsigned char *pflag)
 	while (1)
 	{
 		char ch = *src++ ;
-		if ((ch == ',') || (ch == 0x0D) || (ch == term))
+		if (((ch == ',') && (term == ' ')) || (ch == 0x0D) || (ch == term))
 			break ;
 		flag |= BIT0 ;			// Flag filename
 		if (ch == '.')
