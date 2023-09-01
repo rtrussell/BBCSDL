@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.36a, 22-Jul-2023                                *
+*       Version 1.37a, 17-Aug-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1499,6 +1499,7 @@ static int maintick (void)
 						c += 32 ;
 				    }
 				else if ((ev.key.keysym.mod & KMOD_CTRL) &&
+					!(ev.key.keysym.mod & KMOD_ALT) &&
 					 (c >= SDLK_a) && (c <= SDLK_z))
 					c = c - SDLK_a + 1 ;
 				else if ((ev.key.keysym.mod & KMOD_GUI) &&

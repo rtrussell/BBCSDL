@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2021-2023                     *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.44a, 25-Jul-2023                                 *
+*       Version 0.44a, 28-Aug-2023                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -87,6 +87,7 @@ char *szCmdLine ;
 int MaximumRAM = MAXIMUM_RAM ;
 timer_t UserTimerID ;
 unsigned int palette[256] ;
+void *TTFcache[1] ;
 
 // Array of VDU command lengths:
 static int vdulen[] = {

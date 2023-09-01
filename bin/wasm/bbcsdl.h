@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC for SDL 2.0 (Emscripten / Web Assembly)          *
-*       Copyright (c) R. T. Russell, 2000-2022                     *
+*       Copyright (c) R. T. Russell, 2000-2023                     *
 *                                                                  *
 *       BBCSDL.H constant definitions                              *
-*       Version 1.28a 23-Jan-2022                                  *
+*       Version 1.37a 28-Aug-2023                                  *
 \******************************************************************/
 
 // System constants :
@@ -149,11 +149,6 @@ typedef struct tagRND
 	unsigned char h ;
 } RND, *LPRND ;
 
-// Variables declared in bbcsdl.c:
-extern SDL_Rect ClipRect ;
-extern int bChanged ;
-extern SDL_Texture *TTFcache[65536] ;
-
 // Static variables:
 
 extern int stavar[] ;		// Static integer variables
@@ -268,7 +263,6 @@ extern int sysvar[] ;		// @ variables linked list
 #define sysflg (*(char *)((char*)sysvar + 181))		// *SYS flag
 #define reflag (*(char *)((char*)sysvar + 182))		// *REFRESH flag
 #define flags  (*(unsigned char *)((char*)sysvar + 183))// BASIC's Boolean flags byte
-#define voices ((unsigned char *)((char*)sysvar + 196)) // Voice (waveform) for each channel
 #define zoom   (*(unsigned int *)((char*)sysvar + 212))	// @zoom%
 #define hwo    (*(SDL_AudioDeviceID *)((char*)sysvar + 328)) // @hwo%
 #define platform (*(unsigned int *)((char*)sysvar + 348)) // SDL version and OS platform
@@ -277,8 +271,12 @@ extern int sysvar[] ;		// @ variables linked list
 #define pany   (*(int *)((char*)sysvar + 396))		// @pany%
 #define breakpt (*(heapptr *)((char*)sysvar + 448))	// @brkpt%
 #define breakhi (*(heapptr *)((char*)sysvar + 464))	// @brkhi%
+#define voices ((unsigned char *)((char*)sysvar + 508)) // Voice (waveform) for each channel
 
-// Declared in bbcsdl.c:
+// Variables declared in bbcsdl.c:
+extern SDL_Rect ClipRect ;
+extern int bChanged ;
+extern SDL_Texture *TTFcache[65536] ;
 extern unsigned int palette[256] ;
 extern size_t iResult ;		// Result from user event
 extern int nUserEv ;		// Number of pending user events

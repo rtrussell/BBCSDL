@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.36a, 06-Jul-2023                                *
+*       Version 1.37a, 19-Aug-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1027,6 +1027,8 @@ static void vmove (char code, int dx, int dy)
 		int l, r, t, b ;
 		grawin (&l, &r, &t, &b) ;
 		cmove (code | BIT5, dx, dy, &lastx, &lasty, l, t, r, b) ;
+		*((unsigned char*)&pixelx + 3) = 0 ;
+		*((unsigned char*)&pixely + 3) = 0 ;
 	}
 	else
 		cmove (code, dx, dy, &textx, &texty, textwl, textwt, textwr, textwb) ;
