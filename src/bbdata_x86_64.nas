@@ -3,7 +3,7 @@
 ;*       Copyright (c) R. T. Russell, 2000-2023                    *
 ;*                                                                 *
 ;*       BBCDATA.NAS RAM data definitions                          *
-;*       Version 1.37a, 28-Aug-2023                                *
+;*       Version 1.38a, 02-Sep-2023                                *
 ;\*****************************************************************/
 ;
 MAX_PORTS       EQU     4       ; Maximum number of i/o ports
@@ -42,10 +42,10 @@ SOUNDQL         EQU     5*SOUNDQE ; Number of bytes per channel
 	GLOBAL	voices,chrmap
 	GLOBAL	breakpt,breakhi,ttxtfont
 ;
-	EXTERN	loadn,loads,storen,stores,getvar,putvar,expr,item,xeq
-	EXTERN	xfloat,xfix,lexan,token,putevt,palette,str00,con
+	EXTERN	loadn,loads,storen,stores,getvar,putvar,expr,item,lexan
+	EXTERN	xfloat,xfix,xeq,token,putevt,palette,str00,con,TTFcache
 ;
-	EXTERN	gfxPrimitivesGetFont,gfxPrimitivesSetFont,TTFcache
+	EXTERN	gfxPrimitivesGetFont,gfxPrimitivesSetFont,RedefineChar
 ;
 %macro  checkalign	0
 	%if (($ - $$) & 7)
@@ -1114,5 +1114,6 @@ fnarr0:	dq	loadn		; Load numeric
 	dq	putevt		; Store event in queue
 	dq	gfxPrimitivesGetFont
 	dq	gfxPrimitivesSetFont
+	dq	RedefineChar
 fnarrt:
 ;

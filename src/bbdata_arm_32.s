@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2018-2023                    *
 *                                                                 *
 *       BBCDAT.S RAM data definitions                             *
-*       Version 1.37a, 28-Aug-2023                                *
+*       Version 1.38a, 02-Sep-2023                                *
 \*****************************************************************/
 
 .equ	MAX_PORTS,4
@@ -599,7 +599,7 @@ b4lnk3:	.long	0		/* Terminating link */
 /* Array of function entry points */
 
 fnarr:	.byte	1		/* Number of dimensions */
-	.long	21		/* Number of entries */
+	.long	22		/* Number of entries */
 	.long	loadn		/* Load numeric */
 	.long	loads		/* Load string */
 	.long	storen		/* Store numeric */
@@ -621,6 +621,7 @@ fnarr:	.byte	1		/* Number of dimensions */
 	.long	putevt		/* Put event in queue */
 	.long	gfxPrimitivesGetFont
 	.long	gfxPrimitivesSetFont
+	.long	RedefineChar
 
 	.text
 

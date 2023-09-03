@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2021-2023                     *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.44a, 28-Aug-2023                                 *
+*       Version 0.45a, 03-Sep-2023                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -125,6 +125,7 @@ void quiet (void) ;
 // Dummy functions:
 void gfxPrimitivesSetFont(void) { } ;
 void gfxPrimitivesGetFont(void) { } ;
+void RedefineChar(void) { } ;
 
 // File scope variables:
 static unsigned char inputq[QSIZE] ;
@@ -524,13 +525,18 @@ long long apicall_ (long long (*APIfunc) (size_t, size_t, size_t, size_t, size_t
 			volatile double e, volatile double f, volatile double g, volatile double h)
 	{
 		long long result ;
-#ifdef _WIN32
+#ifdef __WIN64__
+		static void* savesp ;
+		asm ("mov %%rsp,%0" : "=m" (savesp)) ;
+#elif defined _WIN32
 		static void* savesp ;
 		asm ("mov %%esp,%0" : "=m" (savesp)) ;
 #endif
 		result = APIfunc (p->i[0], p->i[1], p->i[2], p->i[3], p->i[4], p->i[5],
 				p->i[6], p->i[7], p->i[8], p->i[9], p->i[10], p->i[11]) ;
-#ifdef _WIN32
+#ifdef __WIN64__
+		asm ("mov %0,%%rsp" : : "m" (savesp)) ;
+#elif defined _WIN32
 		asm ("mov %0,%%esp" : : "m" (savesp)) ;
 #endif
 		return result ;
@@ -549,13 +555,18 @@ double fltcall_ (double (*APIfunc) (size_t, size_t, size_t, size_t, size_t, size
 			volatile double e, volatile double f, volatile double g, volatile double h)
 	{
 		double result ;
-#ifdef _WIN32
+#ifdef __WIN64__
+		static void* savesp ;
+		asm ("mov %%rsp,%0" : "=m" (savesp)) ;
+#elif defined _WIN32
 		static void* savesp ;
 		asm ("mov %%esp,%0" : "=m" (savesp)) ;
 #endif
 		result = APIfunc (p->i[0], p->i[1], p->i[2], p->i[3], p->i[4], p->i[5],
 				p->i[6], p->i[7], p->i[8], p->i[9], p->i[10], p->i[11]) ;
-#ifdef _WIN32
+#ifdef __WIN64__
+		asm ("mov %0,%%rsp" : : "m" (savesp)) ;
+#elif defined _WIN32
 		asm ("mov %0,%%esp" : : "m" (savesp)) ;
 #endif
 		return result ;

@@ -1,9 +1,9 @@
 /*****************************************************************\
 *   BBC BASIC for SDL 2.0 (32-bit Web Assembly)                   *
-*   Copyright (c) R. T. Russell, 2000-2021                        *
+*   Copyright (c) R. T. Russell, 2000-2023                        *
 *                                                                 *
 *   BBDATA_WASM.C RAM data definitions                            *
-*   Version 1.22a, 15-May-2021                                    *
+*   Version 1.38a, 03-Sep-2023                                    *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -91,6 +91,7 @@ VAR xeq (void) ;
 int putevt (int, int, int, int) ;
 const void *gfxPrimitivesGetFont (void) ;
 void gfxPrimitivesSetFont (const void *, unsigned int, unsigned int) ;
+int RedefineChar(void *, char, unsigned char *, unsigned int, unsigned int) ;
 
 // Variables used by generic modules (BBMAIN, BBEXEC, BBEVAL, BBASMB):
 
@@ -139,17 +140,29 @@ int vdustr[55] = { 0x00005000, // vdufmt = vdustr + 1
 	0x00001000, 0x007B6D00, (int) b4fmt, 0x00000048, // @vdu.m{}
 	0x00000000, 0x007B7700, (int) b4fmt, 0x0000004C};// @vdu.w{}
 
-// Wrapper function to match SYS signature:
+// Wrapper functions to match SYS signature:
 
 long long BBC_putevt(st handler, st msg, st wparam, st lparam, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return putevt(handler, msg, wparam, lparam); }
 
+long long GFX_GetFont(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (int) gfxPrimitivesGetFont(); }
+
+long long GFX_SetFont(st fontdata, st cw, st ch, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ gfxPrimitivesSetFont((void *) fontdata, cw, ch); return 0; }
+
+long long GFX_DefChar(st renderer, st c, st charpos, st width, st height, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return RedefineChar((void *) renderer, (char) c, (unsigned char *) charpos, width, height); }
+
 // Array of function entry points:
 
-void *fntab[23] = {	// fnarr = fntab + 3
+void *fntab[24] = {	// fnarr = fntab + 3
 	(void *) 0x01000000,	// no. of dimensions = 1	
-	(void *) 21, 		// no. of elements
+	(void *) 22, 		// no. of elements
 	loadn,		// Load numeric 
 	loads,		// Load string
 	storen,		// Store numeric
@@ -169,8 +182,9 @@ void *fntab[23] = {	// fnarr = fntab + 3
 	hook,		// Timer callback (used by timerlib)
 	xeq,		// Return to BASIC
 	BBC_putevt,	// Store event in queue
-	gfxPrimitivesGetFont,
-	gfxPrimitivesSetFont } ;
+	GFX_GetFont,
+	GFX_SetFont,
+	GFX_DefChar } ;
 
 // The following variables are organised as a linked-list
 // for access via 'system variables' starting with @:
