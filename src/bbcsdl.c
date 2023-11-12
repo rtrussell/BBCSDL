@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.37a, 17-Aug-2023                                *
+*       Version 1.38a, 15-Oct-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -678,7 +678,7 @@ if (!SDL_RenderTargetSupported(renderer))
 	return 8;
 }
 
-SDL_GL_GetDrawableSize (window, &sizex, &sizey) ; // Window may not be the requested size
+SDL_GetRendererOutputSize (renderer, &sizex, &sizey) ; // Window may not be the requested size
 
 #if defined __ANDROID__ || defined __IPHONEOS__
 {
@@ -936,6 +936,7 @@ Mutex = SDL_CreateMutex () ;
 #endif
 
 SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
+SDL_EventState(SDL_DROPTEXT, SDL_ENABLE);
 SDL_PumpEvents () ;
 if (SDL_PeepEvents (&ev, 1, SDL_GETEVENT, SDL_DROPFILE, SDL_DROPFILE))
 {
@@ -1607,6 +1608,18 @@ static int maintick (void)
 			}
 			oldx = ev.mgesture.x ;
 			oldy = ev.mgesture.y ;
+			break ;
+
+		case SDL_DROPFILE:
+		case SDL_DROPTEXT:
+			if (systrp && (sysflg & 8)) 
+			{
+				int wparam = ((intptr_t) ev.drop.file) & 0x0FFFFFFFFUL ;
+				int lparam = ((intptr_t) ev.drop.file) / 0x100000000UL ;
+				putevt (systrp, ev.type, wparam, lparam) ;
+				flags |= ALERT ;
+				break ;
+			}
 			break ;
 
 		case SDL_WINDOWEVENT:

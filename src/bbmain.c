@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.35a, 15-Mar-2023                                *
+*       Version 1.38a, 04-Sep-2023                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -1583,6 +1583,7 @@ int basic (void *ecx, void *edx, void *prompt)
 			signed char *tmp = vpage + (signed char *) zero ;
 			clear () ;
 			n = strlen (buff) + 3 ;
+			if (n > 255) error (19, NULL) ; // 'String too long'
 			while (lino > SLOAD(tmp + 1))
 				tmp += (int)*(unsigned char *)tmp ; 
 			if (lino == SLOAD(tmp + 1))

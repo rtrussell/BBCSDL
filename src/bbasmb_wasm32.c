@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.36a, 30-Jul-2023                                *
+*       Version 1.38a, 09-Sep-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -462,6 +462,14 @@ long long BBC_RemoveTimer(st id, st i1, st i2, st i3, st i4, st i5, st i6, st i7
 
 // Miscellaneous:
 
+long long BBC_Delay(st ms, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ SDL_Delay(ms); return 0; }
+
+long long BBC_GetError(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDL_GetError(); }
+
 long long BBC_HasIntersection(st recta, st rectb, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_HasIntersection((const SDL_Rect*) recta, (const SDL_Rect*) rectb); }
@@ -478,9 +486,17 @@ long long BBC_GetWindowFlags(st window, st i1, st i2, st i3, st i4, st i5, st i6
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_GetWindowFlags((SDL_Window*) window); }
 
+long long BBC_SetWindowPosition(st window, st x, st y, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ SDL_SetWindowPosition((SDL_Window*) window, x, y); return 0; }
+
 long long BBC_SetWindowResizable(st window, st resizable, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ SDL_SetWindowResizable((SDL_Window*) window, resizable); return 0; }
+
+long long BBC_SetWindowSize(st window, st w, st h, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ SDL_SetWindowSize((SDL_Window*) window, w, h); return 0; }
 
 long long BBC_SetWindowTitle(st window, st title, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -614,7 +630,11 @@ long long BBC_emscripten_async_wget(st url, st file, st i2, st i3, st i4, st i5,
 	return 0 ;
 }
 
-#define NSYS 128
+long long BBC_emscripten_run_script_string(st script, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) emscripten_run_script_string((const char*) script); }
+
+#define NSYS 133
 
 static const char *sysname[NSYS] = {
 	"B2D_GetProcAddress",
@@ -654,6 +674,7 @@ static const char *sysname[NSYS] = {
 	"SDL_CreateRGBSurfaceWithFormat",
 	"SDL_CreateTexture",
 	"SDL_CreateTextureFromSurface",
+	"SDL_Delay",
 	"SDL_DestroyTexture",
 	"SDL_FillRect",
 	"SDL_FreeSurface",
@@ -669,6 +690,7 @@ static const char *sysname[NSYS] = {
 	"SDL_GL_SetSwapInterval",
 	"SDL_GL_SwapWindow",
 	"SDL_GetDisplayUsableBounds",
+	"SDL_GetError",
 	"SDL_GetPerformanceCounter",
 	"SDL_GetPerformanceFrequency",
 	"SDL_GetQueuedAudioSize",
@@ -719,7 +741,9 @@ static const char *sysname[NSYS] = {
 	"SDL_SetTextureAlphaMod",
 	"SDL_SetTextureBlendMode",
 	"SDL_SetTextureColorMod",
+	"SDL_SetWindowPosition",
 	"SDL_SetWindowResizable",
+	"SDL_SetWindowSize",
 	"SDL_SetWindowTitle",
 	"SDL_ShowSimpleMessageBox",
 	"SDL_UnlockAudioDevice",
@@ -738,6 +762,7 @@ static const char *sysname[NSYS] = {
 	"drmp3_open_file_and_read_f32",
 	"drmp3dec_f32_to_s16",
 	"emscripten_async_wget",
+	"emscripten_run_script_string",
 	"gmtime",
 	"localtime",
 	"mktime",
@@ -784,6 +809,7 @@ static void *sysfunc[NSYS] = {
 	BBC_CreateRGBSurfaceWithFormat,
 	BBC_CreateTexture,
 	BBC_CreateTextureFromSurface,
+	BBC_Delay,
 	BBC_DestroyTexture,
 	BBC_FillRect,
 	BBC_FreeSurface,
@@ -799,6 +825,7 @@ static void *sysfunc[NSYS] = {
 	BBC_GL_SetSwapInterval,
 	BBC_GL_SwapWindow,
 	BBC_GetDisplayUsableBounds,
+	BBC_GetError,
 	BBC_GetPerformanceCounter,
 	BBC_GetPerformanceFrequency,
 	BBC_GetQueuedAudioSize,
@@ -849,7 +876,9 @@ static void *sysfunc[NSYS] = {
 	BBC_SetTextureAlphaMod,
 	BBC_SetTextureBlendMode,
 	BBC_SetTextureColorMod,
+	BBC_SetWindowPosition,
 	BBC_SetWindowResizable,
+	BBC_SetWindowSize,
 	BBC_SetWindowTitle,
 	BBC_ShowSimpleMessageBox,
 	BBC_UnlockAudioDevice,
@@ -868,6 +897,7 @@ static void *sysfunc[NSYS] = {
 	BBC_drmp3_open_file_and_read_f32,
 	BBC_drmp3dec_f32_to_s16,
 	BBC_emscripten_async_wget,
+	BBC_emscripten_run_script_string,
 	BBC_gmtime,
 	BBC_localtime,
 	BBC_mktime,

@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.34d, 23-Mar-2023                                *
+*       Version 1.38a, 04-Sep-2023                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -889,6 +889,11 @@ void reset (void)
 {
 	vduq[10] = 0 ;	// Flush VDU queue
 	keyptr = NULL ;	// Cancel *KEY expansion
+	if (*(keystr + 0))
+	    {
+		SDL_free (*(keystr + 0)) ; // Clipboard
+		*(keystr + 0) = NULL ;
+	    }
 	optval = 0 ;	// Cancel I/O redirection
 	reflag = 0 ;	// *REFRESH ON
  }
@@ -1095,7 +1100,14 @@ static int rdkey (unsigned char *pkey)
 	{
 		*pkey = *keyptr++ ;
 		if (*keyptr == 0)
+		    {
 			keyptr = NULL ;
+			if (*(keystr + 0))
+			    {
+				SDL_free (*(keystr + 0)) ; // Clipboard
+				*(keystr + 0) = NULL ;
+			    }
+		    }
 		return 1 ;
 	}
 
@@ -1443,16 +1455,8 @@ void osline (char *buffer)
 			case 22:
 				if (SDL_HasClipboardText ())
 				    {
-					char *t = SDL_GetClipboardText () ;
-					char *s = t ;
-					while ((*s >= ' ') && (p < (buffer + 255)))
-					    {
-						oswrch (*s) ;
-						memmove (p + 1, p, buffer + 255 - p) ;
-						*p++ = *s++ ;
-					    }
-					*(buffer + 255) = 0x0D ;
-					SDL_free (t) ;
+					*(keystr + 0) = SDL_GetClipboardText () ;
+					keyptr = (unsigned char *) *(keystr + 0) ;
 				    }
 				break ;
 

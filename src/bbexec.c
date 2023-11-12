@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.35a, 04-Apr-2023                                *
+*       Version 1.38a, 10-Oct-2023                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -219,6 +219,7 @@ void storen (VAR v, void *ptr, unsigned char type)
 			v.d.d = v.f ;
 			if ((v.s.l == 0x7FF00000) || (v.s.l == 0xFFF00000))
 				error (20, NULL) ; // 'Number too big'
+			if (v.s.l == 0) v.d.d = 0.0 ;
 			USTORE(ptr, v.s.p) ;
 			USTORE((char *)ptr + 4, v.s.l) ;
 			}
@@ -1085,6 +1086,7 @@ static void defscan (signed char *edx)
 			return ;
 		oldesi = esi ;
 		esi = edx + 1 ; // Byte after DEF
+		curlin = esi - (signed char *) zero ;
 		nxt () ;
 		if ((*esi == TPROC) || (*esi == TFN))
 		    {
@@ -1094,6 +1096,7 @@ static void defscan (signed char *edx)
 			VSTORE(ptr, esi) ;
 		    }
 		esi = oldesi ;
+		curlin = esi - (signed char *) zero ;
 		edx -= 3 ; // point to line-length byte
 		edx += (int) *(unsigned char *)edx ;
 	    }
@@ -1483,6 +1486,7 @@ VAR xeq (void)
 			    {
 				unsigned char type ;
 				void *ptr ;
+				volatile int seq ;
 				int count = 0 ;
 				signed char *oldesi = esi ;
 				char *edi = accs ;
@@ -1527,6 +1531,7 @@ VAR xeq (void)
 					*--esp = count ;
 					*--esp = RETCHK ;
 					esi = oldesi - 1 ;
+					for (seq=0; seq<1; seq++) ; // GCC bug?
 					// transfer secret [accs] to formal [esi] 
 					esi = argue ((signed char *)accs - 1, esp + 2, 1) ;
 				    }

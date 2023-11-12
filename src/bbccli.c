@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.37a, 09-Aug-2023                                *
+*       Version 1.38a, 04-Sep-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -74,6 +74,7 @@ static int BBC_RWclose (struct SDL_RWops* context)
 char *setup (char *dst, char *src, char *ext, char term, unsigned char *pflag)
 {
 	unsigned char flag = 0 ;
+	char *limit = dst + 0x100 ;
 
 	while (*src == ' ') src++ ;		// Skip leading spaces
 	if ((*src == '"') && (term != '"'))
@@ -102,6 +103,7 @@ char *setup (char *dst, char *src, char *ext, char term, unsigned char *pflag)
 			flag |= BIT1 ;		// Flag path present
 		}
 		*dst++ = ch ;
+		if (dst >= limit) error (204, "Bad name") ;
 	}
 
 	if (flag & BIT7)
@@ -111,8 +113,10 @@ char *setup (char *dst, char *src, char *ext, char term, unsigned char *pflag)
 	}
 	else if (flag & BIT0)
 	{
+		int n = strlen(ext) ;
+		if (dst + n >= limit) error (204, "Bad name") ;
 		strcpy (dst, ext) ;
-		dst += strlen (ext) ;
+		dst += n ;
 	}
 
 	if (pflag != NULL)
@@ -238,8 +242,7 @@ void oscli (char *cmd)
 		return ;
 
 	q = memchr (cmd, 0x0D, sizeof(cpy)) ;
-	if (q == NULL)
-		error (204, "Bad name") ;
+	if (q == NULL) return ;
 	memcpy (cpy, cmd, q - cmd) ;
 	cpy[q - cmd] = 0 ;
 	p = cpy ;
