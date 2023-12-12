@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.38a, 04-Sep-2023                                *
+*       Version 1.39a, 09-Dec-2023                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -904,7 +904,7 @@ static int getsub (void **pebx, unsigned char *ptype)
 	dims = *ebx++ ;
 	while (dims--)
 	    {
-		unsigned long long n = expri () ;
+		unsigned int n = expri () ;
 		int ecx = ULOAD(ebx) ;
 		ebx += 4 ;
 		if (n >= ecx)

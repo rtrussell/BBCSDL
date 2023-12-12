@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.38a, 15-Oct-2023                                *
+*       Version 1.38b, 11-Dec-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -55,6 +55,7 @@ unsigned int DIRoff = 19 ; // Used by Android x86-32 build
 #endif
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
+#include <emscripten/html5.h>
 #include <sys/mman.h>
 #define PLATFORM "Wasm"
 #endif
@@ -186,7 +187,23 @@ static SDL_Rect backbutton = {0} ;
 static SDL_Texture *buttexture ;
 
 #if defined __EMSCRIPTEN__
-// dlsym implemented locally
+static EM_BOOL Emscripten_HandleFullscreenChange(int eventType, 
+		const EmscriptenFullscreenChangeEvent *fullscreenChangeEvent, void *userData)
+{
+	static int oldw, oldh ;
+	int neww = oldw, newh = oldh ;
+	SDL_Window *window = userData ;
+	if (fullscreenChangeEvent->isFullscreen)
+	    {
+		SDL_GetWindowSize (window, &oldw, &oldh) ;
+		neww = fullscreenChangeEvent->screenWidth ;
+		newh = fullscreenChangeEvent->screenHeight ;
+	    }
+	SDL_SetWindowSize (window, neww, newh) ;
+	putevt (siztrp, WM_SIZE, SDL_GetWindowID(window), (newh << 16) | neww) ;
+	flags |= ALERT ;
+	return 0;
+}
 #elif defined __WINDOWS__
 void *dlsym (void *handle, const char *symbol)
 {
@@ -1040,6 +1057,8 @@ while ((Thread = SDL_CreateThread(entry, "Interpreter", (void *) immediate)) == 
 
 // Main polling loop:
 #ifdef __EMSCRIPTEN__
+    emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, window, 0,
+						Emscripten_HandleFullscreenChange);
     emscripten_set_main_loop(mainloop, 0, 1);
 #else
 while (running)

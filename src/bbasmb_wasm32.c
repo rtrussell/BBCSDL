@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.38a, 09-Sep-2023                                *
+*       Version 1.38b, 12-Dec-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -462,6 +462,10 @@ long long BBC_RemoveTimer(st id, st i1, st i2, st i3, st i4, st i5, st i6, st i7
 
 // Miscellaneous:
 
+long long BBC_CaptureMouse(st enabled, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_CaptureMouse(enabled); }
+
 long long BBC_Delay(st ms, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ SDL_Delay(ms); return 0; }
@@ -485,6 +489,11 @@ long long BBC_SetHint(st name, st value, st i2, st i3, st i4, st i5, st i6, st i
 long long BBC_GetWindowFlags(st window, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_GetWindowFlags((SDL_Window*) window); }
+
+long long BBC_SetWindowFullscreen(st window, st flag, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ if (flag) emscripten_run_script("Module.requestFullscreen()"); 
+	  else      emscripten_run_script("document.exitFullscreen()"); return 0; }
 
 long long BBC_SetWindowPosition(st window, st x, st y, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -541,6 +550,10 @@ long long BBC_free(st ptr, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 long long BBC_memcpy(st dest, st src, st n, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) SDL_memcpy((void*) dest, (void*) src, n); }
+
+long long BBC_memmove(st dest, st src, st n, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDL_memmove((void*) dest, (void*) src, n); }
 
 long long BBC_memset(st dest, st c, st n, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -634,7 +647,7 @@ long long BBC_emscripten_run_script_string(st script, st i1, st i2, st i3, st i4
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) emscripten_run_script_string((const char*) script); }
 
-#define NSYS 133
+#define NSYS 136
 
 static const char *sysname[NSYS] = {
 	"B2D_GetProcAddress",
@@ -665,6 +678,7 @@ static const char *sysname[NSYS] = {
 	"SDLNet_TCP_Send",
 	"SDL_AddTimer",
 	"SDL_BuildAudioCVT",
+	"SDL_CaptureMouse",
 	"SDL_ClearQueuedAudio",
 	"SDL_CloseAudioDevice",
 	"SDL_ComposeCustomBlendMode",
@@ -741,6 +755,7 @@ static const char *sysname[NSYS] = {
 	"SDL_SetTextureAlphaMod",
 	"SDL_SetTextureBlendMode",
 	"SDL_SetTextureColorMod",
+	"SDL_SetWindowFullscreen",
 	"SDL_SetWindowPosition",
 	"SDL_SetWindowResizable",
 	"SDL_SetWindowSize",
@@ -752,6 +767,7 @@ static const char *sysname[NSYS] = {
 	"SDL_free",
 	"SDL_malloc",
 	"SDL_memcpy",
+	"SDL_memmove",
 	"SDL_memset",
 	"STBIMG_Load",
 	"STBIMG_LoadTexture",
@@ -800,6 +816,7 @@ static void *sysfunc[NSYS] = {
 	BBC_Net_TCP_Send,
 	BBC_AddTimer,
 	BBC_BuildAudioCVT,
+	BBC_CaptureMouse,
 	BBC_ClearQueuedAudio,
 	BBC_CloseAudioDevice,
 	BBC_ComposeCustomBlendMode,
@@ -876,6 +893,7 @@ static void *sysfunc[NSYS] = {
 	BBC_SetTextureAlphaMod,
 	BBC_SetTextureBlendMode,
 	BBC_SetTextureColorMod,
+	BBC_SetWindowFullscreen,
 	BBC_SetWindowPosition,
 	BBC_SetWindowResizable,
 	BBC_SetWindowSize,
@@ -887,6 +905,7 @@ static void *sysfunc[NSYS] = {
 	BBC_free,
 	BBC_malloc,
 	BBC_memcpy,
+	BBC_memmove,
 	BBC_memset,
 	BBC_STBIMG_Load,
 	BBC_STBIMG_LoadTexture,

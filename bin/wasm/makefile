@@ -13,7 +13,7 @@ OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
       bbcvdu.o bbcvtx.o flood.o sort.o bbdata.o bbcsdl.o \
       bbasmb.o SDL2_gfxPrimitives.o SDL2_rotozoom.o
 
-all: bbcsdl.html index.html
+all: bbcsdl.html
 
 bbmain.o: bbmain.c BBC.h
 	$(CXX) -c -O3 -ffast-math -fno-finite-math-only $< -o $@
