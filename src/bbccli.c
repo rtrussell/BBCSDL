@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.38a, 04-Sep-2023                                *
+*       Version 1.39a, 14-Dec-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -683,7 +683,7 @@ void oscli (char *cmd)
 				while (*p == ' ') p++ ;
 				if (*p == '+')
 					n = strtol (p + 1, &p, 16) ;
-				else
+				else if (*p != 0x0D)
 					n = (char *) (size_t) strtoull (p, &p, 16) - q ;
 			    }
 			if ((n <= 0) && ((q < (char *)userRAM) || (q >= (char *)userTOP)))
@@ -741,7 +741,7 @@ void oscli (char *cmd)
 				if ((rect.h == 0) && (col == 0))
 				    {
 					rect.w = 0 ;
-					sscanf (p, "%x %i, %i, %x", (int*) &addr, &rect.x, &rect.y, &col) ;
+					sscanf (p, "%p %i, %i, %x", &addr, &rect.x, &rect.y, &col) ;
 				    }
 				rect.w /= 2 ;
 				rect.h /= 2 ;
@@ -851,7 +851,7 @@ void oscli (char *cmd)
 				while (*p == ' ') p++ ;
 				if (*p == '+')
 					n = strtol (p + 1, &p, 16) ;
-				else
+				else if (*p != 0x0D)
 					n = (char *) (size_t) strtoull (p, &p, 16) - q ;
 			    }
 			if (n <= 0)
@@ -992,7 +992,7 @@ void oscli (char *cmd)
 				while (*p == ' ') p++ ;
 				if (*p == '+')
 					h = strtol (p + 1, &p, 16) ;
-				else
+				else if (*p != 0x0D)
 					h = strtoull (p, &p, 16) - s ;
 				b = s & 0xFFFFFFFF ;
 			    }

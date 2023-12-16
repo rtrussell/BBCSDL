@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2023                         *
 *                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.46a, 17-Sep-2023                                *
+*       Version 0.47a, 14-Dec-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -911,7 +911,7 @@ void oscli (char *cmd)
 				while (*p == ' ') p++ ;
 				if (*p == '+')
 					n = strtol (p + 1, &p, 16) ;
-				else
+				else if (*p != 0x0D)
 					n = (char *) (size_t) strtoull (p, &p, 16) - q ;
 			    }
 			if ((n <= 0) && ((q < (char *)userRAM) || (q >= (char *)userTOP)))
@@ -1000,7 +1000,7 @@ void oscli (char *cmd)
 				while (*p == ' ') p++ ;
 				if (*p == '+')
 					n = strtol (p + 1, &p, 16) ;
-				else
+				else if (*p != 0x0D)
 					n = (char *) (size_t) strtoull (p, &p, 16) - q ;
 			    }
 			if (n <= 0)
