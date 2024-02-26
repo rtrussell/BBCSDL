@@ -1,0 +1,250 @@
+Keyword	                             Description	Informal syntax
+
+ABS	A function returning the absolute value of its numeric argument			<n-var>=ABS(<numeric>)
+ACS	A function returning the arc-cosine in radians (0-PI) of its numeric argument	<n-var>=ACS(<numeric>)
+ADVAL 	ADVAL(0)  returns the state (0-2^n−1) of the n buttons on a joystick device	<n-var>=ADVAL(0)
+	ADVAL(1)  returns the current position (0-65535) of the joystick x-axis		<n-var>=ADVAL(1)
+	ADVAL(2)  returns the current position (0-65535) of the joystick y-axis		<n-var>=ADVAL(2)
+	ADVAL(3)  returns the current position (0-65535) of the joystick z-axis		<n-var>=ADVAL(3)
+	ADVAL(−1) returns the number of free bytes (0-255) in the keyboard buffer	<n-var>=ADVAL(-1)
+	ADVAL(−5) returns the number of free bytes (0-16) in the channel 0 SOUND queue	<n-var>=ADVAL(-5)
+	ADVAL(−6) returns the number of free bytes (0-16) in the channel 1 SOUND queue	<n-var>=ADVAL(-6)
+	ADVAL(−7) returns the number of free bytes (0-16) in the channel 2 SOUND queue	<n-var>=ADVAL(-7)
+	ADVAL(−8) returns the number of free bytes (0-16) in the channel 3 SOUND queue	<n-var>=ADVAL(-8)
+AND	An operator giving the Boolean or bitwise AND between two numeric operands	<n-var>=<numeric> AND <numeric>
+AND=	A compound assignment performing a Boolean or bitwise AND on a numeric variable	<n-var> AND= <numeric>
+ASC	A function returning the numeric value (0-255) of the 1st character in a string	<n-var>=ASC(<string>)
+ASN	A function returning the arc-sine (−PI/2 to +PI/2) of its numeric argument	<n-var>=ASN(<numeric>)
+ATN	A function returning the arc-tangent (−PI/2 to +PI/2) of its numeric argument	<n-var>=ATN(<numeric>)
+BGET#	A function returning one byte (0-255) from the specified open file channel	<n-var>=BGET#<channel>
+BPUT#	[1] A statement writing one byte (0-255) to the specified open file channel	BPUT #<channel>,<numeric>
+	[2] A statement writing a string, optionally followed by LF, to an open file	BPUT #<channel>,<string>[;]
+BY	A qualifier for the DRAW, FILL, MOVE and PLOT statements and the GET$ function
+CALL	[1] A statement to call a machine-code function, optionally passing parameters	CALL <pointer>{,<n-var>|<s-var>|<array()>|<struct{}>}
+	[2] A statement to load a tokenised code module, run it, and then discard it	CALL <string>
+CASE	Introduces a switch clause, vectoring execution on a numeric or string value	CASE <numeric>|<string> OF
+CHAIN 	A statement to load and run a tokenised program, replacing the current program	CHAIN <string>
+CHR$	A function returning a single-character string of its numeric argument (0-255)	<s-var>=CHR$(<numeric>)
+CIRCLE	A statement to draw a solid or outline circle, with centre x,y and radius r	CIRCLE [FILL] <numeric>,<numeric>,<numeric>
+CLEAR	A statement to remove all currently defined variables, arrays and structures	CLEAR
+CLOSE#	[1] A statement to close the file open on the specified channel			CLOSE #<numeric>
+	[2] A statement to close all currently-open files				CLOSE #0 
+CLG	A statement to clear the graphics viewport to the graphics bkgnd colour/action	CLG
+CLS	A statement to clear the text viewport to the text background colour		CLS
+COLOUR	[1] COLOUR col       Sets the text foreground colour to palette entry col 	COLOUR <numeric>
+	[2] COLOUR 128+col   Sets the text background colour to palette entry col	COLOUR <numeric>
+	[3] COLOUR col,phy   Sets palette entry col to the physical colour phy (0-15)	COLOUR <numeric>,<numeric>
+	[4] COLOUR col,R,G,B Sets the palette entry col to the RGB colour (each 0-255)	COLOUR <numeric>,<numeric>,<numeric>,<numeric>
+COS	A function returning the cosine of the radian angle supplied as its argument	<n-var>=COS(<numeric>)
+COUNT	A function returning the number of bytes PRINTed since the last newline (CR)	<n-var>=COUNT
+DATA	A statement followed by a list of constant data values to be read using READ	DATA <s-const>|<n-const>{,<s-const>|<n-const>}
+DEF	[1] A statement introducing a user-defined procedure, with optional parameters 	DEF PROC<name>[([RETURN]<s-var>|<n-var>|<array>|<struct>{,[RETURN]<s-var>|<n-var>|<array>|<struct>})]
+	[2] A statement introducing a user-defined function, with optional parameters	DEF FN<name>[([RETURN]<s-var>|<n-var>{,[RETURN]<s-var>|<n-var>})]
+DEG	A function returning the value in degrees of its argument in radians 		<n-var>=DEG(<numeric>)
+DIM	[1] A statement declaring a numeric or string array				DIM <n-var>|<s-var>(<numeric>{,<numeric>})
+	[2] A statement declaring a data structure with the specified members		DIM <name>{<member>{,<member>}}
+	[3] A statement declaring a data structure based on a prototype structure	DIM <struct{}>=<struct{}>
+	[4] A statement declaring an array of identical data structures			DIM <name>{(<numeric>[,<numeric>])<member>{,<member>}}
+	[5] A statement declaring an array of data structures based on a prototype	DIM <name>{(<numeric>[,<numeric>])}=<struct{}>
+	[6] A statement reserving a block of memory on the heap or on the stack		DIM <n-var> [LOCAL] <numeric>
+	[7] A function returning the number of dimensions of an array			<n-var>=DIM(<array()>)
+	[8] A function returning the size (maximum subscript) of an array dimension	<n-var>=DIM(<array>,<numeric>)
+	[9] A function returning the size (in bytes) of a structure			<n-var>=DIM(<struct{}>)
+DIV	An operator giving the integer quotient of the first operand by the second	<n-var>=<numeric> DIV <numeric>
+DIV=	A compound assignment performing an integer division of a numeric variable	<n-var>DIV=<numeric>
+DRAW	A statement to draw a line from the graphics cursor to specified coordinates 	DRAW [BY] <numeric>,<numeric>
+ELLIPSE	A statement to draw a solid or outline ellipse with centre x,y and radii a,b 	ELLIPSE [FILL] <numeric>,<numeric>,<numeric>,<numeric>
+ELSE	A statement to specify the action taken if an IF or ON condition is not met
+END	[1] A statement to close files, terminate a program and exit to immediate mode	END
+	[2] A function returning a pointer to the first unused location in the heap	<n-var>=END
+ENDCASE	A statement which terminates a CASE clause					ENDCASE
+ENDIF	A statement which terminates a multi-line IF clause				ENDIF
+ENDPROC	A statement which restores context and returns from a user-defined procedure	ENDPROC
+ENDWHILE	A statement which terminates a WHILE loop				ENDWHILE
+ENVELOPE	A statement to define a pitch and/or ADSR envelope for use by SOUND	ENVELOPE <numeric>,<numeric>,<numeric>,<numeric>,<numeric>,<numeric>,<numeric>,<numeric>,<numeric>,<numeric>,<numeric>,<numeric>,<numeric>,<numeric>
+EOF#	A function returning TRUE if the file's pointer is at the end of the file 	<n-var>=EOF#(<numeric>)
+EOR	An operator giving the bitwise exclusive-OR between two numeric operands	<n-var>=<numeric> EOR <numeric>
+EOR=	A compound assignment performing a bitwise exclusive-OR on a numeric variable	<n-var>EOR=<numeric>
+ERL	A function returning the line number at which the most recent error occurred	<n-var>=ERL
+ERR	A function returning the error code number of the most recent error		<n-var>=ERR
+ERROR	A statement to throw an error, with a specified error number and string		ERROR <numeric>,<string>
+EVAL	A function returning the numeric or string result of evaluating an expression	<n-var>|<s-var>=EVAL(<string>)
+EXIT	[1] Exits a FOR..NEXT loop and jumps to the statement after the matching NEXT	EXIT FOR [<n-var>]
+	[2] Exits a REPEAT..UNTIL loop and jumps to the statement after the UNTIL	EXIT REPEAT
+	[3] Exits a WHILE..ENDWHILE loop and jumps to the statement after the ENDWHILE	EXIT WHILE
+EXP	A function returning e (2.71828183) raised to the power of the numeric argument	<n-var>=EXP(<numeric>)
+EXT#	A function returning the length of the file opened on the specified channel	<n-var>=EXT#(<numeric>)
+FALSE	A function returning the constant numeric value zero				<n-var>=FALSE
+FILL	[1] A statement to perform a 'flood fill' starting at the specified coordinates	FILL [BY] <numeric>,<numeric>
+	[2] An optional qualifier of the CIRCLE, ELLIPSE and RECTANGLE statements
+FN	[1] Calls a user-defined function by name, with optional parameters 		<n-var>|<s-var>=FN<name>[(<exp>{,<exp>})]
+	[2] Calls a user-defined function by pointer, with optional parameters		<n-var>|<s-var>=FN(<pointer>)[(<exp>{,<exp>})]
+FOR	A statement to introduce a FOR...NEXT loop (always executed at least once)	FOR <n-var>=<numeric> TO <numeric> [STEP <numeric>]
+GCOL	[1] GCOL [mode,]col     Sets the graphics foreground colour and optional mode	GCOL [<numeric>,]<numeric>
+	[2] GCOL [mode,]128+col Sets the graphics bkgnd colour and optional mode	GCOL [<numeric>,]<numeric>
+GET	[1] A function returning a byte from the keyboard buffer, waiting if empty	<n-var>=GET
+	[2] A function returning the character at the specified text column and row	<n-var>=GET(<numeric>,<numeric>)
+GET$	[1] A function returning a byte from the keyboard buffer as a length-1 string	<s-var>=GET$
+	[2] A function returning the character at the specified text coords as a string	<s-var>=GET$(<numeric>,<numeric>)
+	[3] A function reading a string from a file (up to a CR, LF or NUL terminator)	<s-var>=GET$#<numeric>
+	[4] A function reading a string from a file up to a specified terminator	<s-var>=GET$#<numeric> TO <numeric>
+	[5] A function reading a string from a file of the specified length in bytes	<s-var>=GET$#<numeric> BY <numeric>
+GOSUB	A statement to call a subroutine starting at a specified line number 		GOSUB <l-num>|(<numeric>)
+GOTO	A statement to jump directly to a specified (possibly calculated) line number	GOTO <l-num>|(<numeric>)
+HIMEM	[1] A statement to set the first memory address above the top of the heap	HIMEM=<pointer>
+	[2] A function returning the first memory address above the top of the heap	<n-var>=HIMEM
+IF	[1] A statement to take a specified action if an integer condition is non-zero 	IF <t-cond> THEN <stmt>{:<stmt>} ELSE <stmt>{:<stmt>}
+	[2] A statement to introduce a multi-line conditional clause 			IF <t-cond> THEN[;]
+INKEY	[1] A function returning TRUE if a specified key is currently depressed		<n-var>=INKEY(<negative-numeric>)
+	[2] A function returning a byte from the keyboard, waiting a specified cs time 	<n-var>=INKEY(<numeric>)
+INKEY$	A function returning a string from the keyboard, waiting a specified time	<s-var>=INKEY$(<numeric>)
+INPUT	A statement to input a line and assign the value(s) to specified variable(s)	INPUT [LINE][TAB(X[,Y])][SPC(<numeric>)]['][<s-const>[,|;]]<n-var>|<s-var>{,<n-var>|<s-var>}
+INPUT#	A statement to input from an open file and assign values to specified variables	INPUT #<numeric>,<n-var>|<s-var>{,<n-var>|<s-var>}
+INSTALL	A statement to install a BASIC library module (it is loaded above HIMEM)	INSTALL <string>
+INSTR	A function returning the position (if any) of a substring within a string	<n-var>=INSTR(<string>,<string>[,<numeric>])
+INT	A function truncating to an integer, towards minus infinity (floor function)	<n-var>=INT<numeric>
+LEFT$	[1] A function returning the leftmost n characters (bytes) of a string		<s-var>=LEFT$(<string>,<numeric>)
+	[2] A function returning all but the last character (byte) of a string		<s-var>=LEFT$(string) 
+	[3] A statement replacing the leftmost n bytes of a string with a new string	LEFT$(<s-var>,<numeric>)=<string>
+	[4] A statement replacing all but the last byte of a string with a new string	LEFT$(<s-var>)=<string>
+LEN	A function returning the length of a string in bytes (not characters, if UTF-8)	<n-var>=LEN(<string>)
+LET	An optional keyword introducing a numeric or string assignment statement	[LET] <var>=<exp>
+LINE	[1] A statement to draw a straight line between two pairs of coordinates	LINE <numeric>,<numeric>,<numeric>,<numeric>
+	[2] A modifier causing the INPUT statement to read including commas and spaces	LINE INPUT [TAB(X[,Y])][SPC(<numeric>)]['][<s-const>[,|;]]<s-var>{,<s-var>}
+LN	A function returning the natural (Napierian) logarithm of its numeric argument	<n-var>=LN<numeric>
+LOCAL	A statement to declare variables, arrays and structures 'local' to a FN or PROC	LOCAL <n-var>|<s-var>|<array()>|<struct>{,<n-var>|<s-var>|<array()>|<struct{}>}
+LOCAL DATA	A statement to save the DATA pointer, so it may be restored later	LOCAL DATA
+LOG	A function returning the common (base-10) logarithm of its numeric argument	<n-var>=LOG<numeric>
+LOMEM	[1] A statement to set the address of (pointer to) the base of the heap		LOMEM=<pointer>
+	[2] A function returning the address of (pointer to) the base of the heap	<n-var>=LOMEM
+MID$	[1] A function returning part of a string, given the start and optional length	<s-var>=MID$(<string>,<numeric>[,<numeric>])
+	[2] An assignment statement replacing part of a string with a new string		MID$(<s-var>,<numeric>[,<numeric>])=<string>
+MOD	[1] An operator giving the integer remainder after division by the 2nd operand	<n-var>=<numeric> MOD <numeric>
+	[2] A function returning the square-root of the sum-of-the-squares of an array	<n-var>=MOD(<array()>)
+MOD=	A compound assignment calculating the integer remainder after a division	<n-var>MOD=<numeric>
+MODE	[1] A statement initialising a specified screen mode				MODE <numeric>
+	[2] A function returning the current screen mode number, or −1 if user-defined	<n-var>=MODE
+MOUSE	A statement to return the current position and button status of the 'mouse'	MOUSE <n-var>,<n-var>,<n-var>
+MOUSE ON	A statement to select a particular mouse pointer shape and enable it	MOUSE ON [<numeric>]
+MOUSE OFF	A statement to hide the mouse pointer					MOUSE OFF
+MOUSE TO	A statement to move the mouse pointer to the specified coordinates	MOUSE TO <n-var>,<n-var>
+MOUSE RECTANGLE
+	A statement to confine the mouse pointer within a specified rectangle		MOUSE RECTANGLE OFF|<n-var>,<n-var>,<n-var>,<n-var>
+MOVE	A statement to move the graphics cursor to absolute or relative coordinates	MOVE [BY] <numeric>,<numeric>
+NEXT	A statement to indicate the end of one or more FOR...NEXT loops			NEXT [<n-var>{,<n-var>}]
+NOT	A function returning the Boolean or bitwise inversion of its numeric argument	<n-var>=NOT<numeric>
+OF	A mandatory part of the CASE statement, must be the last thing on the line	CASE <numeric>|<string> OF
+OFF	[1] A statement to hide the text caret (cursor)					OFF
+	[2] A qualifier used with MOUSE, MOUSE RECTANGLE, ON, SOUND & TRACE statements
+ON	[1] A statement to jump to a specified line number depending on a numeric index	ON <numeric> GOTO <l-num>{,<l-num>} [ELSE <l-num>|<stmt>{:<stmt>}]
+	[2] A statement to call a line-numbered subroutine depending on a numeric index	ON <numeric> GOSUB <l-num>{,<l-num>} [ELSE <l-num>|<stmt>{:<stmt>}]
+	[3] A statement to call a named procedure depending on a numeric index		ON <numeric> PROC<name>[(<exp>{,<exp>})]{,PROC<name>[(<exp>{,<exp>})]} [ELSE <stmt>{:<stmt>}]
+	[4] A statement to show the text caret (cursor)					ON
+	[5] A statement to cancel an ON CLOSE, ERROR, MOUSE, MOVE, SYS or TIME action	ON <event> [LOCAL] OFF
+ON CLOSE	A statement to specify the action taken if the window is closed		ON CLOSE [LOCAL] <stmt>{:<stmt>}:RETURN
+ON ERROR	A statement to specify the action taken if a trappable error occurs		ON ERROR [LOCAL] <stmt>{:<stmt>}
+ON MOUSE	A statement to specify the action taken if a mouse button is clicked	ON MOUSE [LOCAL] <stmt>{:<stmt>}:RETURN
+ON MOVE	A statement to specify the action taken if the window is moved or resized	ON MOVE [LOCAL] <stmt>{:<stmt>}:RETURN
+ON SYS	A statement to specify the action taken if an OS event is notified		ON SYS [LOCAL] <stmt>{:<stmt>}:RETURN
+ON TIME	A statement to specify the action taken if the periodic timer fires		ON TIME [LOCAL] <stmt>{:<stmt>}:RETURN
+OPENIN	A function which opens a file for reading (only) and returns a channel number	<n-var>=OPENIN(<string>)
+OPENOUT	A function which creates a new (empty) file and returns a channel number	<n-var>=OPENOUT(<string>)
+OPENUP	A function which opens a file for update (R/W) and returns a channel number	<n-var>=OPENUP(<string>)
+OR	An operator giving the Boolean or bitwise OR between two numeric operands	<n-var>=<numeric> OR <numeric>
+OR=	A compound assignment performing a Boolean or bitwise OR on a numeric variable	<n-var> OR= <numeric>
+ORIGIN	A statement to set the coordinates of the current graphics origin		ORIGIN <numeric>,<numeric>
+OSCLI	A statement to pass a 'star' (OS) command to the Command Line Interpreter	OSCLI <string>
+OTHERWISE	A part of the CASE clause specifying the action if no WHEN condition is met	OTHERWISE [<stmt>]{:<stmt>}
+PAGE	[1] A statement to set the address of (pointer to) where a program is loaded	PAGE=<pointer>
+	[2] A function returning the address of (pointer to) the current program	<n-var>=PAGE
+PI	A function returning the constant numeric value Pi (3.14159265...)		<n-var>=PI
+PLOT	[1] A statement to carry out a plotting operation identified by a numeric index	PLOT [BY] <numeric>,<numeric>,<numeric>
+	[2] A statement to plot a solid rectangle 1/8 of the character width and height	PLOT [BY] <numeric>,<numeric>
+POINT	A function returning the logical colour (palette index) at given coordinates	<n-var>=POINT(<numeric>,<numeric>)
+POS	A function returning the horizontal position of the text caret (cursor) 0=left	<n-var>=POS
+PRINT	A statement to evaluate and print a list of expressions, with formatting	PRINT {[TAB(<numeric>[,<numeric>])][SPC(<numeric>]['][,][;][~][<string>|<numeric>]}
+PRINT#	A statement to write numeric or string values to a file in 'internal' format	PRINT#<numeric>{,<numeric>|<string>}
+PRIVATE	A statement to declare variables, arrays and structures private to a FN or PROC	PRIVATE <n-var>|<s-var>|<array()>|<struct>{,<n-var>|<s-var>|<array()>|<struct{}>}
+PROC	[1] Calls a user-defined procedure by name, with optional parameters 		PROC<name>[(<exp>{,<exp>})]
+	[2] Calls a user-defined procedure by pointer, with optional parameters		PROC(<pointer>)[(<exp>{,<exp>})]
+PTR	[1] A function returning a pointer to a string, array, structure or FN/PROC	<n-var>=PTR(<s-var>|<array()>|<struct{}>|FN<name>[()]|PROC<name>[()])
+	[2] A statement to set the pointer to a string, array, structure or FN/PROC	PTR(<s-var>|<array()>|<struct{}>|FN<name>[()]|PROC<name>[()])=<numeric>
+PTR#	[1] A function returning the current pointer of the specified open file 	<n-var>=PTR#<numeric>
+	[2] A statement to set the pointer of the specified open file			PTR#<numeric>=<numeric>
+QUIT	A statement to exit to the OS (or calling process) with an optional exit code	QUIT [<numeric>]
+RAD	A function returning the value in radians of its argument in degrees		<n-var>=RAD<numeric>
+READ	A statement to read one or more values from one or more DATA statements		READ <n-var>|<s-var>{<n-var>|<s-var>}
+READ#	A statement which is synonymous with INPUT#					READ#<numeric>,<n-var>|<s-var>{,<n-var>|<s-var>}
+RECTANGLE	[1] A statement to draw an outline or filled axis-aligned rectangle	RECTANGLE [FILL] <numeric>,<numeric>,<numeric>[,<numeric>]
+	[2] A statement to copy the contents of a rectangle to a specified location	RECTANGLE <numeric>,<numeric>,<numeric>[,<numeric>] TO <numeric>,<numeric>
+	[3] A statement to move the contents of a rectangle to a specified location	RECTANGLE FILL <numeric>,<numeric>,<numeric>[,<numeric>] TO <numeric>,<numeric>
+	[4] A statement to swap the contents of a rectangle with a specified location	RECTANGLE SWAP <numeric>,<numeric>,<numeric>[,<numeric>] TO <numeric>,<numeric>
+REM	A statement containing a remark or comment, the rest of the line is ignored	REM any text
+REPEAT	A statement introducing a REPEAT..UNTIL loop (UNTIL conditionally jumps here)	REPEAT
+REPORT	A statement to print the most recent error message (or a copyright string)	REPORT
+REPORT$	A function returning the most recent error message as a string			<s-var>=REPORT$
+RESTORE	[1] A statement to set the DATA pointer to the beginning or to a specified line	RESTORE [<l-num>|(<numeric>)]
+	[2] A statement to set the DATA pointer relative to the current line		RESTORE +<numeric>
+	[3] A statement to restore the DATA pointer to the value saved by a LOCAL DATA	RESTORE DATA
+	[4] A statement to restore the error handler to that saved by ON ERROR LOCAL	RESTORE ERROR
+	[5] A statement to restore LOCALs, PRIVATEs and formal parameters of an FN/PROC	RESTORE LOCAL
+RETURN	[1] A statement to return from a subroutine, optionally to a specified line	RETURN [<l-num>|(<numeric>)]
+	[2] In a DEF FN or DEF PROC, indicates that a parameter is also used for output
+RIGHT$	[1] A function returning the rightmost n characters (bytes) of a string		<s-var>=RIGHT$(<string>,<numeric>)
+	[2] A function returning the last character (byte) of a string			<s-var>=RIGHT$(string) 
+	[3] A statement replacing the rightmost n bytes of a string with a new string	RIGHT$(<s-var>,<numeric>)=<string>
+	[4] A statement replacing the last byte of a string with a new string		RIGHT$(<s-var>)=<string>
+RND	[1] A function returning a pseudo-random signed 32-bit integer			<n-var>=RND
+	[2] A function returning a pseudo-random number from 0.0 to 0.9999999999	<n-var>=RND(1)
+	[3] A function returning a pseudo-random integer in the range 1 to n		<n-var>=RND(<numeric>)
+	[4] A function repeating the last returned random number, in RND(1) format	<n-var>=RND(0)
+RUN	[1] A statement to run the current program from the start			RUN
+ 	[2] A statement synonymous with CHAIN						RUN <string>
+SGN	A function returning the sign, or signum, (−1, 0 or +1) of the argument		<n-var>=SGN(<numeric>)
+SIN	A function returning the sine of the radian angle supplied as its argument 	<n-var>=SIN(<numeric>)
+SOUND	A statement to make a sound, optionally using an envelope			SOUND <numeric>,<numeric>,<numeric>,<numeric>
+SOUND OFF	A statement to silence any playing sound(s)				SOUND OFF
+SPC	Used in an INPUT or PRINT statement, outputs the specified number of spaces	INPUT|PRINT SPC(<numeric>)
+SQR	A function returning the square-root of its numeric argument			<n-var>=SQR(<numeric>)
+STEP	An optional part of the FOR statement, specifying the increment value		FOR <n-var>=<numeric> TO <numeric> [STEP <numeric>]
+STOP	A statement to stop the program and exit to immediate mode, doesn't close files	STOP
+STR$	A function returning the decimal string representation of its numeric argument	<s-var>=STR$(<numeric>)
+STR$~	A function returning the hexadecimal representation of its numeric argument	<s-var>=STR$~(<numeric>)
+STRING$	A function returning a concatenation of multiple copies of the same string	<s-var>=STRING$(<numeric>,<string>)
+SUM	[1] A function returning the sum of all the elements of a numeric array		<n-var>=SUM(<n-array()>)
+	[2] A function returning a concatenation of all the elements of a string array	<s-var>=SUM(<s-array()>)
+SUMLEN	A function returning the sum of the lengths of the elements of a string array	<n-var>=SUMLEN(<s-array()>)
+SWAP	[1] A statement swapping the values of two numeric variables of the same type 	SWAP <n-var>,<n-var>
+	[2] A statement swapping the values of two string variables			SWAP <s-var>,<s-var>
+	[3] A statement swapping two arrays or structures				SWAP <array()>,<array()>|SWAP <struct{}>,<struct{}>
+	[4] An optional qualifier of the RECTANGLE statement				RECTANGLE SWAP <numeric>,<numeric>,<numeric>[,<numeric>] TO <numeric>,<numeric> 
+SYS	[1] A statement to call an Operating System API function by name		SYS <string>{,<numeric>|<string>} [TO <n-var>]
+	[2] A statement to call an Operating System or Library function by pointer	SYS <numeric>{,<numeric>|<string>} [TO <n-var>]
+	[3] A function returning the pointer to a named Operating System API function	<n-var>=SYS(<string>)
+TAB	[1] Used in an INPUT or PRINT statement, outputs spaces up to the given column	INPUT|PRINT TAB(<numeric>)
+	[2] Used in an INPUT or PRINT statament, moves the text caret to the col & row	INPUT|PRINT TAB(<numeric>,<numeric>)
+TAN	A function returning the tangent of the radian angle supplied as its argument	<n-var>=TAN<numeric>
+THEN	[1] Specifies the action if the condition is true in a single-line IF statement	IF <t-cond> THEN <stmt>{:<stmt>} [ELSE <stmt>{:<stmt>}]
+	[2] When at the very end of an IF statement, introduces a multi-line IF clause	IF <t-cond> THEN[;]
+TIME	[1] A statement to set the elapsed-time clock to a value in centiseconds	TIME=<numeric>
+	[2] A function returning the current value of the elapsed time clock in cs	<n-var>=TIME
+TIME$	A function returning the current date and time as DoW.DD Mon Year,HH:MM:SS	<s-var>=TIME$
+TINT	A function returning the 24-bit colour at the given coordinates (&BBGGRR)	<n-var>=TINT(<numeric>,<numeric>)
+TO	[1] A mandatory part of the FOR statement, specifying the final value		FOR <n-var>=<numeric> TO <numeric> [STEP <numeric>]
+	[2] An optional part of the MOUSE and RECTANGLE statements
+TOP	A function returning a pointer to (address of) the first byte after the program	<n-var>=TOP
+TRACE	[1] A statement to control whether line numbers are printed when executed	TRACE ON|OFF
+	[2] A statement to print line numbers if less than the specified value		TRACE<l-num>|(<numeric>)
+TRACE STEP	A statement to enter or exit single-step mode (when debugging)		TRACE STEP [ON|OFF]
+TRUE	A function returning the constant integer value −1				<n-var>=TRUE
+UNTIL	A statement which terminates a REPEAT loop, and exits the loop if non-zero	UNTIL <t-cond>
+USR	A function calling a machine-code program and returning its integer exit value	<n-var>=USR(<pointer>)
+VAL	A function returning the numeric value of a string, or zero if not a number	<n-var>=VAL(<string>)
+VDU	A statement to send one or more values (8 or 16-bits) to the output stream	VDU <numeric>{,|;<numeric>}[;][|]
+VPOS	A function returning the vertical position of the text caret (cursor) 0=top	<n-var>=VPOS
+WAIT	A statement to wait for a specified number of centiseconds (or 1 ms if zero)	WAIT [<numeric>]
+WHEN	A part of the CASE statement specifying the action on a certain value or values	WHEN <numeric>{,<numeric>}|<string>{<string>}:<stmt>{:<stmt>}
+WHILE	A statement introducing a WHILE...ENDWHILE loop, giving the condition to loop	WHILE <t-cond>
+WIDTH	[1] A statement specifying the line length (in bytes) before an automatic CRLF	WIDTH <numeric>
+	[2] A function returning the line length before an automatic CRLF (0 if never)	<n-var>=WIDTH
+	[3] A function returning the width (in graphics units) of a string		<n-var>=WIDTH(<string>)

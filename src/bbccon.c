@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2021-2023                     *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.45a, 03-Sep-2023                                 *
+*       Version 0.46a, 20-Dec-2023                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -84,7 +84,7 @@ char *szLibrary ;
 char *szUserDir ;
 char *szTempDir ;
 char *szCmdLine ;
-int MaximumRAM = MAXIMUM_RAM ;
+intptr_t MaximumRAM = MAXIMUM_RAM ;
 timer_t UserTimerID ;
 unsigned int palette[256] ;
 void *TTFcache[1] ;
@@ -1846,8 +1846,19 @@ pthread_t hThread = NULL ;
 
 	if (*szAutoRun && (NULL != (ProgFile = fopen (szAutoRun, "rb"))))
 	    {
+		unsigned char *esi = progRAM ;
 		fread (progRAM, 1, userTOP - progRAM, ProgFile) ;
 		fclose (ProgFile) ;
+		while (*esi)
+		    {
+			esi += (int) *esi ; 
+			if (*(esi-1) != 0x0D) 
+			    {
+				fprintf(stderr, "%s isn't a valid internal-format (.bbc) file\r\n",
+						szAutoRun) ;
+				return 10 ;
+			    }
+		    }
 	    }
 	else
 	    {

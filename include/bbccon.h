@@ -3,13 +3,13 @@
 *       Copyright (c) R. T. Russell, 2000-2023                     *
 *                                                                  *
 *       bbccon.h constant definitions                              *
-*       Version v0.45, 25-Jul-2023                                 *
+*       Version v0.46, 20-Dec-2023                                 *
 \******************************************************************/
 
 // System constants :
 
 #define YEAR    "2023"          // Copyright year
-#define VERSION "v0.45"         // Version string
+#define VERSION "v0.46"         // Version string
 #ifdef PICO
 #define ACCSLEN 1024  // Must be the same in bbcsdl.h and bbccon.h
 #define DEFAULT_RAM PAGE_OFFSET+0x20000 // Initial amount of RAM to allocate
@@ -24,7 +24,11 @@
 #define PAGE_OFFSET ACCSLEN + 0x1300     // Offset of PAGE from memory base
 #endif
 #define MINIMUM_RAM PAGE_OFFSET+0x20000  // Minimum amount of RAM to allocate
-#define MAXIMUM_RAM 0x10000000  // Maximum amount of RAM to allocate
+#if UINTPTR_MAX == UINT32_MAX
+#define MAXIMUM_RAM 0x10000000           // Maximum amount of RAM to allocate
+#else
+#define MAXIMUM_RAM 0x100000000LL        // Maximum amount of RAM to allocate
+#endif
 
 #if (PAGE_OFFSET < 0x10000) && (defined(__x86_64__) || defined(__aarch64__))
 #error "PAGE must be at least 64K above memory base on 64-bit platforms"

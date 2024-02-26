@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2023                         *
 *                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.47a, 14-Dec-2023                                *
+*       Version 0.46a, 14-Dec-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -581,7 +581,7 @@ static int wild (char *ebx, char *edx)
 void oscli (char *cmd)
 {
 	int b = 0, h = POWR2, n ;
-	char cpy[256] ;
+	char cpy[MAX_PATH] ;
 	char path[MAX_PATH], path2[MAX_PATH] ;
 	FILE *srcfile, *dstfile ;
 	DIR *d ;
@@ -593,7 +593,7 @@ void oscli (char *cmd)
 	if ((*cmd == 0x0D) || (*cmd == '|'))
 		return ;
 
-	q = memchr (cmd, 0x0D, 256) ;
+	q = memchr (cmd, 0x0D, sizeof(cpy)) ;
 	if (q == NULL)
 		error (19, NULL) ; // 'String too long'
 	memcpy (cpy, cmd, q - cmd) ;

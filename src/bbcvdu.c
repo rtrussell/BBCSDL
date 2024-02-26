@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.37a, 19-Aug-2023                                *
+*       Version 1.39a, 11-Feb-2024                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1750,9 +1750,12 @@ static void colour (signed char al)
 //VDU 19, l, p, 0, 0, 0 - SET PHYSICAL COLOUR
 //VDU 19, l,-1, r, g, b (rgb: 6-bits)
 //VDU 19, l,16, R, G, B (RGB: 8-bits)
+//VDU 19, l+128, A, R, G, B
 static void setpal (unsigned char n, signed char m, unsigned char r, unsigned char g, unsigned char b)
 {
-	switch (m)
+	if (n > 127)
+		palette[(int) (n & 0x7F)] = (m << 24) | (b << 16) | (g << 8) | r ;
+	else switch (m)
 	{
 	case 16:
 		palette[(int) n] = 0xFF000000 | (b << 16) | (g << 8) | r ;

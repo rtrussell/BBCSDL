@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.38b, 12-Dec-2023                                *
+*       Version 1.39a, 12-Dec-2023                                *
 \*****************************************************************/
 
 #include <stdlib.h>

@@ -1,16 +1,17 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.38b, 11-Dec-2023                                *
+*       Version 1.39a, 21-Feb-2024                                *
 \*****************************************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -181,7 +182,7 @@ static int blink = 0 ;
 static signed char oldscroln = 0 ;
 static const Uint8* keystate ;
 static int exitcode = 0, running = 1 ;
-static int MaximumRAM = MAXIMUM_RAM ;
+static intptr_t MaximumRAM = MAXIMUM_RAM ;
 static SDL_AudioSpec want, have ;
 static SDL_Rect backbutton = {0} ;
 static SDL_Texture *buttexture ;
@@ -223,7 +224,7 @@ void *dlsym (void *handle, const char *symbol)
 #endif
 
 #if defined __LINUX__ || defined __ANDROID__
-static void *mymap (unsigned int size)
+static void *mymap (uintptr_t size)
 {
 	FILE *fp ;
 	char line[256] ;
@@ -239,11 +240,7 @@ static void *mymap (unsigned int size)
 		start = (void *)((size_t)start & -0x1000) ; // page align (GCC extension)
 		if (start >= (base + size)) 
 			return base ;
-		if (finish > (void *)0xFFFFF000)
-			return NULL ;
 		base = (void *)(((size_t)finish + 0xFFF) & -0x1000) ; // page align
-		if (base > ((void *)0xFFFFFFFF - size))
-			return NULL ;
 	    }
 	return base ;
 }
@@ -624,6 +621,7 @@ if (SDLNet_Init() == -1)
 
 // Setting quality to "linear" can break flood-fill, affecting 'jigsaw.bbc' etc.
 #if defined __ANDROID__ || defined __IPHONEOS__
+	SDL_SetHint (SDL_HINT_THREAD_STACK_SIZE, "0x2000000") ;
 	SDL_SetHint (SDL_HINT_RENDER_DRIVER, "opengles") ;
 	SDL_SetHint ("SDL_RENDER_BATCHING", "1") ;
 	SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "nearest") ;
@@ -634,6 +632,7 @@ if (SDLNet_Init() == -1)
 	SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 6) ;
 	SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 5) ;
 #else
+	SDL_SetHint (SDL_HINT_THREAD_STACK_SIZE, "0x2000000") ;
 	SDL_SetHint (SDL_HINT_RENDER_DRIVER, "opengl") ;
 	SDL_SetHint ("SDL_RENDER_BATCHING", "1") ;
 	SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "nearest") ;
@@ -777,7 +776,7 @@ buttexture = MakeBackButton (renderer) ;
 
 	if (base != NULL)
 		userRAM = mmap (base, MaximumRAM, PROT_EXEC | PROT_READ | PROT_WRITE, 
-					MAP_FIXED | MAP_PRIVATE | MAP_ANON, -1, 0) ;
+			    MAP_FIXED | MAP_PRIVATE | MAP_ANON | MAP_NORESERVE, -1, 0) ;
 
 #endif
 

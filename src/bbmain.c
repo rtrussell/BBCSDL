@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.39a, 09-Dec-2023                                *
+*       Version 1.39a, 17-Dec-2023                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -880,29 +880,30 @@ int arrlen (void **pebx)
 	int dims ;
 	unsigned char *ebx = *(unsigned char**)pebx ;
 	int edx = 1 ;
-	if ((ebx < (unsigned char*)2) || (*ebx == 0))
+	if (ebx < (unsigned char*)2)
 		error(14, NULL) ; // 'Bad use of array'
 	dims = *ebx++ ;
-	while (dims--)
+	while (1)
 	    {
 		edx *= ULOAD(ebx) ;
 		ebx += 4 ;
+		if (--dims <= 0) break ;
 	    }
-	*pebx = ebx ;
+	if (dims == 0) *pebx = ebx ; else *pebx = VLOAD(ebx) ;
 	return edx ;
 } 
 
 // Process array subscripts
 // Returns offset into array data
-static int getsub (void **pebx, unsigned char *ptype)
+static unsigned int getsub (void **pebx, unsigned char *ptype)
 {
 	int dims ;
 	unsigned char *ebx = (unsigned char*) CLOAD(pebx) ;
-	int edx = 0 ;
-	if ((ebx < (unsigned char*)2) || (*ebx == 0))
+	unsigned int edx = 0 ;
+	if (ebx < (unsigned char*)2)
 		error(14, NULL) ; // 'Bad use of array'
 	dims = *ebx++ ;
-	while (dims--)
+	while (1)
 	    {
 		unsigned int n = expri () ;
 		int ecx = ULOAD(ebx) ;
@@ -910,15 +911,15 @@ static int getsub (void **pebx, unsigned char *ptype)
 		if (n >= ecx)
 			error (15, NULL) ; // 'Subscript out of range'
 		edx = edx * ecx + n ;
-		if (dims) comma () ; else braket () ;
+		if (--dims > 0) comma () ; else { braket () ; break ; }
 	    }
-	*pebx = ebx ;
+	if (dims == 0) *pebx = ebx ; else *pebx = VLOAD(ebx) ;
 	edx *= (*ptype & TMASK) ;
 	return edx ;
 }
 
 // Make struct.array&() look like a NUL-terminated string:
-static int getsbs (void *ebx, unsigned char *ptype)
+static unsigned int getsbs (void *ebx, unsigned char *ptype)
 {
 	if (nxt () == ')') 
 	    {
@@ -1292,7 +1293,7 @@ void * getvar (unsigned char *ptype)
 
 	if (*esi == '(')
 	    {
-		int ecx ;
+		unsigned int ecx ;
 		esi++ ;
 		if (nxt () == ')')
 		    {

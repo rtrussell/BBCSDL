@@ -542,6 +542,13 @@ void oscli (char *cmd)
 					quiet () ;
 				kbdqr = kbdqw ;
 			    }
+			else if (n == 19)
+			    {
+				pushev (EVT_REFLAG, (void *) 0x201, 0) ;
+				waitev () ;
+				while (reflag & 1)
+					SDL_Delay (1) ;
+			    }
 			else if (n == 21)
 			    {
 				if (b == 0)

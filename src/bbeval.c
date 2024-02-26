@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.36a, 24-Jun-2023                                *
+*       Version 1.39a, 04-Feb-2024                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -179,27 +179,26 @@ int str (VAR v, char *dst, int format)
 // Convert a numeric value to a NUL-terminated hexadecimal string:
 int strhex (VAR v, char *dst, int field)
 {
-	char fmt[12] ;
-	long long n ;
-
 #ifdef _WIN32
-	sprintf (fmt, "%%%uI64X", field) ;
+	char fmt[7] = "%*I64X" ;
 #else
-	sprintf (fmt, "%%%ullX", field) ;
+	char fmt[6] = "%*llX" ;
 #endif
+	long long n ;
 
 	if (v.i.t)
 	    {
-		long long t = v.f ;
-		if (t != truncl (v.f))
+		n = v.f ;
+		if (n != truncl (v.f))
 			error (20, NULL) ; // 'Number too big'
-		v.i.n = t ;
 	    }
+	else
+		n = v.i.n ;
 
-	n = v.i.n ; // copy because v is effectively passed-by-reference
 	if ((liston & BIT2) == 0)
 		n &= 0xFFFFFFFF ;
-	return sprintf(dst, fmt, n) ;
+
+	return sprintf(dst, fmt, field, n) ;
 }
 
 // Multiply by an integer-power of 10:
