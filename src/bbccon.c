@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                          *
-*       Copyright (C) R. T. Russell, 2021-2023                     *
+*       Copyright (C) R. T. Russell, 2021-2024                     *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.46a, 20-Dec-2023                                 *
+*       Version 0.46a, 03-Apr-2024                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -212,7 +212,7 @@ void *myThread (void *parm)
 #endif
 
 #ifdef __linux__
-static void *mymap (unsigned int size)
+static void *mymap (uintptr_t size)
 {
 	FILE *fp ;
 	char line[256] ;
@@ -228,11 +228,7 @@ static void *mymap (unsigned int size)
 		start = (void *)((size_t)start & -0x1000) ; // page align (GCC extension)
 		if (start >= (base + size)) 
 			return base ;
-		if (finish > (void *)0xFFFFF000)
-			return NULL ;
 		base = (void *)(((size_t)finish + 0xFFF) & -0x1000) ; // page align
-		if (base > ((void *)0xFFFFFFFF - size))
-			return NULL ;
 	    }
 	return base ;
 }
@@ -1164,7 +1160,7 @@ static FILE *lookup (void *chan)
 }
 
 // Load a file into memory:
-void osload (char *p, void *addr, int max)
+void osload (char *p, void *addr, unsigned int max)
 {
 	int n ;
 	FILE *file ;
@@ -1180,7 +1176,7 @@ void osload (char *p, void *addr, int max)
 }
 
 // Save a file from memory:
-void ossave (char *p, void *addr, int len)
+void ossave (char *p, void *addr, unsigned int len)
 {
 	int n ;
 	FILE *file ;
@@ -1725,7 +1721,7 @@ pthread_t hThread = 0 ;
 
 	if (base != NULL)
 		userRAM = mmap (base, MaximumRAM, PROT_EXEC | PROT_READ | PROT_WRITE, 
-					MAP_FIXED | MAP_PRIVATE | MAP_ANON, -1, 0) ;
+			    MAP_FIXED | MAP_PRIVATE | MAP_ANON | MAP_NORESERVE, -1, 0) ;
 
 #endif
 

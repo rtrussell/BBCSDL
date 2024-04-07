@@ -1,9 +1,9 @@
 ;/*****************************************************************\
 ;*       BBC BASIC for SDL 2.0 (x86_64)                            *
-;*       Copyright (c) R. T. Russell, 2000-2023                    *
+;*       Copyright (c) R. T. Russell, 2000-2024                    *
 ;*                                                                 *
 ;*       BBCDATA.NAS RAM data definitions                          *
-;*       Version 1.38a, 02-Sep-2023                                *
+;*       Version 1.39a, 12-Mar-2024                                *
 ;\*****************************************************************/
 ;
 MAX_PORTS       EQU     4       ; Maximum number of i/o ports
@@ -46,6 +46,7 @@ SOUNDQL         EQU     5*SOUNDQE ; Number of bytes per channel
 	EXTERN	xfloat,xfix,xeq,token,putevt,palette,str00,con,TTFcache
 ;
 	EXTERN	gfxPrimitivesGetFont,gfxPrimitivesSetFont,RedefineChar
+	EXTERN	sortup,sortdn
 ;
 %macro  checkalign	0
 	%if (($ - $$) & 7)
@@ -1107,8 +1108,8 @@ fnarr0:	dq	loadn		; Load numeric
 	dq	xfix		; Convert float to integer
 	dq	str00		; Convert a number to a string
 	dq	con		; Convert a string to a number
-	dq	0		; Reserved for sortup
-	dq	0		; Reserved for sortdn
+	dq	sortup		; (Reserved in BBCSDL)
+	dq	sortdn		; (Reserved in BBCSDL)
 	dq	0		; Reserved for hook
 	dq	xeq		; Return to BASIC
 	dq	putevt		; Store event in queue

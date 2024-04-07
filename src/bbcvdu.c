@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.39a, 11-Feb-2024                                *
+*       Version 1.40a, 05-Mar-2024                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -299,7 +299,7 @@ static void ascale (int *x, int *y)
 // calculate radius:
 static int radius (int cx, int cy, int rx, int ry)
 {
-	return (int)(sqrt ((rx - cx) * (rx - cx) + (ry - cy) * (ry - cy))) & -2 ;
+	return (int)(sqrt ((rx - cx) * (rx - cx) + (ry - cy) * (ry - cy))) ;
 }
 
 // calculate arctangent (degrees 0-360):
@@ -1664,6 +1664,12 @@ static void plotns (unsigned char al, int cx, int cy)
 static void plot (unsigned char code, short xs, short ys)
 {
 	int xpos = xs, ypos = ys ;
+
+	if (code >= 144)
+	    {
+		*((unsigned char*)&pixelx + 3) = 0 ;
+		*((unsigned char*)&pixely + 3) = 0 ;
+	    }
 
 	if ((code & BIT2) != 0)
 	    {

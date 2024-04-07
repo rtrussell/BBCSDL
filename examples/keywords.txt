@@ -27,9 +27,9 @@ CHAIN 	A statement to load and run a tokenised program, replacing the current pr
 CHR$	A function returning a single-character string of its numeric argument (0-255)	<s-var>=CHR$(<numeric>)
 CIRCLE	A statement to draw a solid or outline circle, with centre x,y and radius r	CIRCLE [FILL] <numeric>,<numeric>,<numeric>
 CLEAR	A statement to remove all currently defined variables, arrays and structures	CLEAR
+CLG	A statement to clear the graphics viewport to the graphics bkgnd colour/action	CLG
 CLOSE#	[1] A statement to close the file open on the specified channel			CLOSE #<numeric>
 	[2] A statement to close all currently-open files				CLOSE #0 
-CLG	A statement to clear the graphics viewport to the graphics bkgnd colour/action	CLG
 CLS	A statement to clear the text viewport to the text background colour		CLS
 COLOUR	[1] COLOUR col       Sets the text foreground colour to palette entry col 	COLOUR <numeric>
 	[2] COLOUR 128+col   Sets the text background colour to palette entry col	COLOUR <numeric>
@@ -196,8 +196,9 @@ RIGHT$	[1] A function returning the rightmost n characters (bytes) of a string		
 	[4] A statement replacing the last byte of a string with a new string		RIGHT$(<s-var>)=<string>
 RND	[1] A function returning a pseudo-random signed 32-bit integer			<n-var>=RND
 	[2] A function returning a pseudo-random number from 0.0 to 0.9999999999	<n-var>=RND(1)
-	[3] A function returning a pseudo-random integer in the range 1 to n		<n-var>=RND(<numeric>)
+	[3] A function returning a pseudo-random integer in the range 1 to n		<n-var>=RND(<positive>)
 	[4] A function repeating the last returned random number, in RND(1) format	<n-var>=RND(0)
+	[5] A function seeding the random number generator, and returning that seed	<n-var>=RND(<negative>)
 RUN	[1] A statement to run the current program from the start			RUN
  	[2] A statement synonymous with CHAIN						RUN <string>
 SGN	A function returning the sign, or signum, (−1, 0 or +1) of the argument		<n-var>=SGN(<numeric>)

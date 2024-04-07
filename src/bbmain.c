@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.39a, 17-Dec-2023                                *
+*       Version 1.40a, 03-Apr-2024                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -21,8 +21,8 @@ void osline (char *) ;		// Read line of input
 void reset (void) ;		// Prepare for reporting an error
 void faterr (const char *) ;	// Report a 'fatal' error message
 void trap (void) ;		// Test for ESCape
-void osload (char*, void*, int) ; // Load a file to memory
-void ossave (char*, void*, int) ; // Save a file from memory
+void osload (char*, void*, unsigned int) ; // Load a file to memory
+void ossave (char*, void*, unsigned int) ; // Save a file from memory
 int osopen (int, char *) ;	// Open a file
 unsigned char osbget (int, int*) ; // Read a byte from a file
 void osshut (int) ;		// Close file(s)

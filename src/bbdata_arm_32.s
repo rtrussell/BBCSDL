@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       BBC BASIC for SDL 2.0 (ARM_32)                            *
-*       Copyright (c) R. T. Russell, 2018-2023                    *
+*       Copyright (c) R. T. Russell, 2018-2024                    *
 *                                                                 *
 *       BBCDAT.S RAM data definitions                             *
-*       Version 1.38a, 02-Sep-2023                                *
+*       Version 1.39a, 12-Mar-2024                                *
 \*****************************************************************/
 
 .equ	MAX_PORTS,4
@@ -614,8 +614,8 @@ fnarr:	.byte	1		/* Number of dimensions */
 	.long	xfix		/* Convert float to integer */
 	.long	str		/* Convert a number to a string */
 	.long	con		/* Convert a string to a number */
-	.long	0		/* Reserved for sortup */
-	.long	0		/* Reserved for sortdn */
+	.long	sortup		/* (Reserved in BBCSDL) */
+	.long	sortdn		/* (Reserved in BBCSDL) */
 	.long	0		/* Reserved for hook */
 	.long	xeq		/* Run BASIC code */
 	.long	putevt		/* Put event in queue */

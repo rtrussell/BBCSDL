@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.38a, 04-Sep-2023                                *
+*       Version 1.40a, 03-Apr-2024                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -42,6 +42,11 @@ void *dlsym (void *, const char *) ;
 #else
 #include <emmintrin.h>
 #endif
+
+#if defined __i386__ || defined __x86_64__ || defined __arm__
+void sortup(void){} ;
+void sortdn(void){} ;
+#endif 
 
 // Delared in bbmain.c:
 void error (int, const char *) ;
@@ -2112,7 +2117,7 @@ static SDL_RWops *lookup (void *chan)
 }
 
 // Load a file into memory:
-void osload (char *p, void *addr, int max)
+void osload (char *p, void *addr, unsigned int max)
 {
 	int n ;
 	SDL_RWops *file ;
@@ -2128,7 +2133,7 @@ void osload (char *p, void *addr, int max)
 }
 
 // Save a file from memory:
-void ossave (char *p, void *addr, int len)
+void ossave (char *p, void *addr, unsigned int len)
 {
 	int n ;
 	SDL_RWops *file ;

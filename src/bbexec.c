@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.39a, 20-Dec-2023                                *
+*       Version 1.40a, 03-Apr-2024                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -85,7 +85,7 @@ void osbput (void *, unsigned char) ; // Write a byte to a file
 void setptr (void *, long long) ;	// Set the file pointer
 long long getext (void *) ;	// Get file length
 void osshut (void *) ;		// Close file(s)
-void osload (char*, void *, int) ; // Load a file to memory
+void osload (char*, void *, unsigned int) ; // Load a file to memory
 #ifdef CAN_SET_RTC
 void putims (const char *) ;	// Set real-time-clock
 #endif
@@ -954,7 +954,7 @@ static signed char* argue (signed char *ebx, heapptr *edi, int flag)
 }
 
 // Adjust the format pointers in nested structures to point into stack:
-static void fixup (void *edi, int ebx)
+static void fixup (void *edi, intptr_t ebx)
 {
 	edi += 4 ; // bump past size field (GCC extension)
 	while (1)
