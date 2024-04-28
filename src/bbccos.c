@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                         *
-*       Copyright (C) R. T. Russell, 2023                         *
+*       Copyright (C) R. T. Russell, 2024                         *
 *                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.46a, 14-Dec-2023                                *
+*       Version 0.46b, 27-Apr-2024                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -59,11 +59,15 @@ extern void *userRAM ;
 
 #if defined(__arm__) || defined(__aarch64__) || defined(__arm64__) || defined(__EMSCRIPTEN__)
 typedef __attribute__((aligned(1))) double variant;
-typedef __attribute__((aligned(1))) double udouble;
 #else
 typedef long double variant ;
-typedef double udouble ;
 #endif
+
+typedef __attribute__((aligned(1))) int unaligned_int;
+typedef __attribute__((aligned(1))) short unaligned_short;
+typedef __attribute__((aligned(1))) double unaligned_double;
+typedef __attribute__((aligned(1))) char* unaligned_charptr;
+typedef __attribute__((aligned(1))) long long unaligned_longlong;
 
 typedef struct tagSTR
 {
@@ -1205,19 +1209,20 @@ static int compare (void *src, void *dst, unsigned char type)
 		case 1:	return	(*(unsigned char*)dst > *(unsigned char*)src) -
 				(*(unsigned char*)dst < *(unsigned char*)src) ; 
 
-		case 4: return	(*(int*)dst > *(int*)src) - (*(int*)dst < *(int*)src) ; 
+		case 4: return	(*(unaligned_int*)dst > *(unaligned_int*)src) -
+				(*(unaligned_int*)dst < *(unaligned_int*)src) ; 
 
 		case 10:
-			if ((*(short*)(dst+8) == 0) && (*(short*)(src+8) == 0))
+			if ((*(unaligned_short*)(dst+8) == 0) && (*(unaligned_short*)(src+8) == 0))
 				goto case40 ;
 		    {
 			variant d, s ;
-			if (*(short*)(dst+8) == 0)
-				d = *(long long *)dst ;
+			if (*(unaligned_short*)(dst+8) == 0)
+				d = *(unaligned_longlong *)dst ;
 			else
 				d = *(variant *)dst ;
-			if (*(short*)(src+8) == 0)
-				s = *(long long *)src ;
+			if (*(unaligned_short*)(src+8) == 0)
+				s = *(unaligned_longlong *)src ;
 			else
 				s = *(variant *)src ;
 			return (d > s) - (d < s) ;
@@ -1225,16 +1230,16 @@ static int compare (void *src, void *dst, unsigned char type)
 		    
 		case 8:
 		    {
-			double d = *(udouble *)dst ;
-			double s = *(udouble *)src ;
+			double d = *(unaligned_double *)dst ;
+			double s = *(unaligned_double *)src ;
 			return (d > s) - (d < s) ;
 		    }
 
 		case 40:
 		case40:
 		    {
-			long long d = *(long long*)dst ;
-			long long s = *(long long*)src ;
+			long long d = *(unaligned_longlong*)dst ;
+			long long s = *(unaligned_longlong*)src ;
 			return (d > s) - (d < s) ;
 		    }
 
@@ -1261,7 +1266,7 @@ static int compare (void *src, void *dst, unsigned char type)
 	return 0 ;
 }
 
-static void shellsort (int dir, int ecx, void *ebp)
+static void shellsort (int dir, int ecx, void* ebp)
 {
 	int edx ;
 	unsigned int esi, edi ;
@@ -1290,7 +1295,7 @@ static void shellsort (int dir, int ecx, void *ebp)
 			while (num--)
 			    {
 				unsigned char type = *(unsigned char*)ebp++ ;
-				char *ebx = *(char **)ebp ;
+				char *ebx = *(unaligned_charptr*)ebp ;
 				ebp += sizeof(void *) ;
 				char *src = ebx + esi * (type & 15) ;
 				char *dst = ebx + edi * (type & 15) ;
@@ -1305,7 +1310,7 @@ static void shellsort (int dir, int ecx, void *ebp)
 				while (num--)
 				    {
 					unsigned char size = *(unsigned char*)ebp++ & 15 ;
-					char *ebx = *(char **)ebp ;
+					char *ebx = *(unaligned_charptr*)ebp ;
 					ebp += sizeof(void *) ;
 					char *src = ebx + esi * size ;
 					char *dst = ebx + edi * size ;

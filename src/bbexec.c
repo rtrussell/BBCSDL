@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.40a, 03-Apr-2024                                *
+*       Version 1.40a, 28-Apr-2024                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -1818,7 +1818,7 @@ VAR xeq (void)
 					else
 					    {
 						ISTORE(newtop, 0xF8000005) ;
-						*(short *)(newtop + 4) = 0x0D ;
+						SSTORE(newtop + 4, 0x0D) ;
 						check () ;
 						esp -= STRIDE ;
 						*(void **)esp = esi ;
@@ -3707,6 +3707,8 @@ VAR xeq (void)
 						char *edi = pfree + (char *) zero ;
 						if ((edx > edi) && (edx < (char *)esp))
 							edi = edx ;
+						else if ((edx == edi) && (ILOAD(ebp) != 1))
+							edi = (char *) ((intptr_t) edi | 3) ; // Align
 
 						type |= BIT6 ; // Flag array
 						ebx += (type & TMASK) ;
@@ -3808,6 +3810,8 @@ VAR xeq (void)
 							edi = edx ;  // tag structure
 							edx = pfree + (char *) zero ;
 						    }
+						else if (edx == edi)
+							edx = (char *) ((intptr_t) edx | 3) ; // Align
 
 						if (ecx == 0)
 							CSTORE(ebp, edi) ; // no array
@@ -3936,6 +3940,7 @@ VAR xeq (void)
 								eax = VLOAD(edi + ecx) ;
 							if (eax != edx)
 								error (10, NULL) ; // 'Bad DIM'
+							edx = pfree + zero ;
 						    }
 						else if (edx > (pfree + (char *) zero))
 						    {
@@ -3943,8 +3948,12 @@ VAR xeq (void)
 								edi -= edx - pfree - (char *) zero ;
 							ecx += edx - pfree - (char *) zero ;
 							fixup (pfree + zero, edi - pfree - (char *) zero) ;
+							edx = pfree + zero ;
 						    }
-						if ((ecx != 0) && memcmp (pfree + zero, edi, ecx))
+						else
+							edx = (char *) ((intptr_t) edx | 3) ; // Align3
+
+						if ((ecx != 0) && memcmp (edx, edi, ecx))
 							error (10, NULL) ; // 'Bad DIM statement'
 					    }
 
