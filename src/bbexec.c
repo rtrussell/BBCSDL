@@ -3,7 +3,8 @@
 *       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
-*       Broadcasting Corporation and used with their permission   *
+*       Broadcasting Corporation and used with their permission,  *
+*       it is not transferrable to a forked or derived work.      *                                                          *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
 *       Version 1.40a, 28-Apr-2024                                *

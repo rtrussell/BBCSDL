@@ -3,10 +3,11 @@
 *       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
-*       Broadcasting Corporation and used with their permission   *
+*       Broadcasting Corporation and used with their permission,  *
+*       it is not transferrable to a forked or derived work.      *                                                          *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.39a, 04-Feb-2024                                *
+*       Version 1.40a, 01-Jun-2024                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -2626,8 +2627,11 @@ int expra (void *ebp, int ecx, unsigned char type)
 					switch (op)
 					    {
 						case TOR:
-						case TAND:
 						case TEOR:
+							v = expr1 () ;
+							break ;
+
+						case TAND:
 							v = expr3 () ;
 							break ;
 

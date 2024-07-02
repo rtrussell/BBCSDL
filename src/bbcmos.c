@@ -44,8 +44,10 @@ void *dlsym (void *, const char *) ;
 #endif
 
 #if defined __i386__ || defined __x86_64__ || defined __arm__
+#ifndef __ANDROID__
 void sortup(void){} ;
 void sortdn(void){} ;
+#endif
 #endif 
 
 // Delared in bbmain.c:

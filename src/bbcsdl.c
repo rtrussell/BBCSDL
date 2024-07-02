@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.39a, 21-Feb-2024                                *
+*       Version 1.40a, 08-Jun-2024                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -85,7 +85,7 @@ unsigned int DIRoff = 19 ; // Used by Android x86-32 build
 
 // Performance tuning parameters:
 #define POLLT 2  // Poll for approaching vSync every 2 milliseconds 
-#define FGDLY 50 // Wait 50 * POLLT ms after returning to foreground
+#define FGDLY 80 // Wait 80 * POLLT ms after returning to foreground
 #define BUSYT 40 // Busy-wait for 40 ms after last user output event
 #define PACER 12 // 12 ms 'processing time' per frame (max. ~75 fps)
 #define MAXEV 10 // Don't refresh display if > 10 waiting events ...
@@ -628,9 +628,9 @@ if (SDLNet_Init() == -1)
 	SDL_SetHint ("SDL_TV_REMOTE_AS_JOYSTICK", "0") ;
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES) ;
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 1) ;
-	SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 5) ;
-	SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 6) ;
-	SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 5) ;
+	SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 8) ;
+	SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 8) ;
+	SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 8) ;
 #else
 	SDL_SetHint (SDL_HINT_THREAD_STACK_SIZE, "0x2000000") ;
 	SDL_SetHint (SDL_HINT_RENDER_DRIVER, "opengl") ;
@@ -1686,6 +1686,7 @@ static int maintick (void)
 			break ;
 
 		case SDL_RENDER_DEVICE_RESET:
+		case SDL_RENDER_TARGETS_RESET:
 			{
 				int w, h ;
 				SDL_Texture **p, *t = SDL_GetRenderTarget (renderer) ;
@@ -1701,6 +1702,12 @@ static int maintick (void)
 						*p = NULL ;
 					}
 				buttexture = MakeBackButton (renderer) ;
+				if (siztrp)
+					{
+						// Signal 'render device/targets reset'
+						putevt (siztrp, WM_SIZE, -1, (h << 16) | w) ; 
+						flags |= ALERT ;
+					}
 			}
 			break ;
 		}

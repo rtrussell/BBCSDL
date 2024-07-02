@@ -3,7 +3,7 @@
 ;*       Copyright (c) R. T. Russell, 2023                         *
 ;*       aPLib courtesy of Joergen Ibsen, www.ibsensoftware.com    *
 ;*                                                                 *
-;*       UNPACK.NAS Compressed file unpacker                       *
+;*       UNPACK.NAS Compressed file unpacker (32-bit version)      *
 ;\*****************************************************************/
 ;
         GLOBAL  unpack@20,verify@12

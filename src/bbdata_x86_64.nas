@@ -3,7 +3,7 @@
 ;*       Copyright (c) R. T. Russell, 2000-2024                    *
 ;*                                                                 *
 ;*       BBCDATA.NAS RAM data definitions                          *
-;*       Version 1.39a, 12-Mar-2024                                *
+;*       Version 1.40a, 12-Mar-2024                                *
 ;\*****************************************************************/
 ;
 MAX_PORTS       EQU     4       ; Maximum number of i/o ports

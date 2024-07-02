@@ -71,8 +71,8 @@ bbcsdl.exe: $(OBJ)
 sdlrun.o: sdlrun.c
 	$(CXX) -Wall -c -O2 $< -o $@
 
-unpack.o: unpack.nas
-	nasm --prefix _ -f win32 -s unpack.nas -o unpack.o
+unpack32.o: unpack32.nas
+	nasm --prefix _ -f win32 -s unpack32.nas -o unpack32.o
 
-sdlrun.exe: sdlrun.o unpack.o
-	$(CXX) sdlrun.o unpack.o -o sdlrun.exe -lmingw32 -mwindows -Wl,-s 
+sdlrun.exe: sdlrun.o unpack32.o
+	$(CXX) sdlrun.o unpack32.o -o sdlrun.exe -lmingw32 -mwindows -Wl,-s 

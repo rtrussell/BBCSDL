@@ -158,7 +158,7 @@ OTHERWISE	A part of the CASE clause specifying the action if no WHEN condition i
 PAGE	[1] A statement to set the address of (pointer to) where a program is loaded	PAGE=<pointer>
 	[2] A function returning the address of (pointer to) the current program	<n-var>=PAGE
 PI	A function returning the constant numeric value Pi (3.14159265...)		<n-var>=PI
-PLOT	[1] A statement to carry out a plotting operation identified by a numeric index	PLOT [BY] <numeric>,<numeric>,<numeric>
+PLOT	[1] A statement to carry out a plotting operation identified by a numeric index	PLOT <numeric>,<numeric>,<numeric>
 	[2] A statement to plot a solid rectangle 1/8 of the character width and height	PLOT [BY] <numeric>,<numeric>
 POINT	A function returning the logical colour (palette index) at given coordinates	<n-var>=POINT(<numeric>,<numeric>)
 POS	A function returning the horizontal position of the text caret (cursor) 0=left	<n-var>=POS

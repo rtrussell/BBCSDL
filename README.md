@@ -22,3 +22,6 @@ convenient place to put the function wrappers needed to support SYS in the in-br
 
 Not indicated in the diagram is that the in-browser edition uses different versions of bbc.h
 and bbcsdl.h from the rest.
+
+Note that the name 'BBC BASIC' is used by permission of the British Broadcasting Corporation
+and is not transferrable to a derived or forked work.

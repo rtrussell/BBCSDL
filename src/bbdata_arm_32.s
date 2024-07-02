@@ -3,7 +3,7 @@
 *       Copyright (c) R. T. Russell, 2018-2024                    *
 *                                                                 *
 *       BBCDAT.S RAM data definitions                             *
-*       Version 1.39a, 12-Mar-2024                                *
+*       Version 1.40a, 12-Mar-2024                                *
 \*****************************************************************/
 
 .equ	MAX_PORTS,4
