@@ -214,6 +214,7 @@ STR$~	A function returning the hexadecimal representation of its numeric argumen
 STRING$	A function returning a concatenation of multiple copies of the same string	<s-var>=STRING$(<numeric>,<string>)
 SUM	[1] A function returning the sum of all the elements of a numeric array		<n-var>=SUM(<n-array()>)
 	[2] A function returning a concatenation of all the elements of a string array	<s-var>=SUM(<s-array()>)
+	[3] An operator giving the modulo-2^64 integer sum of two numeric operands	<n-var>=<numeric> SUM <numeric>
 SUMLEN	A function returning the sum of the lengths of the elements of a string array	<n-var>=SUMLEN(<s-array()>)
 SWAP	[1] A statement swapping the values of two numeric variables of the same type 	SWAP <n-var>,<n-var>
 	[2] A statement swapping the values of two string variables			SWAP <s-var>,<s-var>

@@ -15,15 +15,6 @@ OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
 
 all: bbcsdl.exe sdlrun.exe
 
-bbmain.i: bbmain.c BBC.h
-	$(CXX) -E $< > bbmain.i
-
-bbexec.i: bbexec.c BBC.h
-	$(CXX) -E $< > bbexec.i
-
-bbeval.i: bbeval.c BBC.h
-	$(CXX) -E $< > bbeval.i
-
 bbmain.o: bbmain.c BBC.h
 	$(CXX) -c -O2 -freg-struct-return -ffast-math -fno-finite-math-only $< -o $@
 
