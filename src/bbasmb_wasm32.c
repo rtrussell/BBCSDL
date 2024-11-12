@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.39a, 12-Dec-2023                                *
+*       Version 1.40a, 12-Nov-2024                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -262,6 +262,10 @@ long long BBC_CreateRGBSurface(st flgs, st width, st height, st depth, st Rmask,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) SDL_CreateRGBSurface(flgs, width, height, depth, Rmask, Gmask, Bmask, Amask); }
 
+long long BBC_CreateRGBSurfaceFrom(st pixels, st width, st height, st depth, st pitch, st Rmask, st Gmask,
+	  st Bmask, st Amask, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDL_CreateRGBSurfaceFrom((void*)pixels, width, height, depth, pitch, Rmask, Gmask, Bmask, Amask); }
+
 long long BBC_CreateRGBSurfaceWithFormat(st flgs, st width, st height, st depth, st format, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) SDL_CreateRGBSurfaceWithFormat(flgs, width, height, depth, format); }
@@ -466,6 +470,10 @@ long long BBC_CaptureMouse(st enabled, st i1, st i2, st i3, st i4, st i5, st i6,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_CaptureMouse(enabled); }
 
+long long BBC_CreateColorCursor(st surface, st hot_x, st hot_y, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return (intptr_t) SDL_CreateColorCursor((SDL_Surface *)surface, hot_x, hot_y); }
+
 long long BBC_Delay(st ms, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ SDL_Delay(ms); return 0; }
@@ -481,6 +489,10 @@ long long BBC_HasIntersection(st recta, st rectb, st i2, st i3, st i4, st i5, st
 long long BBC_IntersectRectAndLine(st rect, st X1, st Y1, st X2, st Y2, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_IntersectRectAndLine((const SDL_Rect*) rect, (int*) X1, (int*) Y1, (int*) X2, (int*) Y2); }
+
+long long BBC_SetCursor(st cursor, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ SDL_SetCursor((SDL_Cursor *)cursor); return 0; }
 
 long long BBC_SetHint(st name, st value, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
@@ -647,7 +659,7 @@ long long BBC_emscripten_run_script_string(st script, st i1, st i2, st i3, st i4
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) emscripten_run_script_string((const char*) script); }
 
-#define NSYS 136
+#define NSYS 139
 
 static const char *sysname[NSYS] = {
 	"B2D_GetProcAddress",
@@ -684,7 +696,9 @@ static const char *sysname[NSYS] = {
 	"SDL_ComposeCustomBlendMode",
 	"SDL_ConvertAudio",
 	"SDL_ConvertSurfaceFormat",
+	"SDL_CreateColorCursor",
 	"SDL_CreateRGBSurface",
+	"SDL_CreateRGBSurfaceFrom",
 	"SDL_CreateRGBSurfaceWithFormat",
 	"SDL_CreateTexture",
 	"SDL_CreateTextureFromSurface",
@@ -744,6 +758,7 @@ static const char *sysname[NSYS] = {
 	"SDL_RenderReadPixels",
 	"SDL_RenderSetClipRect",
 	"SDL_SetColorKey",
+	"SDL_SetCursor",
 	"SDL_SetHint",
 	"SDL_SetPaletteColors",
 	"SDL_SetRenderDrawBlendMode",
@@ -822,7 +837,9 @@ static void *sysfunc[NSYS] = {
 	BBC_ComposeCustomBlendMode,
 	BBC_ConvertAudio,
 	BBC_ConvertSurfaceFormat,
+	BBC_CreateColorCursor,
 	BBC_CreateRGBSurface,
+	BBC_CreateRGBSurfaceFrom,
 	BBC_CreateRGBSurfaceWithFormat,
 	BBC_CreateTexture,
 	BBC_CreateTextureFromSurface,
@@ -882,6 +899,7 @@ static void *sysfunc[NSYS] = {
 	WASM_RenderReadPixels,
 	WASM_RenderSetClipRect,
 	BBC_SetColorKey,
+	BBC_SetCursor,
 	BBC_SetHint,
 	BBC_SetPaletteColors,
 	BBC_SetRenderDrawBlendMode,
