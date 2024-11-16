@@ -2,7 +2,7 @@
 *	  BBC BASIC for SDL 2.0 (Windows edition)		   *
 *	  Copyright (c) R. T. Russell, 2024			   *
 *								   *
-*	  Version 1.3, 28-Jun-2024				   *
+*	  Version 1.4, 15-Nov-2024				   *
 \******************************************************************/
 
 #include <windows.h>
@@ -219,7 +219,8 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	// Enclose in quotes in case embedded space(s):
 	strcpy (szEmptyFile, "\042") ;
 	strcat (szEmptyFile, szFileName) ;
-	strcat (szEmptyFile, "\042") ;
+	strcat (szEmptyFile, "\042 ") ;
+	strcat (szEmptyFile, szCmdLine) ;
 
 	// Run BBCSDL:
 	strcpy (szLibrary, szBinaries) ;
