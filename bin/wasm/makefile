@@ -3,11 +3,11 @@
 VPATH  = ../BBCSDL/src ../BBCSDL/include
 
 CXX = emcc -s USE_PTHREADS=1 -s USE_SDL=2 -s USE_SDL_TTF=2 -s USE_SDL_NET=2 \
-      -I . -I ../BBCSDL/include -Wall -Wno-pthreads-mem-growth
+      -I . -I ../BBCSDL/include -pthread -Wall -Wno-pthreads-mem-growth
 
 LXX = emcc -s USE_PTHREADS=1 -s USE_SDL=2 -s USE_SDL_TTF=2 -s USE_SDL_NET=2 -s MAXIMUM_MEMORY=1gb \
       -s PTHREAD_POOL_SIZE=2 -s ALLOW_MEMORY_GROWTH=1 -s WASM=1 -s ASSERTIONS=0 -s STACK_SIZE=5MB \
-      -I . -I ../BBCSDL/include -Wall -Wno-pthreads-mem-growth
+      -I . -I ../BBCSDL/include -pthread -Wall -Wno-pthreads-mem-growth
 
 OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
       bbcvdu.o bbcvtx.o flood.o sort.o bbdata.o bbcsdl.o \
