@@ -84,6 +84,7 @@ void *osopen (int, char *) ;	// Open a file
 unsigned char osbget (void *, int*) ; // Read a byte from a file
 void osbput (void *, unsigned char) ; // Write a byte to a file
 void setptr (void *, long long) ;	// Set the file pointer
+void setext (void *, long long) ;	// Set the file extent
 long long getext (void *) ;	// Get file length
 void osshut (void *) ;		// Close file(s)
 void osload (char*, void *, unsigned int) ; // Load a file to memory
@@ -1938,7 +1939,12 @@ VAR xeq (void)
 /************************************  EXT  ************************************/
 
 			case TEXTR:
-				error (255, "Sorry, not implemented") ;
+				long long n ;
+				void *chan = channel () ;
+				equals () ;
+				n = expri () ;
+				setext (chan, n) ;
+				break ;
 
 /************************************ PAGE *************************************/
 

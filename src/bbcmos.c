@@ -1764,12 +1764,21 @@ int adval (int n)
 	    }
 	if (n <= -1)
 	    	return (kbdqr - kbdqw - 1) & 0xFF ;
-
+	if (n >= 7 | n <= 9)
+	    {
+		int x, y, b;
+		mouse(&x, &y, &b);
+		if (n == 7) return x;
+		if (n == 8) return y;
+		if (n == 9) return b;
+	    }
+	
 	if (Joystick == NULL)
 	    {
 		Joystick = SDL_JoystickOpen (0) ;
 		if (Joystick == NULL)
-			error (245, "Device unavailable") ;
+			return 0 ;		// ADVAL should not generate an error
+//			error (245, "Device unavailable") ;
 	    }
 	if (n == 0)
 	    {
@@ -2392,6 +2401,12 @@ long long getext (void *chan)
 	if (newptr > size)
 		return newptr ;
 	return size ;
+}
+
+// Set file size:
+void setext (void *chan, long long ptr)
+{
+	return;		// TODO: unimplemented
 }
 
 // Get EOF status:

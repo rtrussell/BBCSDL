@@ -1451,6 +1451,12 @@ long long getext (void *chan)
 	return size ;
 }
 
+// Set file size:
+void setext (void *chan, long long ptr)
+{
+	return;		// TODO: unimplemented
+}
+
 // Get EOF status:
 long long geteof (void *chan)
 {
