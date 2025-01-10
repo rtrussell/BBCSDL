@@ -1764,13 +1764,14 @@ int adval (int n)
 	    }
 	if (n <= -1)
 	    	return (kbdqr - kbdqw - 1) & 0xFF ;
-	if (n >= 7 | n <= 9)
+	if ((n >= 7) || (n <= 9))
 	    {
 		int x, y, b;
 		mouse(&x, &y, &b);
 		if (n == 7) return x;
 		if (n == 8) return y;
-		if (n == 9) return b;
+		// This is annoying, MOUSE returns %lmr but ADVAL(9) returns %rml
+		if (n == 9) return (b & 0xFFFA) | ((b & 1)<<2) | ((b & 4)>>2);
 	    }
 	
 	if (Joystick == NULL)
@@ -1778,6 +1779,7 @@ int adval (int n)
 		Joystick = SDL_JoystickOpen (0) ;
 		if (Joystick == NULL)
 			return 0 ;		// ADVAL should not generate an error
+						// Yes, RISC OS gets this wrong
 //			error (245, "Device unavailable") ;
 	    }
 	if (n == 0)
