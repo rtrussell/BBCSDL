@@ -2406,9 +2406,22 @@ long long getext (void *chan)
 }
 
 // Set file size:
-void setext (void *chan, long long ptr)
+void setext (void *chan, long long ext)
 {
-	return;		// TODO: unimplemented
+	// SDL interface appears not to have a 'truncate' facility.
+	// Initial code.
+	// If we do this manually, this works to extend a file, but not to truncate it.
+	// If we truncate, we also need to pull PTR back if oldptr>newext.
+	// This needs more research.
+	long long oldext = getext(chan);		// Get current EXT
+	if ((ext > 0) && (ext > oldext))		// Care about negative numbers?
+	{
+		long long oldptr = getptr(chan);	// Get current PTR
+		setptr (chan, getext(chan));		// Move PTR to end of file
+		setptr (chan, ext-1);			// Move PTR past end of file, extending it
+		osbput (chan, 0);			// Write a byte to fix it
+		setptr (chan, oldptr);			// Restore PTR
+	}
 }
 
 // Get EOF status:
