@@ -3623,6 +3623,7 @@ VAR xeq (void)
 					esi++ ;
 					quiet () ;
 				    }
+// TODO: SOUND ON
 				else
 				    {
 					short chan = expri () ;
