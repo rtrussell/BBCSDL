@@ -1841,6 +1841,7 @@ void sound (short chan, signed char ampl, unsigned char pitch, unsigned char dur
 }
 
 // Disable sound generation:
+// TODO: SOUND ON, SOUND OFF
 void quiet (void)
 {
 	int i ;
@@ -2154,7 +2155,7 @@ void ossave (char *p, void *addr, unsigned int len)
 		error (253, "Bad string") ;
 	file = SDL_RWFromFile (path, "w+b") ;
 	if (file == NULL)
-		error (214, "Couldn't create file") ;
+		error (192, "Couldn't create file") ;
 	n = SDL_RWwrite(file, addr, 1, len) ;
 	BBC_RWclose (file) ;
 	if (n < len)
@@ -2406,21 +2407,39 @@ long long getext (void *chan)
 }
 
 // Set file size:
-void setext (void *chan, long long ext)
+void setext (void *chan, long long newext)
 {
-	// SDL interface appears not to have a 'truncate' facility.
-	// Initial code.
-	// If we do this manually, this works to extend a file, but not to truncate it.
-	// If we truncate, we also need to pull PTR back if oldptr>newext.
-	// This needs more research.
-	long long oldext = getext(chan);		// Get current EXT
-	if ((ext > 0) && (ext > oldext))		// Care about negative numbers?
-	{
-		long long oldptr = getptr(chan);	// Get current PTR
-		setptr (chan, getext(chan));		// Move PTR to end of file
-		setptr (chan, ext-1);			// Move PTR past end of file, extending it
+	long long oldext;
+	long long oldptr;
+
+	if (newext < 0) return;				// Ignore negative extent TODO: error?
+	oldext = getext(chan);				// Get current EXT, departs here if not open
+	if (newext == oldext) return;			// Quickly deal with no-op
+	oldptr = getptr(chan);				// Get current PTR
+	if (newext > oldext)
+	{						// Extending
+		// NB: If any of these error, we lose PTR
+		setptr (chan, oldext);			// Move PTR to end of file
+		setptr (chan, newext-1);		// Move PTR past end of file, extending it
 		osbput (chan, 0);			// Write a byte to fix it
 		setptr (chan, oldptr);			// Restore PTR
+	}
+	else
+	{						// Truncating
+		// SDL interface does not have a 'truncate' facility.
+		// Documentation recommends doing this manuualy via the host API.
+		if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
+		{					// Can't change EXT on a port
+			setptr (chan, newext);		// Move PTR to new end of file
+#if defined __WINDOWS__
+			SDL_RWops *file = lookup (chan) ;
+			SetEndOfFile(file->hidden.windowsio.h);
+		// TODO
+		// else -> other platforms
+#endif
+			if (oldptr < newext)
+				setptr (chan, oldptr);	// Restore PTR
+		}
 	}
 }
 
