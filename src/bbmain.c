@@ -42,7 +42,7 @@ long long loadi (void *, unsigned char) ;
 // Global jump buffer:
 jmp_buf env ;
 
-#ifdef __llvm__
+#if defined __llvm__ || defined __riscv__
 signed char *esi ;		// Program pointer
 heapptr *esp ;			// Stack pointer
 #endif
@@ -1567,7 +1567,9 @@ int basic (void *ecx, void *edx, void *prompt)
 		clrtrp () ;
 		osline (accs) ;
 		*(char *)(memchr (accs, 0x0D, 256) + 1) = 0 ; // Add NUL term for sscanf
+#ifndef __riscv__      
 		crlf () ;
+#endif
 
 		sscanf (accs, "%hu%n", &lino, &n) ;
 		if (lino == 0)

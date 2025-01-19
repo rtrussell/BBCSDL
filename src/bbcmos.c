@@ -7,7 +7,7 @@
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.40a, 03-Apr-2024                                *
+*       Version 1.40a, 28-Apr-2024 - 07-Jan-2025 Added EXT=, ADVAL7/8/9 *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -2409,6 +2409,7 @@ long long getext (void *chan)
 // Set file size:
 void setext (void *chan, long long newext)
 {
+#if defined __WINDOWS__
 	long long oldext;
 	long long oldptr;
 
@@ -2427,20 +2428,20 @@ void setext (void *chan, long long newext)
 	else
 	{						// Truncating
 		// SDL interface does not have a 'truncate' facility.
-		// Documentation recommends doing this manuualy via the host API.
+		// Documentation recommends doing this manually via the host API.
 		if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
 		{					// Can't change EXT on a port
 			setptr (chan, newext);		// Move PTR to new end of file
-#if defined __WINDOWS__
 			SDL_RWops *file = lookup (chan) ;
 			SetEndOfFile(file->hidden.windowsio.h);
-		// TODO
-		// else -> other platforms
-#endif
 			if (oldptr < newext)
 				setptr (chan, oldptr);	// Restore PTR
 		}
 	}
+#else
+	// TODO -> other platforms
+	return;
+#endif
 }
 
 // Get EOF status:

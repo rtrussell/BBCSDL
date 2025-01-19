@@ -4,10 +4,10 @@
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission,  *
-*       it is not transferrable to a forked or derived work.      *                                                          *
+*       it is not transferrable to a forked or derived work.      *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.40a, 01-Jun-2024                                *
+*       Version 1.40a, 28-Apr-2024 - 07-Jan-2025 RISCV #ifdefs    *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -21,7 +21,80 @@
 #include <setjmp.h>
 #include "BBC.h"
 
-#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__
+#if defined __riscv__
+#define floorl floor
+static long long powers_of_10[] = {
+   -1LL,                      // 10^0
+   -10LL,
+   -100LL,
+   -1000LL,
+   -10000LL,
+   -100000LL,                 // 10^5
+   -1000000LL,
+   -10000000LL,
+   -100000000LL,
+   -1000000000LL,
+   -10000000000LL,            // 10^10
+   -100000000000LL,
+   -1000000000000LL,
+   -10000000000000LL,
+   -100000000000000LL,
+   -1000000000000000LL,       // 10^15
+   -10000000000000000LL,
+   -100000000000000000LL,
+   -1000000000000000000LL     // 10^18
+};
+
+int print_lld(char *buffer, long long i) {
+   char *bp = buffer;
+   if (i == 0) {
+      *bp++ = '0';
+   } else {
+      if (i > 0) {
+         i = -i;
+      } else {
+         *bp++ = '-';
+      }
+      // Start at 10^18
+      long long *p = powers_of_10 + 18;
+      // Skip to the lowest power of 10 that is <= i
+      while (*p < i) {
+         p--;
+      }
+      // Flag is used to supress leading zeros
+      int flag = 0;
+      // For each remaining power of 10
+      while (p >= powers_of_10) {
+         int digit = '0';
+         // Repeated subtract from i
+         while (i <= *p) {
+            i -= *p;
+            digit++;
+         }
+         // Output the digit
+         if (digit > '0' || flag) {
+            *bp++ = digit;
+            flag = 1;
+         }
+         p--;
+      }
+   }
+   *bp++ = 0;
+   return strlen(buffer);
+}
+
+int print_llX(char *buffer, unsigned long long u) {
+   unsigned long u1 = (unsigned long)(u >> 32);
+   unsigned long u2 = (unsigned long)(u & 0xffffffff);
+   if (u1) {
+      return sprintf(buffer, "%lX%08lX", u1, u2);
+   } else {
+      return sprintf(buffer, "%lX", u2);
+   }
+}
+#endif
+
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__ || defined __riscv__
 #define powl pow
 #define sqrtl sqrt
 #define sinl sin
@@ -80,6 +153,9 @@ unsigned char osrdch (void) ;	// Get character from console input
 int oskey (int) ;		// Wait for character or test key
 int getime (void) ;		// Return centisecond count
 int getims (void) ;		// Get clock time string to accs
+#ifdef __riscv__
+int getmode(void) ;		// Get current screen mode
+#endif
 int vtint (int, int) ;		// Get RGB pixel colour or -1
 int vpoint (int, int) ;		// Get palette index or -1
 void getcsr (int*, int*) ;	// Get text cursor (caret) coords
@@ -97,7 +173,7 @@ void *sysadr (char *) ;		// Get the address of an API function
 // Global jump buffer:
 extern jmp_buf env ;
 
-#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__ || defined __riscv__
 static void setfpu(void) {}
 static double xpower[9] = {1.0e1, 1.0e2, 1.0e4, 1.0e8, 1.0e16, 1.0e32, 1.0e64,
 			   1.0e128, 1.0e256} ;
@@ -148,7 +224,11 @@ int str (VAR v, char *dst, int format)
 		if (prec == 0) prec = 9 ;
 		if (v.i.t == 0)
 		    {
+#ifdef __riscv__
+			n = print_lld(dst, v.i.n);
+#else
 			n = sprintf(dst, "%lld", v.i.n) ; // ARM (no 80-bit float)
+#endif
 			if (n <= prec) break ;
 			v.f = v.i.n ;
 		    }
@@ -180,10 +260,12 @@ int str (VAR v, char *dst, int format)
 // Convert a numeric value to a NUL-terminated hexadecimal string:
 int strhex (VAR v, char *dst, int field)
 {
+#ifndef __riscv__
 #ifdef _WIN32
 	char fmt[7] = "%*I64X" ;
 #else
 	char fmt[6] = "%*llX" ;
+#endif
 #endif
 	long long n ;
 
@@ -198,12 +280,16 @@ int strhex (VAR v, char *dst, int field)
 
 	if ((liston & BIT2) == 0)
 		n &= 0xFFFFFFFF ;
-
+#ifdef __riscv__
+   // TODO: implement field width
+	return print_llX(dst, n);
+#else
 	return sprintf(dst, fmt, field, n) ;
+#endif
 }
 
 // Multiply by an integer-power of 10:
-#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__ || defined __riscv__
 static double xpow10 (double n, int p)
 {
 	int f = 0, i = 0 ;
@@ -1220,7 +1306,11 @@ VAR item (void)
 /************************************ MODE *************************************/
 
 		case TMODE:
+#ifdef __riscv__
+			v.i.n = getmode() ;
+#else
 			v.i.n = modeno ;
+#endif
 			v.i.t = 0 ;
 			return v ;
 
@@ -1485,7 +1575,7 @@ VAR item (void)
 
 		case TPI:
 			if (*esi == '#') esi++ ;
-#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__ || defined __riscv__
 			v.i.n = 0x400921FB54442D18L ;
 			v.i.t = 1 ;
 #else
@@ -1545,7 +1635,7 @@ VAR item (void)
 /************************************* DEG *************************************/
 
 		case TDEG:
-#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__ || defined __riscv__
 			v.i.n = 0x404CA5DC1A63C1F8L ;
 			v.i.t = 1 ;
 #else
@@ -1557,7 +1647,7 @@ VAR item (void)
 /************************************* RAD *************************************/
 
 		case TRAD:
-#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__ || defined __riscv__
 			v.i.n = 0x3F91DF46A2529D39L ;
 			v.i.t = 1 ;
 #else
@@ -1591,7 +1681,7 @@ VAR item (void)
 #endif
 			{
 			VAR loge ;
-#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__
+#if defined __arm__ || defined __aarch64__ || defined __EMSCRIPTEN__ || defined __ANDROID__ || defined __riscv__
 			loge.i.n = 0x3FDBCB7B1526E50EL ;
 			loge.i.t = 1 ;
 #else

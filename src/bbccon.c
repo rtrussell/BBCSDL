@@ -3,7 +3,7 @@
 *       Copyright (C) R. T. Russell, 2021-2024                     *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.46a, 03-Apr-2024                                 *
+*       Version 1.40a, 28-Apr-2024 - 07-Jan-2025 Added EXT=        *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -1452,9 +1452,41 @@ long long getext (void *chan)
 }
 
 // Set file size:
-void setext (void *chan, long long ptr)
+void setext (void *chan, long long newext)
 {
-	return;		// TODO: unimplemented
+	long long oldext;
+	long long oldptr;
+
+	if (newext < 0) return;				// Ignore negative extent TODO: error?
+	oldext = getext(chan);				// Get current EXT, departs here if not open
+	if (newext == oldext) return;			// Quickly deal with no-op
+	oldptr = getptr(chan);				// Get current PTR
+	if (newext > oldext)
+	{						// Extending
+		// NB: If any of these error, we lose PTR
+		setptr (chan, oldext);			// Move PTR to end of file
+		setptr (chan, newext-1);		// Move PTR past end of file, extending it
+		osbput (chan, 0);			// Write a byte to fix it
+		setptr (chan, oldptr);			// Restore PTR
+	}
+	else
+	{						// Truncating
+		// Console application, so do this manually via the host API.
+//		if ((chan > (void *)MAX_PORTS) && (chan <= (void *)(MAX_PORTS+MAX_FILES)))
+//		{					// Can't change EXT on a port
+//			setptr (chan, newext);		// Move PTR to new end of file
+//#ifdef _WIN32
+////			intptr_t file = _get_osfhandle (fileno (lookup (chan))) ;
+////			SetEndOfFile((HANDLE) file);
+//		// TODO
+//		// else -> other platforms
+////			
+////			SetEndOfFile(fileno (lookup (chan)));
+//#endif
+//			if (oldptr < newext)
+//				setptr (chan, oldptr);	// Restore PTR
+//		}
+	}
 }
 
 // Get EOF status:

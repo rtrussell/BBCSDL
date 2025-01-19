@@ -1,0 +1,10 @@
+06-Jan-2025
+EXT#= hands over to I/O interface layer, added dummy setext() to fill in later.
+ADVAL 7,8,9 implemented,
+
+11-Jan-2025
+setext() extend works for all, truncate works for Windows
+to do: truncate for non-windows, truncate for console in bbcon.c.
+
+RISCV: update diagram of source files.
+
