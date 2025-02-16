@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2025  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission,  *
-*       it is not transferrable to a forked or derived work.      *                                                          *
+*       it is not transferrable to a forked or derived work.      *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.40a, 01-Jun-2024                                *
+*       Version 1.41a, 13-Feb-2025                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -93,6 +93,7 @@ long long getptr (void*) ;	// Get file pointer
 long long getext (void*) ;	// Get file length
 long long geteof (void*) ;	// Get EOF status
 void *sysadr (char *) ;		// Get the address of an API function
+int getmode (void) ;		// Get the current MODE number
 
 // Global jump buffer:
 extern jmp_buf env ;
@@ -197,7 +198,12 @@ int strhex (VAR v, char *dst, int field)
 		n = v.i.n ;
 
 	if ((liston & BIT2) == 0)
+	    {
+		int i = n ;
+		if (i != n)
+			error (20, NULL) ; // 'Number too big'
 		n &= 0xFFFFFFFF ;
+	    }
 
 	return sprintf(dst, fmt, field, n) ;
 }
@@ -1220,7 +1226,7 @@ VAR item (void)
 /************************************ MODE *************************************/
 
 		case TMODE:
-			v.i.n = modeno ;
+			v.i.n = getmode() ;
 			v.i.t = 0 ;
 			return v ;
 

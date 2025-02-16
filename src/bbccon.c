@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                          *
-*       Copyright (C) R. T. Russell, 2021-2024                     *
+*       Copyright (C) R. T. Russell, 2021-2025                     *
 *                                                                  *
 *       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.46a, 03-Apr-2024                                 *
+*       Version 0.48a, 13-Feb-2025                                 *
 \******************************************************************/
 
 #define _GNU_SOURCE
@@ -447,6 +447,12 @@ int vtint (int x, int y)
 {
 	error (255, "Sorry, not implemented") ;
 	return -1 ;
+}
+
+// Get current MODE number:
+int getmode (void)
+{
+	return modeno ;
 }
 
 // Get nearest palette index:
@@ -1449,6 +1455,12 @@ long long getext (void *chan)
 	if (newptr > size)
 		return newptr ;
 	return size ;
+}
+
+// Set file size (if possible):
+void setext (void *chan, long long ptr)
+{
+	error (255, "Sorry, not implemented") ;
 }
 
 // Get EOF status:

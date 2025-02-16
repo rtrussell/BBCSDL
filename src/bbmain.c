@@ -4,7 +4,8 @@
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission,  *
-*       it is not transferrable to a forked or derived work.      *                                                          *
+*       it is not transferrable to a forked or derived work.      *
+*                                                                 *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
 *       Version 1.40a, 03-Apr-2024                                *

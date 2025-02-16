@@ -335,6 +335,7 @@ _SDL_NumJoysticks
 _SDL_NumSensors
 _SDL_OpenAudio
 _SDL_OpenAudioDevice
+_SDL_OpenURL
 _SDL_PauseAudio
 _SDL_PauseAudioDevice
 _SDL_PeepEvents

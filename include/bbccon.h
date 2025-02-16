@@ -1,9 +1,9 @@
 /******************************************************************\
 *       BBC BASIC Minimal Console Version                          *
-*       Copyright (c) R. T. Russell, 2000-2024                     *
+*       Copyright (c) R. T. Russell, 2000-2025                     *
 *                                                                  *
 *       bbccon.h constant definitions                              *
-*       Version v0.47, 09-Oct-2024                                 *
+*       Version v0.48, 02-Feb-2025                                 *
 \******************************************************************/
 
 // System constants :
@@ -138,6 +138,7 @@ typedef struct tagRND
 extern unsigned char colmsk ; 	// Mask for maximum number of colours
 extern unsigned char vflags ;	// VDU drivers flags byte
 extern signed char scroln ; 	// Scroll counter in paged mode
+extern char modeno ;		// MODE number
 extern unsigned char cmcflg ;
 extern char sclflg ;
 extern char reflag, sysflg ;

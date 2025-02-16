@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2025  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.40a, 03-Apr-2024                                *
+*       Version 1.41a, 13-Feb-2025                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -1033,6 +1033,12 @@ int vtint (int x, int y)
 {
 	pushev (EVT_TINT, (void *)(intptr_t)x, (void *)(intptr_t)y) ;
 	return waitev () ;
+}
+
+// Get current MODE number:
+int getmode (void)
+{
+	return modeno ;
 }
 
 // Get nearest palette index:
@@ -2392,6 +2398,12 @@ long long getext (void *chan)
 	if (newptr > size)
 		return newptr ;
 	return size ;
+}
+
+// Set file size (if possible):
+void setext (void *chan, long long ptr)
+{
+	error (255, "Sorry, not implemented") ;
 }
 
 // Get EOF status:
