@@ -1,0 +1,286 @@
+     1                                  ;/*****************************************************************;*	BBC BASIC for SDL 2.0 (Windows edition)			   *
+     3                                  ;*	Copyright (c) R. T. Russell, 2024			   *
+     4                                  ;*	aPLib courtesy of Joergen Ibsen, www.ibsensoftware.com	   *
+     5                                  ;*								   *
+     6                                  ;*	UNPACK.NAS Compressed file unpacker (64-bit version)	   *
+     7                                  ;\*****************************************************************/
+     8                                  ;
+     9                                  	GLOBAL  unpack,verify
+    10                                  	EXTERN  ReadFile,SetFilePointer
+    11                                  ;
+    12                                  	SEGMENT .text
+    13                                  ;
+    14                                  BUFSIZ  EQU	512
+    15                                  ;
+    16                                  ; Parameters: rcx = hFile
+    17                                  ;	      rdx = lpBuffer
+    18                                  ;	      r8  = nNumberOfBytesToVerify
+    19                                  ;     Result: eax = non-zero if different
+    20                                  ;  Preserved: rbx, rbp, rdi, rsi, r12, r13, r14, r15
+    21                                  ;
+    22                                  verify:
+    23 00000000 55                      	push	rbp
+    24 00000001 56                      	push	rsi
+    25 00000002 57                      	push	rdi
+    26 00000003 4889E5                  	mov	rbp,rsp		; copy stack pointer
+    27 00000006 4987C8                  	xchg	rcx,r8		; rcx = nBytes, r8 = hFile
+    28 00000009 4889D7                  	mov	rdi,rdx		; lpBuffer
+    29                                  
+    30 0000000C BA00020000              	mov	edx,BUFSIZ
+    31 00000011 48F7DA                  	neg	rdx
+    32 00000014 4821D4                  	and	rsp,rdx		; align stack pointer
+    33 00000017 F7DA                    	neg	edx
+    34 00000019 4829D4                  	sub	rsp,rdx		; make space on stack
+    35 0000001C 4889E6                  	mov	rsi,rsp
+    36                                  
+    37 0000001F 89C8                    vloop:	mov	eax,ecx
+    38 00000021 39D0                    	cmp	eax,edx		; remaining >- BUFSIZ ?
+    39 00000023 7602                    	jbe	vloop1
+    40 00000025 89D0                    	mov	eax,edx		; If so, use BUFSIZ
+    41                                  	
+    42 00000027 4150                    vloop1:	push	r8
+    43 00000029 50                      	push	rax		; Bytes to read
+    44 0000002A 51                      	push	rcx		; Bytes remaining
+    45 0000002B 52                      	push	rdx		; BUFSIZ
+    46                                  
+    47 0000002C 4C89C1                  	mov	rcx,r8		; hFile
+    48 0000002F 4889F2                  	mov	rdx,rsi		; lpBuffer
+    49 00000032 4989C0                  	mov	r8,rax		; nNumberOfBytesToRead
+    50 00000035 4531C9                  	xor	r9d,r9d		; lpNumberOfBytesRead
+    51 00000038 6A00                    	push	byte 0		; lpOverlapped
+    52                                  
+    53 0000003A 4883EC20                	sub	rsp,32		; Shadow space
+    54 0000003E E8(00000000)            	call	ReadFile
+    55 00000043 4883C428                	add	rsp,40
+    56                                  
+    57 00000047 5A                      	pop	rdx
+    58 00000048 58                      	pop	rax		; rax = bytes remaining
+    59 00000049 59                      	pop	rcx		; rcx = bytes just read
+    60 0000004A 4158                    	pop	r8
+    61                                  
+    62 0000004C 29C8                    	sub	eax,ecx		; Adjust bytes remaining
+    63 0000004E E304                    	jrcxz	vloop2
+    64 00000050 56                      	push	rsi
+    65 00000051 F3A6                    	repz	cmpsb		; Compare file with memory
+    66 00000053 5E                      	pop	rsi
+    67                                  
+    68 00000054 91                      vloop2:	xchg	eax,ecx		; ecx <- remaining, eax <- result
+    69 00000055 7504                    	jnz	vloopx		; Different, so bailout
+    70 00000057 09C9                    	or	ecx,ecx		; Anything remaining?
+    71 00000059 75C4                    	jnz	vloop		; Continue comparing
+    72                                  
+    73 0000005B 4889EC                  vloopx:	mov	rsp,rbp		; Restore stack pointer
+    74 0000005E 5F                      	pop	rdi
+    75 0000005F 5E                      	pop	rsi
+    76 00000060 5D                      	pop	rbp
+    77 00000061 C3                      	ret
+    78                                  ;
+    79                                  ; Parameters: rcx = hFile
+    80                                  ;	      rdx = lpBuffer
+    81                                  ;	      r8 = nNumberOfBytesToRead
+    82                                  ;	      r9 = lpNumberOfBytesRead
+    83                                  ;	[rsp+40] = lpOverlapped
+    84                                  ;  Preserved: rbx, rbp, rdi, rsi, r12, r13, r14, r15
+    85                                  ;
+    86                                  unpack:
+    87 00000062 488364242801            	and	qword [rsp+40],byte 1	; Test bit 0, zero remainder
+    88 00000068 0F84(00000000)          	jz	near ReadFile	; n.b. lpOverlapped = NULL
+    89                                  
+    90 0000006E 55                      	push	rbp
+    91 0000006F 4889E5                  	mov	rbp,rsp		; copy stack pointer
+    92 00000072 4989CA                  	mov	r10,rcx		; hFile
+    93                                  
+    94 00000075 B800020000              	mov	eax,BUFSIZ
+    95 0000007A 48F7D8                  	neg	rax
+    96 0000007D 4821C4                  	and	rsp,rax		; align stack pointer
+    97 00000080 4889E1                  	mov	rcx,rsp
+    98 00000083 48F7D8                  	neg	rax
+    99 00000086 4829C4                  	sub	rsp,rax		; make space on stack
+   100                                  
+   101 00000089 53                      	push	rbx
+   102 0000008A 56                      	push	rsi
+   103 0000008B 57                      	push	rdi
+   104                                  
+   105 0000008C 52                      	push	rdx
+   106                                  
+   107 0000008D 4889CE                  	mov	rsi,rcx
+   108 00000090 4889D7                  	mov	rdi,rdx
+   109                                  
+   110 00000093 FC                      	cld
+   111 00000094 B280                    	mov	dl,80h
+   112 00000096 31DB                    	xor	ebx,ebx
+   113                                  
+   114                                  literal:
+   115 00000098 E8F3000000              	call	getbyte
+   116 0000009D AA                      	stosb
+   117 0000009E B302                    	mov	bl,2
+   118                                  nexttag:
+   119 000000A0 E880000000              	call	getbit
+   120 000000A5 73F1                    	jnc	literal
+   121                                  
+   122 000000A7 31C9                    	xor	ecx,ecx
+   123 000000A9 E877000000              	call	getbit
+   124 000000AE 731D                    	jnc	codepair
+   125 000000B0 31C0                    	xor	eax,eax
+   126 000000B2 E86E000000              	call	getbit
+   127 000000B7 7324                    	jnc	shortmatch
+   128 000000B9 B302                    	mov	bl,2
+   129 000000BB FFC1                    	inc	ecx
+   130 000000BD B010                    	mov	al,10h
+   131                                  getmorebits:
+   132 000000BF E861000000              	call	getbit
+   133 000000C4 10C0                    	adc	al,al
+   134 000000C6 73F7                    	jnc	getmorebits
+   135 000000C8 754C                    	jnz	domatch
+   136 000000CA AA                      	stosb
+   137 000000CB EBD3                    	jmp	short nexttag
+   138                                  ;
+   139                                  codepair:
+   140 000000CD E867000000              	call	getgamma_no_ecx
+   141 000000D2 29D9                    	sub	ecx,ebx
+   142 000000D4 7514                    	jnz	normalcodepair
+   143 000000D6 E85C000000              	call	getgamma
+   144 000000DB EB34                    	jmp	short domatch_lastpos
+   145                                  ;
+   146                                  shortmatch:
+   147 000000DD E8AE000000              	call	getbyte
+   148 000000E2 D1E8                    	shr	eax,1
+   149 000000E4 7464                    	jz	donedepacking
+   150 000000E6 11C9                    	adc	ecx,ecx
+   151 000000E8 EB21                    	jmp	short domatch_with_2inc
+   152                                  ;
+   153                                  normalcodepair:
+   154 000000EA 91                      	xchg	eax,ecx
+   155 000000EB FFC8                    	dec	eax
+   156 000000ED C1E008                  	shl	eax,8
+   157 000000F0 E89B000000              	call	getbyte
+   158 000000F5 E83D000000              	call	getgamma
+   159                                  
+   160 000000FA 3D007D0000              	cmp	eax,32000
+   161 000000FF 730A                    	jae	short domatch_with_2inc
+   162 00000101 80FC05                  	cmp	ah,5
+   163 00000104 7307                    	jae	short domatch_with_inc
+   164 00000106 83F87F                  	cmp	eax,7fh
+   165 00000109 7704                    	ja	short domatch_new_lastpos
+   166                                  
+   167                                  domatch_with_2inc:
+   168 0000010B FFC1                    	inc	ecx
+   169                                  
+   170                                  domatch_with_inc:
+   171 0000010D FFC1                    	inc	ecx
+   172                                  
+   173                                  domatch_new_lastpos:
+   174 0000010F 4190                    	xchg	eax,r8d
+   175                                  domatch_lastpos:
+   176 00000111 4489C0                  	mov	eax,r8d
+   177                                  
+   178 00000114 B301                    	mov	bl,1
+   179                                  
+   180                                  domatch:
+   181 00000116 56                      	push	rsi
+   182 00000117 4889FE                  	mov	rsi,rdi
+   183 0000011A 4829C6                  	sub	rsi,rax
+   184 0000011D F3A4                    	rep	movsb
+   185 0000011F 5E                      	pop	rsi
+   186 00000120 E97BFFFFFF              	jmp	nexttag
+   187                                  ;
+   188                                  getbit:
+   189 00000125 00D2                    	add	dl,dl
+   190 00000127 750D                    	jnz	stillbitsleft
+   191 00000129 86C2                            xchg    al,dl
+   192 0000012B 9C                              pushf
+   193 0000012C E85F000000                      call    getbyte
+   194 00000131 9D                              popf
+   195 00000132 86C2                            xchg    al,dl
+   196 00000134 10D2                    	adc	dl,dl
+   197                                  stillbitsleft:
+   198 00000136 C3                      	ret
+   199                                  ;
+   200                                  getgamma:
+   201 00000137 31C9                    	xor	ecx,ecx
+   202                                  getgamma_no_ecx:
+   203 00000139 FFC1                    	inc	ecx
+   204                                  getgammaloop:
+   205 0000013B E8E5FFFFFF              	call	getbit
+   206 00000140 11C9                    	adc	ecx,ecx
+   207 00000142 E8DEFFFFFF              	call	getbit
+   208 00000147 72F2                    	jc	getgammaloop
+   209 00000149 C3                      	ret
+   210                                  ;
+   211                                  donedepacking:
+   212 0000014A 5A                      	pop	rdx
+   213 0000014B 4829D7                  	sub	rdi,rdx
+   214                                  
+   215 0000014E 498739                  	xchg	rdi,[r9]	; [r9] = nRead, last block size = [r9]
+   216 00000151 81E6FF010000            	and	esi,BUFSIZ-1	; Get offset into buffer
+   217 00000157 742F                    	jz	noptradj
+   218 00000159 4829FE                  	sub	rsi,rdi		; How much to adjust pointer (negative)
+   219                                  
+   220 0000015C 51                      	push	rcx
+   221 0000015D 52                      	push	rdx
+   222 0000015E 4150                    	push	r8
+   223 00000160 4151                    	push	r9		; lpNumberOfBytesRead
+   224 00000162 4152                    	push	r10
+   225                                  
+   226 00000164 4C89D1                  	mov	rcx,r10		; hFile	
+   227 00000167 4889F2                  	mov	rdx,rsi		; DistanceToMove (negative)
+   228 0000016A 4531C0                  	xor	r8d,r8d		; lpDistanceToMoveHigh
+   229 0000016D 41B901000000            	mov	r9d,1		; dwMoveMethod = FILE_CURRENT
+   230                                  
+   231 00000173 4883EC20                	sub	rsp,32		; Shadow space
+   232 00000177 E8(00000000)                    call    SetFilePointer
+   233 0000017C 4883C420                	add	rsp,32
+   234                                  
+   235 00000180 415A                    	pop	r10
+   236 00000182 4159                    	pop	r9
+   237 00000184 4158                    	pop	r8
+   238 00000186 5A                      	pop	rdx
+   239 00000187 59                      	pop	rcx
+   240                                  
+   241                                  noptradj:
+   242 00000188 5F                      	pop	rdi
+   243 00000189 5E                      	pop	rsi
+   244 0000018A 5B                      	pop	rbx
+   245                                  
+   246 0000018B 4889EC                  	mov	rsp,rbp
+   247 0000018E 5D                      	pop	rbp
+   248 0000018F C3                      	ret
+   249                                  ;
+   250                                  ; In:  r10 = hFile (to refill buffer)
+   251                                  ;      r9 = lpNumberOfBytesRead
+   252                                  ;      rsi = buffer pointer (on stack)
+   253                                  ; Out: [r9] = nRead (if buffer refilled)
+   254                                  ;      al = byte read
+   255                                  ;      
+   256                                  getbyte:
+   257 00000190 48F7C6FF010000          	test	rsi,BUFSIZ-1	; Buffer empty ?
+   258 00000197 7532                    	jnz	getbyt1
+   259                                  
+   260 00000199 50                      	push	rax
+   261 0000019A 51                      	push	rcx
+   262 0000019B 52                      	push	rdx
+   263 0000019C 4150                    	push	r8
+   264 0000019E 4151                    	push	r9		; lpNumberOfBytesRead
+   265 000001A0 4152                    	push	r10
+   266                                  
+   267 000001A2 B800020000              	mov	eax,BUFSIZ
+   268 000001A7 4829C6                  	sub	rsi,rax
+   269                                  
+   270 000001AA 4C89D1                  	mov	rcx,r10		; hFile
+   271 000001AD 4889F2                  	mov	rdx,rsi		; lpBuffer
+   272 000001B0 4989C0                  	mov	r8,rax		; nNumberOfBytesToRead
+   273 000001B3 6A00                    	push	byte 0		; lpOverlapped
+   274                                  
+   275 000001B5 4883EC20                	sub	rsp,32		; Shadow space
+   276 000001B9 E8(00000000)            	call	ReadFile
+   277 000001BE 4883C428                	add	rsp,40
+   278                                  
+   279 000001C2 415A                    	pop	r10
+   280 000001C4 4159                    	pop	r9
+   281 000001C6 4158                    	pop	r8
+   282 000001C8 5A                      	pop	rdx
+   283 000001C9 59                      	pop	rcx
+   284 000001CA 58                      	pop	rax
+   285                                  getbyt1:
+   286 000001CB AC                      	lodsb
+   287 000001CC C3                      	ret

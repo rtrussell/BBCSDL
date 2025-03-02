@@ -234,6 +234,8 @@ TIME$	A function returning the current date and time as DoW.DD Mon Year,HH:MM:SS
 TINT	A function returning the 24-bit colour at the given coordinates (&BBGGRR)	<n-var>=TINT(<numeric>,<numeric>)
 TO	[1] A mandatory part of the FOR statement, specifying the final value		FOR <n-var>=<numeric> TO <numeric> [STEP <numeric>]
 	[2] An optional part of the MOUSE and RECTANGLE statements
+	[3] Specifies an optional terminator character in the GET$# function
+	[4] Delimits the range of indices in an array slice, first TO last		<array>({<numeric>,} <numeric> TO [<numeric>])
 TOP	A function returning a pointer to (address of) the first byte after the program	<n-var>=TOP
 TRACE	[1] A statement to control whether line numbers are printed when executed	TRACE ON|OFF
 	[2] A statement to print line numbers if less than the specified value		TRACE<l-num>|(<numeric>)

@@ -1036,7 +1036,7 @@ int vtint (int x, int y)
 }
 
 // Get current MODE number:
-int getmode (void)
+int getmodeno (void)
 {
 	return modeno ;
 }

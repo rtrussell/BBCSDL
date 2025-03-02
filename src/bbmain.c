@@ -1,6 +1,6 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2025  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission,  *
@@ -8,7 +8,7 @@
 *                                                                 *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.40a, 03-Apr-2024                                *
+*       Version 1.41a, 26-Feb-2025                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -34,11 +34,16 @@ void oscli (char*) ;            // Command Line Interface
 
 // Routines in bbexec:
 VAR xeq (void) ;		// Execute program
+char *secret (char *, unsigned char) ;
 
 // Routines in bbeval:
 long long itemi (void);		// Return an integer numeric item
 long long expri (void);		// Evaluate an integer numeric expression
 long long loadi (void *, unsigned char) ;
+
+// Forward references:
+void *getvar (unsigned char *) ;
+void *putvar (void *, unsigned char *) ;
 
 // Global jump buffer:
 jmp_buf env ;
@@ -900,6 +905,7 @@ int arrlen (void **pebx)
 static unsigned int getsub (void **pebx, unsigned char *ptype)
 {
 	int dims ;
+	unsigned int eax ;
 	unsigned char *ebx = (unsigned char*) CLOAD(pebx) ;
 	unsigned int edx = 0 ;
 	if (ebx < (unsigned char*)2)
@@ -907,16 +913,59 @@ static unsigned int getsub (void **pebx, unsigned char *ptype)
 	dims = *ebx++ ;
 	while (1)
 	    {
-		unsigned int n = expri () ;
+		eax = expri () ;
 		int ecx = ULOAD(ebx) ;
 		ebx += 4 ;
-		if (n >= ecx)
-			error (15, NULL) ; // 'Subscript out of range'
-		edx = edx * ecx + n ;
-		if (--dims > 0) comma () ; else { braket () ; break ; }
+		if (eax >= ecx)
+			error (15, NULL) ; // 'Bad subscript'
+		edx = edx * ecx + eax ;
+		if (--dims > 0) comma () ; else break ;
 	    }
 	if (dims == 0) *pebx = ebx ; else *pebx = VLOAD(ebx) ;
 	edx *= (*ptype & TMASK) ;
+	if (*esi == TTO)
+	    {
+		unsigned int n ;
+		signed char *oldesi ;
+		void *ebp ;
+		unsigned char pok = 0 ;
+		char *edi = accs ;
+
+		esi++ ;
+		if (nxt () == ')')
+			n = ULOAD(ebx - 4) ;
+		else
+			n = expri () + 1 ;
+		if ((n > ULOAD(ebx - 4)) || (n <= eax))
+			error (15, NULL) ; // 'Bad subscript'
+		n -= eax ;
+		ebx += edx ;
+
+		edi = secret (edi, *ptype) ;
+		*edi++ = '(' ;
+		*edi++ = ')' ;
+		*edi = 0x0D ;
+
+		oldesi = esi ;
+		esi = (signed char*) accs ;
+		ebp = getvar (&pok) ;
+
+		if (pok == 0)
+		    {
+			ebp = putvar (ebp, &pok) ;
+			pfree = ebp + 2 * sizeof(void*) + 5 - zero ;
+		    }
+		VSTORE(ebp, ebp + sizeof(void*)) ;
+		*(unsigned char *) (ebp + sizeof(void*)) = 0 ;
+		USTORE(ebp + sizeof(void*) + 1, n) ;
+		VSTORE(ebp + sizeof(void*) + 5, ebx) ;
+
+		esi = oldesi ;
+		edx = 0 ;
+		*pebx = ebp ;
+		*ptype |= BIT6 ;
+	    }
+	braket () ;
 	return edx ;
 }
 
@@ -1342,6 +1391,8 @@ void * getvar (unsigned char *ptype)
 					esi++ ;
 					ebx += 4 ; // n.b. GCC extension: sizeof(void) = 1
 					ebx = ebp + getsbs (ebx, ptype) ;
+					if ((*ptype & BIT6) != 0)
+						error (56, NULL) ; // 'Bad use of structure'
 				    }
 				else
 					ebx = ebp ;

@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit BBC BASIC Interpreter (Emscripten / Web Assembly)  *
-*       (c) 2018-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2018-2025  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.40a, 12-Nov-2024                                *
+*       Version 1.41a, 28-Feb-2025                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -579,6 +579,10 @@ long long BBC_TTF_Linked_Version(st i0, st i1, st i2, st i3, st i4, st i5, st i6
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) TTF_Linked_Version(); }
 
+long long BBC_OpenURL(st url, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return SDL_OpenURL((const char *) url); }
+
 // Networking (web sockets)
 
 long long BBC_Net_AddSocket(st set, st sock, st i2, st i3, st i4, st i5, st i6, st i7,
@@ -659,7 +663,7 @@ long long BBC_emscripten_run_script_string(st script, st i1, st i2, st i3, st i4
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) emscripten_run_script_string((const char*) script); }
 
-#define NSYS 139
+#define NSYS 140
 
 static const char *sysname[NSYS] = {
 	"B2D_GetProcAddress",
@@ -734,6 +738,7 @@ static const char *sysname[NSYS] = {
 	"SDL_LockTexture",
 	"SDL_MixAudioFormat",
 	"SDL_OpenAudioDevice",
+	"SDL_OpenURL",
 	"SDL_PauseAudioDevice",
 	"SDL_QueryTexture",
 	"SDL_QueueAudio",
@@ -875,6 +880,7 @@ static void *sysfunc[NSYS] = {
 	BBC_LockTexture,
 	BBC_MixAudioFormat,
 	BBC_OpenAudioDevice,
+	BBC_OpenURL,
 	BBC_PauseAudioDevice,
 	BBC_QueryTexture,
 	BBC_QueueAudio,

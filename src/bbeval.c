@@ -7,7 +7,7 @@
 *       it is not transferrable to a forked or derived work.      *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.41a, 13-Feb-2025                                *
+*       Version 1.41a, 27-Feb-2025                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -93,7 +93,7 @@ long long getptr (void*) ;	// Get file pointer
 long long getext (void*) ;	// Get file length
 long long geteof (void*) ;	// Get EOF status
 void *sysadr (char *) ;		// Get the address of an API function
-int getmode (void) ;		// Get the current MODE number
+int getmodeno (void) ;		// Get the current MODE number
 
 // Global jump buffer:
 extern jmp_buf env ;
@@ -951,7 +951,7 @@ void *channel (void)
 
 static int dimfunc (void)
 {
-	int d, n ;
+	unsigned int d, n ;
 	void *ptr ;
 	unsigned char type ;
 	if (nxt () == '(')
@@ -983,7 +983,7 @@ static int dimfunc (void)
 		return d;
 	esi++ ;
 	n = expri () - 1 ;
-	if ((n < 0) || (n >= d))
+	if (n > (d - 1 + (d == 0)))
 		error (15, NULL) ; // 'Bad subscript'
 	return ILOAD(ptr + 1 + n * 4) - 1 ;
 }
@@ -1226,7 +1226,7 @@ VAR item (void)
 /************************************ MODE *************************************/
 
 		case TMODE:
-			v.i.n = getmode() ;
+			v.i.n = getmodeno() ;
 			v.i.t = 0 ;
 			return v ;
 
@@ -2677,20 +2677,11 @@ int expra (void *ebp, int ecx, unsigned char type)
 
 			ebp = savebp ;
 			op = nxt () ;
-			switch (op)
+			if ((op == '+') || (op == '-') || (op == '*') || (op == '/') ||
+				(op == '^') || ((op >= TAND) && (op <= TOR)))
 			    {
-				// TODO enforce left-to-right priority
-				case TOR:
-				case TAND:
-				case TEOR:
-				case '+':
-				case '-':
-				case '*':
-				case '/':
-				case TDIV:
-				case TMOD:
-					esi++ ;
-					continue ;
+				esi++ ;
+				continue ;
 			    }
 			break ;
 		    }
@@ -2730,8 +2721,7 @@ int expra (void *ebp, int ecx, unsigned char type)
 		else
 		    {
 			rowsl = 1 ;
-			colsl = ILOAD(ptr + 1) ;
-			ptr += 5 ;
+			colsl = arrlen (&ptr) ;
 		    }
 
 		if (dimsr == 2)
@@ -2743,8 +2733,7 @@ int expra (void *ebp, int ecx, unsigned char type)
 		else
 		    {
 			colsr = 1 ;
-			rowsr = ILOAD(rhs + 1) ;
-			rhs += 5 ;
+			rowsr = arrlen (&rhs) ;
 		    }
 
 		if ((colsl != rowsr) || (ecx != (colsr * rowsl)))

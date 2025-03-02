@@ -7,7 +7,7 @@
 *       it is not transferrable to a forked or derived work.      *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.41a, 13-Feb-2025                                *
+*       Version 1.41a, 22-Feb-2025                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -331,7 +331,7 @@ static void assign (void *ptr, unsigned char type)
 	if (op != '=')
 	    {
 		if ((op == '+') || (op == '-') || (op == '*') || (op == '/') ||
-			((op >= TAND) & (op <= TOR)))
+			(op == '^') || ((op >= TAND) && (op <= TOR)))
 			equals () ;
 		else
 			error (4, NULL) ; // Mistake
@@ -484,7 +484,7 @@ static void plot (int n, int x, int y)
 }
 
 // Create a 'secret' variable name based on code pointer, for use by PRIVATE:
-static char *secret (char *p, unsigned char type)
+char *secret (char *p, unsigned char type)
 {
 	unsigned int i, ebp = 54 , eax = esi - (signed char *) zero ;
 	eax = (eax << 1) | (eax > ((void *) esp - zero)) ; // library bit in LSB
@@ -4163,7 +4163,7 @@ VAR xeq (void)
 					if (op != '=')
 					    {
 						if ((op == '+') || (op == '-') || (op == '*') || (op == '/') ||
-								((op >= TAND) & (op <= TOR)))
+						    (op == '^') || ((op >= TAND) && (op <= TOR)))
 							equals () ;
 						else
 							error (4, NULL) ; // Mistake
