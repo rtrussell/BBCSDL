@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2025  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.40a, 08-Jun-2024                                *
+*       Version 1.41a, 14-Mar-2025                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1691,10 +1691,10 @@ static int maintick (void)
 				int w, h ;
 				SDL_Texture **p, *t = SDL_GetRenderTarget (renderer) ;
 				SDL_GL_GetDrawableSize (window, &w, &h) ;
-				if (t != NULL) SDL_DestroyTexture (t) ;
 				SDL_SetRenderTarget(renderer, SDL_CreateTexture(renderer, 
 					SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_TARGET,
 					MAX(MAX(w,h),XSCREEN), MAX(MAX(w,h),YSCREEN))) ;
+				if (t != NULL) SDL_DestroyTexture (t) ;
 				for (p = TTFcache; p < TTFcache + 65536; p++)
 					if (*p != NULL)
 					{

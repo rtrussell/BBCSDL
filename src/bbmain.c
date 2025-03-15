@@ -8,7 +8,7 @@
 *                                                                 *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.41a, 26-Feb-2025                                *
+*       Version 1.41a, 05-Mar-2025                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -907,14 +907,14 @@ static unsigned int getsub (void **pebx, unsigned char *ptype)
 	int dims ;
 	unsigned int eax ;
 	unsigned char *ebx = (unsigned char*) CLOAD(pebx) ;
-	unsigned int edx = 0 ;
+	unsigned int ecx, edx = 0 ;
 	if (ebx < (unsigned char*)2)
 		error(14, NULL) ; // 'Bad use of array'
 	dims = *ebx++ ;
 	while (1)
 	    {
 		eax = expri () ;
-		int ecx = ULOAD(ebx) ;
+		ecx = ULOAD(ebx) ;
 		ebx += 4 ;
 		if (eax >= ecx)
 			error (15, NULL) ; // 'Bad subscript'
@@ -933,13 +933,12 @@ static unsigned int getsub (void **pebx, unsigned char *ptype)
 
 		esi++ ;
 		if (nxt () == ')')
-			n = ULOAD(ebx - 4) ;
+			n = ecx ;
 		else
 			n = expri () + 1 ;
-		if ((n > ULOAD(ebx - 4)) || (n <= eax))
+		if ((n > ecx) || (n <= eax))
 			error (15, NULL) ; // 'Bad subscript'
 		n -= eax ;
-		ebx += edx ;
 
 		edi = secret (edi, *ptype) ;
 		*edi++ = '(' ;
@@ -958,7 +957,7 @@ static unsigned int getsub (void **pebx, unsigned char *ptype)
 		VSTORE(ebp, ebp + sizeof(void*)) ;
 		*(unsigned char *) (ebp + sizeof(void*)) = 0 ;
 		USTORE(ebp + sizeof(void*) + 1, n) ;
-		VSTORE(ebp + sizeof(void*) + 5, ebx) ;
+		VSTORE(ebp + sizeof(void*) + 5, *pebx + edx) ;
 
 		esi = oldesi ;
 		edx = 0 ;
