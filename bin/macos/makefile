@@ -3,16 +3,25 @@
 # SDL2_ttf from https://www.libsdl.org/projects/SDL_ttf/
 # SDL2_net from https://www.libsdl.org/projects/SDL_net/
 
+ARCH := $(shell uname -m)
 SDL_LIB = -L/usr/include -ldl -lm
+MIN_MACOS_VERSION = 10.7
 
 VPATH = ../../src ../../include
-CXX = gcc -Wall -pthread -mmacosx-version-min=10.6 -I ../../include
+CXX = gcc -Wall -pthread -mmacosx-version-min=$(MIN_MACOS_VERSION) -F /Library/Frameworks -I ../../include
+
+ifeq ($(ARCH),arm64)
+    OBJ_EXTRA = sort.o
+endif
 
 OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
       bbcvdu.o bbcvtx.o flood.o bbdata.o bbcsdl.o \
-      bbasmb.o bbctmp.o
+      bbasmb.o bbctmp.o $(OBJ_EXTRA)
 
 all: bbcsdl
+
+clean:
+	rm -f *.o bbcsdl libstb.dylib
 
 bbmain.o: bbmain.c BBC.h
 	$(CXX) -c -O2 -ffast-math -fno-finite-math-only $< -o $@
@@ -53,8 +62,19 @@ SDL2_rotozoom.o: SDL2_rotozoom.c SDL2_rotozoom.h SDL2_gfxPrimitives.h SDL_stbima
 flood.o: flood.c
 	$(CXX) -c -O3 $< -o $@
 
-bbdata.o: ../../src/bbdata_x86_64.nas
-	nasm --prefix _ -f macho64 -s ../../src/bbdata_x86_64.nas -o bbdata.o
+sort.o: sort.c
+	$(CXX) -c -O3 $< -o $@
+
+ifeq ($(ARCH),arm64)
+    BBDATA_COMPILE = clang -mmacosx-version-min=$(MIN_MACOS_VERSION) -c
+    BBDATA_SRC = ../../src/bbdata_arm_64.s
+else 
+    BBDATA_COMPILE = nasm --prefix _ -f macho64 -s
+    BBDATA_SRC = ../../src/bbdata_x86_64.nas
+endif
+
+bbdata.o: $(BBDATA_SRC)
+	$(BBDATA_COMPILE) $(BBDATA_SRC) -o bbdata.o
 
 libstb.dylib: SDL2_rotozoom.o SDL2_gfxPrimitives.o
 	$(CXX) -dynamiclib -F/Library/Frameworks -framework SDL2 \
@@ -65,5 +85,6 @@ bbcsdl: $(OBJ) libstb.dylib
 	-framework SDL2 -framework SDL2_ttf -framework SDL2_net \
 	-framework Foundation -Wl,-headerpad_max_install_names \
 	-o bbcsdl $(SDL_LIB)
+	install_name_tool -add_rpath /Library/Frameworks bbcsdl
 	cp bbcsdl ../../
 	cp libstb.dylib ../../
