@@ -1,9 +1,15 @@
+ARCH := $(shell uname -m)
+MIN_MACOS_VERSION = 10.7
+
 VPATH = ../../src ../../include ../../../BBCSDL/src ../../../BBCSDL/include
-CXX = gcc -Wall -mmacosx-version-min=10.6 -I ../../include -I ../../../BBCSDL/include
+CXX = gcc -Wall -mmacosx-version-min=$(MIN_MACOS_VERSION) -I ../../include -I ../../../BBCSDL/include
 
 OBJ = bbmain.o bbexec.o bbeval.o bbasmb.o bbdata.o bbccos.o bbccon.o
 
 all: bbcbasic
+
+clean:
+	rm -f *.o bbcbasic
 
 bbmain.o: bbmain.c BBC.h
 	$(CXX) -c -O2 $< -o $@
@@ -23,8 +29,16 @@ bbccos.o: bbccos.c bbccon.h
 bbccon.o: bbccon.c bbccon.h
 	$(CXX) -Wno-array-bounds -Wno-unused-result -c -Os $< -o $@
 
-bbdata.o: ../../../BBCSDL/src/bbdata_x86_64.nas
-	nasm --prefix _ -f macho64 -s ../../../BBCSDL/src/bbdata_x86_64.nas -o bbdata.o
+ifeq ($(ARCH),arm64)
+    BBDATA_COMPILE = clang -mmacosx-version-min=$(MIN_MACOS_VERSION) -c
+    BBDATA_SRC = ../../../BBCSDL/src/bbdata_arm_64.s
+else 
+    BBDATA_COMPILE = nasm --prefix _ -f macho64 -s
+    BBDATA_SRC = ../../../BBCSDL/src/bbdata_x86_64.nas
+endif
+
+bbdata.o: $(BBDATA_SRC)
+	$(BBDATA_COMPILE) $(BBDATA_SRC) -o bbdata.o
 
 bbcbasic: $(OBJ)
 	$(CXX) $(OBJ) -F/Library/Frameworks -L . \
