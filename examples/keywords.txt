@@ -189,7 +189,8 @@ RESTORE	[1] A statement to set the DATA pointer to the beginning or to a specifi
 	[4] A statement to restore the error handler to that saved by ON ERROR LOCAL	RESTORE ERROR
 	[5] A statement to restore LOCALs, PRIVATEs and formal parameters of an FN/PROC	RESTORE LOCAL
 RETURN	[1] A statement to return from a subroutine, optionally to a specified line	RETURN [<l-num>|(<numeric>)]
-	[2] In a DEF FN or DEF PROC, indicates that a parameter is also used for output
+	[2] A statement to return from an ON CLOSE/MOUSE/MOVE/SYS/TIME event handler
+	[3] In a DEF FN or DEF PROC, indicates that a parameter is also used for output
 RIGHT$	[1] A function returning the rightmost n characters (bytes) of a string		<s-var>=RIGHT$(<string>,<numeric>)
 	[2] A function returning the last character (byte) of a string			<s-var>=RIGHT$(string) 
 	[3] A statement replacing the rightmost n bytes of a string with a new string	RIGHT$(<s-var>,<numeric>)=<string>
