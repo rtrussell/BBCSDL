@@ -22,7 +22,7 @@ bbexec.o: bbexec.c BBC.h
 	$(CXX) -c -O3 -ffast-math -fno-finite-math-only $< -o $@
 
 bbeval.o: bbeval.c BBC.h
-	$(CXX) -c -O3 -ffast-math -fno-finite-math-only $< -o $@
+	$(CXX) -c -O3 -ffast-math -fmath-errno -fno-finite-math-only $< -o $@
 
 bbasmb.o: bbasmb_wasm32.c BBC.h
 	$(CXX) -c -Os $< -o $@

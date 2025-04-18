@@ -22,7 +22,7 @@ bbexec.o: bbexec.c BBC.h
 	$(CXX) -c -O2 -freg-struct-return -ffast-math -fno-finite-math-only $< -o $@
 
 bbeval.o: bbeval.c BBC.h
-	$(CXX) -Wno-array-bounds -c -O2 -freg-struct-return -ffast-math -fno-finite-math-only $< -o $@
+	$(CXX) -Wno-array-bounds -c -O2 -freg-struct-return -ffast-math -fmath-errno -fno-finite-math-only $< -o $@
 
 # TODO: Need bbasmb_x86_32 assembler!!
 bbasmb.o: bbasmb_arm_v6m.c BBC.h
