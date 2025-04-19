@@ -7,13 +7,13 @@ OBJ = bbmain.o bbexec.o bbeval.o bbasmb.o bbdata.o bbccos.o bbccon.o
 all: bbcbasic
 
 bbmain.o: bbmain.c BBC.h
-	$(CXX) -Wno-attributes $(CXXFLAGS) -O2 $< -o $@
+	$(CXX) -Wno-attributes $(CXXFLAGS) -O2 -ffast-math -fno-finite-math-only $< -o $@
 
 bbexec.o: bbexec.c BBC.h
-	$(CXX) $(CXXFLAGS) -DARMHF -O2 $< -o $@
+	$(CXX) $(CXXFLAGS) -DARMHF -O2 -ffast-math -fno-finite-math-only $< -o $@
 
 bbeval.o: bbeval.c BBC.h
-	$(CXX) -Wno-array-bounds $(CXXFLAGS) -O2 $< -o $@
+	$(CXX) -Wno-array-bounds $(CXXFLAGS) -O2 -ffast-math -fmath-errno -fno-finite-math-only $< -o $@
 
 bbasmb.o: bbasmb_arm_32.c BBC.h
 	$(CXX) $(CXXFLAGS) -Os $< -o $@
