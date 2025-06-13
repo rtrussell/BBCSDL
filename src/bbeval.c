@@ -7,13 +7,14 @@
 *       it is not transferrable to a forked or derived work.      *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.41a, 27-Feb-2025                                *
+*       Version 1.42a, 11-Jun-2025                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
@@ -577,7 +578,7 @@ VAR math (VAR x, signed char op, VAR y)
 		case '+':
 			if ((x.i.t == 0) && (y.i.t == 0))
 			    {
-#if defined __GNUC__ && __GNUC__ < 5
+#ifndef __builtin_saddll_overflow
 				long long sum = x.i.n + y.i.n ;
 				if (((int)(x.s.l ^ y.s.l) < 0) || ((sum ^ x.i.n) >= 0))
 #else
@@ -596,7 +597,7 @@ VAR math (VAR x, signed char op, VAR y)
 		case '-':
 			if ((x.i.t == 0) && (y.i.t == 0))
 			    {
-#if defined __GNUC__  && __GNUC__ < 5
+#ifndef __builtin_ssubll_overflow
 				long long dif = x.i.n - y.i.n ;
 				if (((int)(x.s.l ^ y.s.l) >= 0) || ((dif ^ x.i.n) >= 0))
 #else
@@ -619,19 +620,26 @@ VAR math (VAR x, signed char op, VAR y)
 				return y ;
 			if ((x.i.t == 0) && (y.i.t == 0))
 			    {
-#if defined __GNUC__  && __GNUC__ < 5
-				long long prod = x.i.n * y.i.n ;
-				if ((x.i.n != 0x8000000000000000) && (y.i.n != 0x8000000000000000) &&
-					((__builtin_clzll(x.i.n) + __builtin_clzll(~x.i.n) +
-					  __builtin_clzll(y.i.n) + __builtin_clzll(~y.i.n)) > 63))
+#ifndef __builtin_smulll_overflow
+				int lz = __builtin_clzll(x.i.n) + __builtin_clzll(~x.i.n) +
+			                 __builtin_clzll(y.i.n) + __builtin_clzll(~y.i.n) ;
+				if ((lz > 64) || ((lz == 64) && (
+				  ((x.i.n >= 0) && (y.i.n >= 0) && (x.i.n <= INT64_MAX / y.i.n)) ||
+				  ((x.i.n >= 0) && (y.i.n < 0)  && (x.i.n <= INT64_MIN / y.i.n)) ||
+				  ((x.i.n < 0)  && (y.i.n >= 0) && (y.i.n <= INT64_MIN / x.i.n)) ||
+				  ((x.i.n < 0)  && (y.i.n < 0)  && (y.i.n >= INT64_MAX / x.i.n)))))
+				    {
+					x.i.n *= y.i.n ;
+					return x ;
+				    }
 #else
 				long long prod ;
 				if (! __builtin_smulll_overflow (x.i.n, y.i.n, &prod))
-#endif
 				    {
 					x.i.n = prod ;
 					return x ;
 				    }
+#endif
 			    }
 			float2 (&x, &y) ;
 			x.f *= y.f ;

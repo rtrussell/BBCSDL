@@ -7,7 +7,7 @@
 *       it is not transferrable to a forked or derived work.      *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.41a, 22-Feb-2025                                *
+*       Version 1.42a, 12-Jun-2025                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -3013,7 +3013,7 @@ VAR xeq (void)
 					v = loadn (ptr, type) ;
 					s.i.t = *(short *)(esp + 4 + STRIDE) ;
 					s.i.n = *(long long *)(esp + 2 + STRIDE) ;
-#if defined __GNUC__ && __GNUC__ < 5
+#ifndef __builtin_saddll_overflow
 					if ((v.i.t == 0) && (s.i.t == 0) && ((((tmpll = v.i.n + s.i.n) ^
 						             v.i.n) >= 0) || ((int)(v.s.l ^ s.s.l) < 0)))
 #else
@@ -3726,7 +3726,7 @@ VAR xeq (void)
 							unsigned int eax = *(int *)(esp + i) ;
 							ISTORE(edi, eax) ;
 							edi += 4 ;
-#if defined __GNUC__ && __GNUC__ < 5
+#ifndef __builtin_umul_overflow
 							ebx *= eax ;
 #else
 							if (__builtin_umul_overflow (eax, ebx, &ebx))

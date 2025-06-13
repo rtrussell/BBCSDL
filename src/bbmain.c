@@ -8,7 +8,7 @@
 *                                                                 *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.41a, 05-Mar-2025                                *
+*       Version 1.42a, 13-Jun-2025                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -637,8 +637,10 @@ void clear (void)
 	signed char *top = gettop (ebx, &fastvars) ;
 	if (top == NULL)
 	    {
-		error (0, "Bad program") ;
-		return ;
+		*(signed char *)(vpage + zero) = 0 ;
+		text ("Bad program") ;
+		crlf () ;
+		error (256, NULL) ;
 	    }
 	*(top+1) = 0xFF ;
 	*(top+2) = 0xFF ;
@@ -1549,13 +1551,14 @@ int basic (void *ecx, void *edx, void *prompt)
 #ifdef PICO
 	libtop = edx ;
 #endif
-	clear () ;
+	errcode = setjmp (env) ; // In case of 'Bad program'
+	if (errcode == 0) clear () ; 
 	datptr = search (vpage + (signed char *) zero, TDATA) - (signed char *) zero ;
 
 	esi = vpage + 3 + (signed char *) zero ;
 	esp = (heapptr *)((himem + (size_t) zero) & -4) ;
 
-	errcode = (setjmp (env)) ; // >0 = error, <0 = QUIT, 256 = END/STOP
+	if (errcode == 0) errcode = setjmp (env) ; // >0 = error, <0 = QUIT, 256 = END/STOP
 
 	if (errcode < 0)
 		return ~errcode ;
