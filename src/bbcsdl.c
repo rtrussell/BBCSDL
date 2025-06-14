@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.41a, 14-Mar-2025                                *
+*       Version 1.42a, 14-Jun-2025                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -25,6 +25,7 @@
 #ifdef __WINDOWS__
 #include <windows.h>
 #include <wchar.h>
+#include <shellapi.h>
 #if defined __x86_64__
 #define PLATFORM "Win64"
 #else
@@ -548,6 +549,14 @@ SDL_Event ev ;
 
 #ifdef __WINDOWS__
 	SDL_setenv ("SDL_AUDIODRIVER", "directsound", 1) ;
+	LPWSTR* argw = CommandLineToArgvW(GetCommandLineW(), &argc);
+	for (i = 0; i < argc; i++)
+	    {
+		int len = WideCharToMultiByte(CP_UTF8, 0, argw[i], -1, NULL, 0, NULL, NULL);
+		argv[i] = malloc(len);
+		WideCharToMultiByte(CP_UTF8, 0, argw[i], -1, argv[i], len, NULL, NULL);
+	    }
+	LocalFree(argw);
 #endif
 
 if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER |

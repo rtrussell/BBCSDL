@@ -2820,8 +2820,16 @@ static drmp3_bool32 drmp3__on_seek_stdio(void* pUserData, int offset, drmp3_seek
 drmp3_bool32 drmp3_init_file(drmp3* pMP3, const char* filePath, const drmp3_config* pConfig)
 {
     FILE* pFile;
+
 #if defined(_MSC_VER) && _MSC_VER >= 1400
     if (fopen_s(&pFile, filePath, "rb") != 0) {
+        return DRMP3_FALSE;
+    }
+#elif defined(_WIN32)
+    WCHAR wfp[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wfp, MAX_PATH);
+    pFile = _wfopen(wfp, L"rb");
+    if (pFile == NULL) {
         return DRMP3_FALSE;
     }
 #else
