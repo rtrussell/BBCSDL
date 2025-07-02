@@ -1,0 +1,51 @@
+VDU code	                            Description					Notes
+
+VDU 0	NUL, do nothing, it is ignored.
+VDU 1,c	Send a character directly to the printer, if it has been enabled with VDU 2.	Not currently implemented in BBCSDL
+VDU 2	Enable the printer, subsequent console output goes to the screen and printer.	Not currently implemented in BBCSDL
+VDU 3	Disable the printer, reverses the effect of VDU 2.				Not currently implemented in BBCSDL
+VDU 4	Restore the normal 'print at text caret' mode, reverses the effect of VDU 5.	VDU 4 text has an opaque background 
+VDU 5	Cause text to be written at the current graphics position, except in MODE 7.	VDU 5 text has a transparent background
+VDU 6 	Enable output to the screen, reverses the effect of VDU 21.
+VDU 7	Send a Ctrl+G character to the console, which may result in a short 'beep'.	Not currently functional in BBCSDL
+VDU 8	Move the text caret one character in the negative X direction (normally left).	Average width if proportional-spaced
+VDU 9	Move the text caret one character in the positive X direction (normally right).	Average width if proportional-spaced
+VDU 10 	Move the text caret one row in the positive Y direction (normally down).	'Line feed'
+VDU 11 	Move the text caret one row in the negative Y direction (normally up).
+VDU 12	Clear the text viewport to the current text background colour & home the caret.	Equivalent to CLS
+VDU 13	Move the text caret to column 0 in the current row (normally the left edge).	'Carriage return'
+VDU 14 	Enable auto-paging mode, scrolling pauses until <Shift> or <Esc> is pressed.
+VDU 15	Disable auto-paging mode, reverses the effect of VDU 14.
+VDU 16 	Clear the graphics viewport using the current background GCOL action & colour.	Equivalent to CLG
+VDU 17,n	Set the text foreground (n < 128) or background (n >= 128) logical colour.	Equivalent to COLOUR n
+VDU 18,m,n	Set the graphics foreground or background logical colour and plotting action.	Equivalent to GCOL m,n
+VDU 19...	Set the colour palette, i.e. the mapping between logical and physical colours:
+VDU 19,n,p,0,0,0	    Set logical colour n to physical colour p in the standard palette.
+VDU 19,n,16,r,g,b	   Set logical colour n to the specified RGB colour (each 0-15).
+VDU 19,n,-1,R,G,B	   Set logical colour n to the specified RGB colour (each 0-255).	Equivalent to COLOUR n,R,G,B
+VDU 19,n+128,A,R,G,B	Set logical colour n to the specified ARGB colour (A = alpha, 0-255).
+VDU 20	Set the text and graphics colours, and the colour palette, to their defaults. 
+VDU 21 	Disable the VDU drivers until a VDU 6 is received, other output is discarded.
+VDU 22,n	Select the specified display mode and reset VDU variables to their defaults. 	Equivalent to MODE n
+VDU 23...	A multi-purpose command, VDU 23 is always followed by exactly 9 more bytes:
+VDU 23,n,a,b,c,d,e,f,g,h	Redefine character n (32-255) to the specified 8x8 dot pattern.
+VDU 23,0,10,s,0;0;0;	    Set the start line of the text caret (0 = top).
+VDU 23,0,11,e,0;0;0;	    Set the end line of the text caret.
+VDU 23,0,18,w,0;0;0;	    Set the width of the text caret in pixels.
+VDU 23,1,0;0;0;0;	       Hide the text caret (cursor).				Equivalent to OFF
+VDU 23,1,1;0;0;0;	       Show the text caret (cursor).				Equivalent to ON
+VDU 23,7,m,d,0;0;0;	     Control how the screen scrolls. 				See the main documentation
+VDU 23,16,x,y,0;0;0;	    Control how the text caret moves after a character is output.	See the main documentation
+VDU 23,18,3,0,0;0;0;	    In MODE 7, disable black text & mosaics, and alt character sets. 
+VDU 23,18,3,1,0;0;0;	    In MODE 7, enable black text & mosaics, and alt character sets.
+VDU 23,22,w;h;cx,cy,n,bg	Select a custom display mode (size, number of rows & cols etc).	See the main documentation
+VDU 23,23,t;0;0;0;	      Set the thickness in pixels when drawing lines and curves.
+VDU 24,l;b;r;t;	Set a graphics viewport: left, bottom, right and top respectively.	Coordinates are graphics units
+VDU 25,p,x;y;	  A general-purpose plotting command, where p = code, x & y = coordinates.	Equivalent to PLOT p,x,y
+VDU 26	Initialise the text and graphics viewports, home the caret & graphics position.
+VDU 27,n	Send the code n to the screen without interpreting it as a control character.
+VDU 28,l,b,r,t	 Set a text viewport: left, bottom, right and top respectively.	Coordinates are row and column numbers
+VDU 29,x;y;	Move the graphics origin to the specified graphics coordinates.	Equivalent to ORIGIN x,y
+VDU 30	Home the text caret (in VDU 4 mode) or the graphics position (in VDU 5 mode).	Default is the top-left corner
+VDU 31,x,y	Move the text caret (cursor) to the specified coordinates.	Equivalent to PRINT TAB(x,y);
+VDU 127	Delete the character to the left of the caret and backspace to this position.	Works in both VDU 4 and VDU 5 modes

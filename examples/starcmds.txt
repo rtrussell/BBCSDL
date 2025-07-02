@@ -1,0 +1,58 @@
+Command	                             Description	Informal syntax
+
+*BYE	Exit the interpreter and return to the calling program.  Synonymous with *QUIT.	OSCLI "BYE"
+*CD	Print the current working directory.  If followed by a name, acts as *CHDIR.	OSCLI "CD" [+ " """ + name$ + """"]
+*CHDIR	Change the current working directory (folder) to a different drive and/or path.	OSCLI "CHDIR """ + directory$ + """"
+*COPY	Copy a file, the extensions default to .bbc (add a trailing dot if none).	OSCLI "COPY """ + srcfile$ + """ """ + dstfile$ + """"
+*DEL	Delete the specified file, the extension defaults to .bbc (add a dot if none).	OSCLI "DEL """ + file$ + """"
+*DELETE	Synonymous with *DEL.
+*DIR	List the disk directory, optionally specifying the directory and/or filename.	OSCLI "DIR" [+ " """ + afsp$ + """"]
+*.	Synonymous with *DIR.
+*DISPLAY	Display an image (BMP, GIF, JPG, PNG) optionally specifying posn, size and key.	OSCLI "DISPLAY """ + file$ + """ " [+ STR$(x%) + "," + STR$(y%) + "," + STR$(w%) + "," + STR$(h%) [+ "," + STR$~key%]]
+*DUMP	List the hex contents of a file, optionally specifying the start and length.	OSCLI "DUMP """ + file$ + """ " [+ STR$~start% [+ " +" + STR$~length%]]
+*ERA	Synonymous with *DEL.
+*ERASE	Synonymous with *ERA and *DEL.
+*ESC	Enable or disable the abort/error action of the ESCape or Back key (ERR = 17).	OSCLI "ESC ON|OFF" 
+*EXEC	Accept console input from the specified file rather than from the keyboard.	OSCLI "EXEC """ + file$ + """"
+*FLOAT	Select the floating-point precision used by indirection (|) and data files.	OSCLI "FLOAT 40|64|80"
+*FONT	Select the required font file (TTF or OTF), size and, optionally, attribute(s).	OSCLI "FONT """ + font$ + """," + STR$(points%) [+ ",BIUQ"]
+*FX	Ignored except for *FX 15,n and *FX 21,n which flush the specified buffer.	OSCLI "FX " + STR$(number%) [+ "," + STR$(buffer%)]
+*FX19	Force a screen refresh, synonymous with *REFRESH (with no parameters).
+*GSAVE	Save the output window, or a specified rectangle, to a BMP-format image file.	OSCLI "GSAVE """ + file$ + """ " [+ STR$(x%) + "," + STR$(y%) + "," + STR$(w%) + "," + STR$(h%)] 
+*HELP	Print the name and version number of BBC BASIC.					OSCLI "HELP"
+*HEX	Set hexadecimal conversion (& and ~) and shifts (<< and >>>) to 32 or 64 bits.	OSCLI "HEX 32|64"
+*INPUT	Redirect console input to come from the specified input channel (0 = keyboard).	OSCLI "INPUT " + STR$(channel%)
+*KEY	Redefine a function or cursor key to return the specified string (or not).	OSCLI "KEY " + STR$(keynum%) [+ " """ + string$ + """"]
+*LIST	List the specified internal format (tokenised, .bbc) program file.		OSCLI "LIST """ + progfile$ + """"
+*LOAD	Load a file into memory at the specified hex address and maximum length.	OSCLI "LOAD """ + file$ + """ " + STR$~address%% + " " + STR$~maxlen%
+*LOCK	Set the specified file to 'read-only' status, the extension defaults to .bbc.	OSCLI "LOCK """ + file$ + """"
+*LOWERCASE	Enable or disable accepting keywords, hex and E-format numbers in lowercase.	OSCLI "LOWERCASE ON|OFF"
+*MD	Create a new directory (folder) with the specified relative or absolute name.	OSCLI "MKDIR """ + directory$ + """"
+*MDISPLAY	As *DISPLAY but read the image data from memory rather than from a file.	OSCLI "MDISPLAY " + STR$~address%% + " " [+ STR$(x%) + "," + STR$(y%) + "," + STR$(w%) + "," + STR$(h%) [+ "," + STR$~key%]]
+*MKDIR	Synonymous with *MD.
+*OSK	Enable or disable the On Screen Keyboard (effective only in Android and iOS).	OSCLI "OSK ON|OFF"
+*OUTPUT	Redirect console output to go to the specified output channel (0 = screen).	OSCLI "OUTPUT " + STR$(channel%)
+*QUIT	Synonymous with *BYE (and with the QUIT statement).				OSCLI "QUIT"
+*RD	Remove (delete) the directory with the specified relative or absolute name.	OSCLI "RMDIR """ + directory$ + """"
+*REFRESH	Enable or disable automatic screen refresh, or force an immediate refresh.	OSCLI "REFRESH [ON|OFF]"
+*REN	Rename a file, the extensions default to .bbc (add a trailing dot if none).	OSCLI "REN """ + oldname$ + """ """ + newname$ + """"
+*RENAME	Synonymous with *REN.
+*RMDIR	Synonymous with *RD.
+*RUN	Run an external command or executable program, optionally not waiting.		OSCLI "RUN " + command$ [;]
+*/	Synonymous with *RUN.
+*SAVE	Save an area of memory to the specified file, the extension defaults to .bbc.	OSCLI "SAVE """ + file$ + """ " + STR$~start%% + " +" + STR$~length%
+*SCREENSAVE	Synonymous with *GSAVE.
+*SPOOL	Copy subsequent console output to the specified file, or terminate spooling.	OSCLI "SPOOL" [+ " """ file$ + """"]
+*SPOOLON	Append all subsequent console output to the specified file.		OSCLI "SPOOLON """ + file$ + """"
+*STEREO	Set the position on the stereo stage −127..+127 of the specified SOUND channel.	OSCLI "STEREO " + STR$(chan%) + "," + STR$(pan%)
+*SYS	Select what events will result in an ON SYS (or ON MOUSE) interrupt.		OSCLI "SYS " + STR$(num%)
+*TEMPO	Set the units (centiseconds) of the duration parameter of the SOUND statement.	OSCLI "TEMPO " + STR$(num%)
+*TIMER	Set the periodicity, in milliseconds, of the ON TIME interrupt.			OSCLI "TIMER " + STR$(num%)
+*TV	Ignored, for compatibility with BBC Micro programs.
+*TYPE	Print the specified text file to the screen, the extension defaults to .bbc.	OSCLI "TYPE """ + file$ + """"
+*UNLOCK	Set the specified file to 'read/write' status, the extension defaults to .bbc.	OSCLI "UNLOCK """ + file$ + """"
+*VOICE	Assign the specified 'voice' ('waveform' or 'stop', 0-7) to a SOUND channel.	OSCLI "VOICE " + STR$(chan%) + "," + STR$(wave%)
+*|	A comment; anything following the '|' up to the end of the line is ignored.
+
+	The OSCLI form of the command must be used if the parameters include variables.
+	Directory and file names must be quoted if they include a space or punctuation.

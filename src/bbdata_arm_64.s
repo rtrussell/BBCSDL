@@ -132,8 +132,6 @@
 .global _offsety
 .global _platform
 .global _memhdc
-.global _prthdc
-.global _MidiId
 .global _reflag
 .global _sysflg
 .global _panx
@@ -170,7 +168,6 @@
 .global _vduvar
 .global _vduptr
 .global _voices
-.global _hwacc
 .global _chrmap
 .global _breakpt
 .global _breakhi
