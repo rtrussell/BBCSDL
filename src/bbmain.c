@@ -8,7 +8,7 @@
 *                                                                 *
 *                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
-*       Version 1.42a, 13-Jun-2025                                *
+*       Version 1.43a, 04-Sep-2025                                *
 \*****************************************************************/
 
 #include <stdio.h>
@@ -1291,7 +1291,7 @@ static void *locate (unsigned char *ptype)
 // If invalid, return NULL.
 // If not found, return pointer to linked-list terminator and set type to 0.
 // If found, return pointer to variable (etc.) and set type as appropriate.
-// Types are: 1, 4, 5, 8, 10, 40 numeric
+// Types are: 1, 4, 5, 8, 10, 32, 40 numeric
 //            128, 130, 136 string
 //            16/24, 80/88 structure, structure array
 //            36, 100 function or procedure
@@ -1326,6 +1326,8 @@ void * getvar (unsigned char *ptype)
 			*ptype = 5 ;
 		else if ((liston & 3) == 1)
 			*ptype = 8 ;
+		else if ((liston & 3) == 2)
+			*ptype = 32 ;
 		else
 			*ptype = 10 ;
 

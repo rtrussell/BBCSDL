@@ -7,7 +7,7 @@
 *       it is not transferrable to a forked or derived work.      *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.42a, 11-Jun-2025                                *
+*       Version 1.43a, 22-Sep-2025                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -360,7 +360,7 @@ VAR cons (void)
 }
 
 // Load a numeric variable:
-// type is 1, 4, 5, 8, 10, 36 or 40
+// type is 1, 4, 5, 8, 10, 32, 36 or 40
 VAR loadn (void *ptr, unsigned char type)
 {
 	VAR v ;
@@ -428,6 +428,15 @@ VAR loadn (void *ptr, unsigned char type)
 			// v.s.l = *(int *)((char *)ptr + 4) ;
 			memcpy (&v.s.p, ptr, 8) ; // may be unaligned
 			break ;
+
+		case 32:
+			{
+			union { int i; float f; } u ;
+			u.i = ILOAD(ptr) ;
+			v.i.t = 1 ; // ARM
+			v.f = u.f ;
+			break ;
+			}
 
 		case 36:
 			v.i.t = 0 ;
@@ -2608,16 +2617,16 @@ int expra (void *ebp, int ecx, unsigned char type)
 				if (nxt () == '.') // dot product
 					break ;
 
-				if ((type != type2) || (ecx != arrlen(&ptr)))
+				if (((type < 128) != (type2 < 128)) || (ecx != arrlen(&ptr)))
 					error (6, NULL) ; // 'Type mismatch'
 				if (type < 128) // numeric array
 				    {
 					for (i = 0; i < ecx; i++)
 					    {
-						VAR v = loadn (ptr, type & ~BIT6) ;
+						VAR v = loadn (ptr, type2 & ~BIT6) ;
 						modify (v, ebp, type & ~BIT6, op) ;
 						ebp += type & TMASK ; // GCC extension
-						ptr += type & TMASK ; // GCC extension
+						ptr += type2 & TMASK ; // GCC extension
 					    }
 				    }
 				else // string array
@@ -2709,7 +2718,7 @@ int expra (void *ebp, int ecx, unsigned char type)
 			error (16, NULL) ; // 'Syntax error'
 		if (type3 == 0)
 			error (26, NULL) ; // 'No such variable'
-		if ((type != type2) || (type != type3) || (type3 & BIT7))
+		if ((type2 != type3) || (type3 & BIT7))
 			error (6, NULL) ; // 'Type mismatch'
 		if (rhs < (void *)2)
 			error (14, NULL) ; // 'Bad use of array'
@@ -2748,7 +2757,8 @@ int expra (void *ebp, int ecx, unsigned char type)
 			error (6, NULL) ; // 'Type mismatch'
 
 		type &= ~BIT6 ;
-		size = type & TMASK ;
+		type2 &= ~BIT6 ;
+		size = type2 & TMASK ;
 		for (i = 0; i < rowsl; i++)
 		    {
 			void *oldrhs = rhs ;
@@ -2756,14 +2766,16 @@ int expra (void *ebp, int ecx, unsigned char type)
 			    {
 				void *oldptr = ptr ;
 				void *oldrhs = rhs ;
+				VAR v = {0} ;
 				for (k = 0; k < colsl; k++)
 				    {
-					modify (math (loadn (ptr,type), '*', loadn (rhs,type)), 
-						ebp, type, '+') ;
+					v = math( math (loadn (ptr,type2), '*', loadn (rhs,type2)), 
+						  '+', v) ;
 					ptr += size ;
 					rhs += size * colsr ;
 				    }
-				ebp += size ;
+				storen (v, ebp, type) ;
+				ebp += (type & 15) ;
 				rhs = oldrhs + size ;
 				ptr = oldptr ;
 			    }

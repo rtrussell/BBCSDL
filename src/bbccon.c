@@ -1,10 +1,10 @@
-/******************************************************************\
-*       BBC BASIC Minimal Console Version                          *
-*       Copyright (C) R. T. Russell, 2021-2025                     *
-*                                                                  *
-*       bbccon.c Main program, Initialisation, Keyboard handling   *
-*       Version 0.48a, 13-Feb-2025                                 *
-\******************************************************************/
+/*****************************************************************\
+*       BBC BASIC Minimal Console Version                         *
+*       Copyright (C) R. T. Russell, 2021-2025                    *
+*                                                                 *
+*       bbccon.c Main program, Initialisation, Keyboard handling  *
+*       Version 0.48a, 13-Feb-2025                                *
+\*****************************************************************/
 
 #define _GNU_SOURCE
 #define __USE_GNU

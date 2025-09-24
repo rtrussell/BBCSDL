@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2023  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2025  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.39a, 14-Dec-2023                                *
+*       Version 1.43a, 04-Sep-2025                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -491,6 +491,10 @@ void oscli (char *cmd)
 			sscanf (p, "%i", &n) ;
 			switch (n)
 			    {
+				case 32:
+					liston &= ~BIT0 ;
+					liston |= BIT1 ;
+					break ;
 				case 40:
 					liston &= ~(BIT0 + BIT1) ;
 					break ;

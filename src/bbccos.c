@@ -1,9 +1,9 @@
-/******************************************************************\
+/*****************************************************************\
 *       BBC BASIC Minimal Console Version                         *
-*       Copyright (C) R. T. Russell, 2024                         *
+*       Copyright (C) R. T. Russell, 2025                         *
 *                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.46b, 27-Apr-2024                                *
+*       Version 0.50, 22-Sep-2025                                 *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -822,6 +822,10 @@ void oscli (char *cmd)
 			sscanf (p, "%i", &n) ;
 			switch (n)
 			    {
+				case 32:
+					liston &= ~BIT0 ;
+					liston |= BIT1 ;
+					break ;
 				case 40:
 					liston &= ~(BIT0 + BIT1) ;
 					break ;

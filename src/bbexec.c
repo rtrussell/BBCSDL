@@ -7,7 +7,7 @@
 *       it is not transferrable to a forked or derived work.      *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.42a, 12-Jun-2025                                *
+*       Version 1.43a, 23-Sep-2025                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -246,6 +246,19 @@ void storen (VAR v, void *ptr, unsigned char type)
 			// *(int *)((char *)ptr + 4) = v.s.l ;
 			memcpy (ptr, &v.s.p, 8) ; // may be unaligned
 			break ;
+
+		case 32:
+			{
+			union { int i; float f; } u ;
+			if (v.i.t == 0)
+				v.f = v.i.n ;
+			u.f = v.f ;
+			if ((u.i == 0x7F800000) || (u.i == 0xFF800000))
+				error (20, NULL) ; // 'Number too big'
+			ISTORE(ptr, u.i) ;
+
+			break ;
+			}
 
 		case 36:
 			VSTORE(ptr, (void *) (size_t) v.i.n) ;
@@ -2033,7 +2046,7 @@ VAR xeq (void)
 					{
 					unsigned char type ;
 					void *ptr ;
-					if ((int) datptr == NULL - (void *) zero)
+					if (datptr == (unsigned int) (NULL - (void *) zero))
 						error (42, NULL) ; // 'Out of DATA'
 					signed char *edx = datptr + (signed char *) zero ;
 					while (1)
@@ -2118,9 +2131,10 @@ VAR xeq (void)
 							VAR v ;
 							char *p = pfree + (char *) zero ;
 							int i, size = 5 ;
-							if (liston & BIT0) size = 8 ;
-							if (liston & BIT1) size = 10 ;
-							for (i = 0; i < size; i++)
+							if ((liston & 3) == 1) size = 8 ;
+							if ((liston & 3) == 2) size = 32 ;
+							if ((liston & 3) == 3) size = 10 ;
+							for (i = 0; i < (size > 10 ? 4 : size); i++)
 								*p++ = osbget (chan, NULL) ;
 							v = loadn (pfree + zero, size) ;
 							storen (v, ptr, type) ;
@@ -2245,10 +2259,11 @@ VAR xeq (void)
 						    {
 							char *p = pfree + (char *) zero ;
 							int i, size = 5 ;
-							if (liston & BIT0) size = 8 ;
-							if (liston & BIT1) size = 10 ;
+							if ((liston & 3) == 1) size = 8 ;
+							if ((liston & 3) == 2) size = 32 ;
+							if ((liston & 3) == 3) size = 10 ;
 							storen (v, p, size) ;
-							for (i = 0; i < size; i++)
+							for (i = 0; i < (size > 10 ? 4 : size); i++)
 								osbput (chan, *p++) ;
 						    }
 						else
