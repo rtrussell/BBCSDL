@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.42a, 14-Jun-2025                                *
+*       Version 1.43a, 20-Oct-2025                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1430,42 +1430,52 @@ static int maintick (void)
 			switch (c)
 			    {
 				case SDLK_HOME :
+				case SDLK_KP_7 :
 				c = 130 ;
 				break ;
 
 				case SDLK_END :
+				case SDLK_KP_1 :
 				c = 131 ;
 				break ;
 
 				case SDLK_PAGEUP :
+				case SDLK_KP_9 :
 				c = 132 ;
 				break ;
 
 				case SDLK_PAGEDOWN :
+				case SDLK_KP_3 :
 				c = 133 ;
  				break ;
 
 				case SDLK_INSERT :
+				case SDLK_KP_0 :
 				c = 134 ;
 				break ;
 
 				case SDLK_DELETE :
+				case SDLK_KP_PERIOD :
 				c = 135 ;
 				break ;
 
 				case SDLK_LEFT :
+				case SDLK_KP_4 :
 				c = 136 ;
 				break ;
 
 				case SDLK_RIGHT :
+				case SDLK_KP_6 :
 				c = 137 ;
 				break ;
 
 				case SDLK_DOWN :
+				case SDLK_KP_2 :
 				c = 138 ;
 				break ;
 
 				case SDLK_UP :
+				case SDLK_KP_8:
 				c = 139 ;
 				break ;
 

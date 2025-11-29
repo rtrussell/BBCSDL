@@ -1,6 +1,6 @@
 ﻿•    BBC BASIC is the programming language originally specified and adopted by the British Broadcasting Corporation for its groundbreaking Computer Literacy Project of the early 1980s.
 
-BBC BASIC for SDL 2.0 is an advanced cross-platform implementation which will run on Windows®, MacOS®, Linux® (x86), Raspberry Pi OS™, Android™, iOS® and in a browser.
+BBC BASIC for SDL 2.0 is an advanced cross-platform implementation which will run on Windows®, MacOS®, Linux® (x86), Raspberry Pi OS™, Android™, iOS® and in a browser.  The full help manual may be found <here>.
 
 The Android, iOS and in-browser editions have a simplified user interface.  To run a program, navigate to the appropriate folder (games, general, graphics, physics, sounds or tools) and tap/click on the program's name.
 

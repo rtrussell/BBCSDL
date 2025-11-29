@@ -6,7 +6,6 @@
 *       Broadcasting Corporation and used with their permission,  *
 *       it is not transferrable to a forked or derived work.      *
 *                                                                 *
-*                                                                 *
 *       bbmain.c: Immediate mode, error handling, variable lookup *
 *       Version 1.43a, 04-Sep-2025                                *
 \*****************************************************************/
