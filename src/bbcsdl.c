@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.43a, 20-Oct-2025                                *
+*       Version 1.43b, 30-Nov-2025                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1429,53 +1429,73 @@ static int maintick (void)
 
 			switch (c)
 			    {
-				case SDLK_HOME :
 				case SDLK_KP_7 :
+				c = 0 ;
+				if (ev.key.keysym.mod & KMOD_NUM) break ;
+				case SDLK_HOME :
 				c = 130 ;
 				break ;
 
-				case SDLK_END :
 				case SDLK_KP_1 :
+				c = 0 ;
+				if (ev.key.keysym.mod & KMOD_NUM) break ;
+				case SDLK_END :
 				c = 131 ;
 				break ;
 
-				case SDLK_PAGEUP :
 				case SDLK_KP_9 :
+				c = 0 ;
+				if (ev.key.keysym.mod & KMOD_NUM) break ;
+				case SDLK_PAGEUP :
 				c = 132 ;
 				break ;
 
-				case SDLK_PAGEDOWN :
 				case SDLK_KP_3 :
+				c = 0 ;
+				if (ev.key.keysym.mod & KMOD_NUM) break ;
+				case SDLK_PAGEDOWN :
 				c = 133 ;
  				break ;
 
-				case SDLK_INSERT :
 				case SDLK_KP_0 :
+				c = 0 ;
+				if (ev.key.keysym.mod & KMOD_NUM) break ;
+				case SDLK_INSERT :
 				c = 134 ;
 				break ;
 
-				case SDLK_DELETE :
 				case SDLK_KP_PERIOD :
+				c = 0 ;
+				if (ev.key.keysym.mod & KMOD_NUM) break ;
+				case SDLK_DELETE :
 				c = 135 ;
 				break ;
 
-				case SDLK_LEFT :
 				case SDLK_KP_4 :
+				c = 0 ;
+				if (ev.key.keysym.mod & KMOD_NUM) break ;
+				case SDLK_LEFT :
 				c = 136 ;
 				break ;
 
-				case SDLK_RIGHT :
 				case SDLK_KP_6 :
+				c = 0 ;
+				if (ev.key.keysym.mod & KMOD_NUM) break ;
+				case SDLK_RIGHT :
 				c = 137 ;
 				break ;
 
-				case SDLK_DOWN :
 				case SDLK_KP_2 :
+				c = 0 ;
+				if (ev.key.keysym.mod & KMOD_NUM) break ;
+				case SDLK_DOWN :
 				c = 138 ;
 				break ;
 
-				case SDLK_UP :
 				case SDLK_KP_8:
+				c = 0 ;
+				if (ev.key.keysym.mod & KMOD_NUM) break ;
+				case SDLK_UP :
 				c = 139 ;
 				break ;
 
