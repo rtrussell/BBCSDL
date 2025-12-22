@@ -211,7 +211,7 @@ _moutrp:.long	0		/* Pointer to ON MOUSE statement */
 _errlin:.long	0		/* Pointer to last error statement */
 
 _prand:
-_random:.fill	5,1,0		/* Current 'random' number (5 bytes) */
+_bbcrandom:.fill	5,1,0		/* Current 'random' number (5 bytes) */
 _vwidth:.byte	0		/* Current value of WIDTH */
 _errnum:.byte	0		/* Error code of last error */
 _liston:.byte	0		/* *FLOAT / *HEX / *LOWERCASE / OPT */
