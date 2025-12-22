@@ -14,7 +14,7 @@ SOUNDQL         EQU     5*SOUNDQE ; Number of bytes per channel
 	GLOBAL	stavar,lc,oc,pc,dynvar,fnptr,proptr,prand
 	GLOBAL	accs,buff,vpage,flist,lomem,pfree,himem
 	GLOBAL	errtxt,onersp,errtrp,datptr,curlin,errlin
-	GLOBAL	tracen,bbcrandom,vcount,vwidth,errnum,liston,tmps
+	GLOBAL	tracen,vcount,vwidth,errnum,liston,tmps
 ;
 	GLOBAL	path,keystr,keybdq,keyptr,spchan,exchan,tweak
 	GLOBAL	fcbtab,timoff,usrchr,soundq,envels,waves,libase
@@ -86,7 +86,7 @@ moutrp:	dd	0		; Pointer to ON MOUSE statement
 errlin:	dd	0		; Pointer to last error statement
 ;
 prand:
-bbcrandom:	times 5 db 0		; Current 'random' number (5 bytes)
+random:	times 5 db 0		; Current 'random' number (5 bytes)
 vwidth:	db	0		; Current value of WIDTH
 errnum:	db	0		; Error code of last error
 liston:	db	0		; *FLOAT/*HEX/*LOWERCASE/OPT
