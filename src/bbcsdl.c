@@ -588,7 +588,7 @@ if (platform < 0x2000200)
 }
 
 #ifdef __FREEBSD__
-	platform |= 1 ;
+	platform |= 2 ;
 #endif
 #ifdef __LINUX__
 	platform |= 1 ;
@@ -777,7 +777,15 @@ buttexture = MakeBackButton (renderer) ;
 						MAP_PRIVATE | MAP_ANON, -1, 0))))
 		MaximumRAM /= 2 ;
 
-#elif defined __EMSCRIPTEN__ || defined __FREEBSD__
+#elif defined __FREEBSD__
+
+	while ((MaximumRAM > DEFAULT_RAM) &&
+			((void*)-1 == (userRAM = mmap ((void *)0, MaximumRAM,
+						PROT_EXEC | PROT_READ | PROT_WRITE,
+						MAP_PRIVATE | MAP_ANON, -1, 0))))
+		MaximumRAM /= 2 ;
+
+#elif defined __EMSCRIPTEN__
 
 	while ((MaximumRAM > DEFAULT_RAM) &&
 			((void*)-1 == (userRAM = mmap ((void *)0, MaximumRAM, 
