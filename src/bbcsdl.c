@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2025  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2026  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.43b, 30-Nov-2025                                *
+*       Version 1.43c, 09-Jan-2026                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -658,13 +658,14 @@ for (i = 1; i < argc; i++)
 }
 
 window = SDL_CreateWindow("BBCSDL",  SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENTERED, 
-				SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | 
+				SCREEN_WIDTH, SCREEN_HEIGHT, 
 #ifdef __IPHONEOS__
 				SDL_WINDOW_ALLOW_HIGHDPI |
 #endif
 #ifdef __ANDROID__
 				SDL_WINDOW_BORDERLESS |
 #endif
+				(getenv("SDL_RENDER_DRIVER") ? 0 : SDL_WINDOW_OPENGL) |
 				(fixedsize ? 0 : SDL_WINDOW_RESIZABLE) | 
 				(fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) | 
 				(borderless ? SDL_WINDOW_BORDERLESS : 0) | 
@@ -817,17 +818,6 @@ glTexParameteriBBC = SDL_GL_GetProcAddress ("glTexParameteri") ;
 glLogicOpBBC = SDL_GL_GetProcAddress("glLogicOp") ;
 glEnableBBC  = SDL_GL_GetProcAddress("glEnable") ;
 glDisableBBC = SDL_GL_GetProcAddress("glDisable") ;
-#ifndef __EMSCRIPTEN__
-if ((glTexParameteriBBC == NULL) || (glLogicOpBBC == NULL) || (glEnableBBC == NULL) || (glDisableBBC == NULL))
-{
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-				szVersion, "SDL_GL_GetProcAddress failed", NULL) ;
-	SDLNet_Quit() ;
-	TTF_Quit() ;
-	SDL_Quit() ;
-	return 10 ;
-}
-#endif
 
 #ifdef __WINDOWS__
 	wchar_t widepath[MAX_PATH] ;

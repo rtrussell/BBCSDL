@@ -1,9 +1,9 @@
 ;/*****************************************************************\
 ;*       BBC BASIC for SDL 2.0 (x86_64)                            *
-;*       Copyright (c) R. T. Russell, 2000-2024                    *
+;*       Copyright (c) R. T. Russell, 2000-2025                    *
 ;*                                                                 *
 ;*       BBCDATA.NAS RAM data definitions                          *
-;*       Version 1.40a, 12-Mar-2024                                *
+;*       Version 1.44a, 22-Dec-2025                                *
 ;\*****************************************************************/
 ;
 MAX_PORTS       EQU     4       ; Maximum number of i/o ports
@@ -14,7 +14,7 @@ SOUNDQL         EQU     5*SOUNDQE ; Number of bytes per channel
 	GLOBAL	stavar,lc,oc,pc,dynvar,fnptr,proptr,prand
 	GLOBAL	accs,buff,vpage,flist,lomem,pfree,himem
 	GLOBAL	errtxt,onersp,errtrp,datptr,curlin,errlin
-	GLOBAL	tracen,random,vcount,vwidth,errnum,liston,tmps
+	GLOBAL	tracen,vcount,vwidth,errnum,liston,tmps
 ;
 	GLOBAL	path,keystr,keybdq,keyptr,spchan,exchan,tweak
 	GLOBAL	fcbtab,timoff,usrchr,soundq,envels,waves,libase
