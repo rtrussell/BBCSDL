@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2025  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2026  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission,  *
 *       it is not transferrable to a forked or derived work.      *
 *                                                                 *
 *       bbeval.c: Expression evaluation, functions and arithmetic *
-*       Version 1.43a, 22-Sep-2025                                *
+*       Version 1.43c, 03-Feb-2026                                *
 \*****************************************************************/
 
 #define __USE_MINGW_ANSI_STDIO 1
@@ -459,8 +459,8 @@ VAR loads (void *ptr, unsigned char type)
 	switch (type)
 	    {
 		case 128:
-			v.s.l = memchr (ptr, 0x0D, 0x10000) - ptr ;
-			if (v.s.l > 0xFFFF)
+			v.s.l = memchr (ptr, 0x0D, 0x1000000) - ptr ;
+			if (v.s.l > 0xFFFFFF)
 				error (19, NULL) ; // 'String too long'
 			if ((ptr < zero) || ((ptr + v.s.l) > (zero + 0xFFFFFFFF)))
 			    {
@@ -587,7 +587,7 @@ VAR math (VAR x, signed char op, VAR y)
 		case '+':
 			if ((x.i.t == 0) && (y.i.t == 0))
 			    {
-#ifndef __builtin_saddll_overflow
+#if !(defined(__GNUC__) && (__GNUC__ >= 7) || defined(__clang__) && (__clang_major__ >= 4))
 				long long sum = x.i.n + y.i.n ;
 				if (((int)(x.s.l ^ y.s.l) < 0) || ((sum ^ x.i.n) >= 0))
 #else
@@ -606,7 +606,7 @@ VAR math (VAR x, signed char op, VAR y)
 		case '-':
 			if ((x.i.t == 0) && (y.i.t == 0))
 			    {
-#ifndef __builtin_ssubll_overflow
+#if !(defined(__GNUC__) && (__GNUC__ >= 7) || defined(__clang__) && (__clang_major__ >= 4))
 				long long dif = x.i.n - y.i.n ;
 				if (((int)(x.s.l ^ y.s.l) >= 0) || ((dif ^ x.i.n) >= 0))
 #else
@@ -629,7 +629,7 @@ VAR math (VAR x, signed char op, VAR y)
 				return y ;
 			if ((x.i.t == 0) && (y.i.t == 0))
 			    {
-#ifndef __builtin_smulll_overflow
+#if !(defined(__GNUC__) && (__GNUC__ >= 7) || defined(__clang__) && (__clang_major__ >= 4))
 				int lz = __builtin_clzll(x.i.n) + __builtin_clzll(~x.i.n) +
 			                 __builtin_clzll(y.i.n) + __builtin_clzll(~y.i.n) ;
 				if ((lz > 64) || ((lz == 64) && (
@@ -1662,7 +1662,30 @@ VAR item (void)
 			for (i = 0; i < count; i++)
 			    {
 				VAR x = loadn (ptr, type) ; // n.b. type can be 40
+#if !(defined(__GNUC__) && (__GNUC__ >= 7) || defined(__clang__) && (__clang_major__ >= 4))
 				v = math (v, '+', math (x, '*', x)) ;
+#else
+				long long tmp ;
+				if ((x.i.t == 0) && ! __builtin_smulll_overflow (x.i.n, x.i.n, &tmp))
+					x.i.n = tmp ;
+				else
+				    {
+					xfloat (&x) ;
+					x.f *= x.f ;
+					if (x.i.t == 0)
+						x.f = 0.0 ; // Underflow
+				    }
+				if ((v.i.t == 0) && (x.i.t == 0) &&
+				    ! __builtin_saddll_overflow (v.i.n, x.i.n, &tmp))
+					v.i.n = tmp ;
+				else
+				    {
+					float2 (&v, &x) ;
+					v.f += x.f ;
+					if (isinf(v.f) || (v.i.t == -1))
+						error (20, NULL) ; // 'Number too big'
+				    }
+#endif
 				ptr += type & TMASK ;
 			    }
 			if (v.i.t == 0)
@@ -1705,7 +1728,24 @@ VAR item (void)
 				type &= ~BIT6 ;
 				while (count--)
 				    {
+#if !(defined(__GNUC__) && (__GNUC__ >= 7) || defined(__clang__) && (__clang_major__ >= 4))
 					v = math (v, '+', loadn (ptr, type)) ; // n.b. type can be 40
+#else
+					long long sum ;
+					x = loadn (ptr, type) ; // n.b. type can be 40
+					if ((v.i.t == 0) && (x.i.t == 0) &&
+					    (! __builtin_saddll_overflow (v.i.n, x.i.n, &sum)))
+						v.i.n = sum ;
+					else
+					    {
+						float2 (&v, &x) ;
+						v.f += x.f ;
+						if (isinf(v.f) || (v.i.t == -1))
+							error (20, NULL) ; // 'Number too big'
+						if ((v.i.t == 0) || (v.i.t == (short) 0x8000))
+							v.f = 0.0 ; // Underflow
+					    }
+#endif
 					ptr += type & TMASK ;
 				    }
 			    }
@@ -2769,8 +2809,36 @@ int expra (void *ebp, int ecx, unsigned char type)
 				VAR v = {0} ;
 				for (k = 0; k < colsl; k++)
 				    {
+#if !(defined(__GNUC__) && (__GNUC__ >= 7) || defined(__clang__) && (__clang_major__ >= 4))
 					v = math( math (loadn (ptr,type2), '*', loadn (rhs,type2)), 
 						  '+', v) ;
+#else
+					long long tmp ;
+					VAR x = loadn (ptr, type2) ;
+					VAR y = loadn (rhs, type2) ;
+					if ((x.i.t == 0) && (y.i.t == 0) &&
+					    ! __builtin_smulll_overflow (x.i.n, y.i.n, &tmp))
+						x.i.n = tmp ;
+					else
+					    {
+						float2 (&x, &y) ;
+						x.f *= y.f ;
+						if (x.i.t == 0)
+							x.f = 0.0 ; // Underflow
+					    }
+					if ((v.i.t == 0) && (x.i.t == 0) &&
+					    ! __builtin_saddll_overflow (v.i.n, x.i.n, &tmp))
+						v.i.n = tmp ;
+					else
+					    {
+						float2 (&v, &x) ;
+						v.f += x.f ;
+						if (isinf(v.f) || (v.i.t == -1))
+							error (20, NULL) ; // 'Number too big'
+						if ((v.i.t == 0) || (v.i.t == (short) 0x8000))
+							v.f = 0.0 ; // Underflow
+					    }
+#endif
 					ptr += size ;
 					rhs += size * colsr ;
 				    }

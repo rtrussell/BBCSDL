@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC Interpreter                    *
-*       (C) 2017-2025  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2026  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission,  *
 *       it is not transferrable to a forked or derived work.      *
 *                                                                 *
 *       bbexec.c: Variable assignment and statement execution     *
-*       Version 1.43a, 23-Sep-2025                                *
+*       Version 1.43c, 03-Feb-2026                                *
 \*****************************************************************/
 
 #include <string.h>
@@ -3028,7 +3028,7 @@ VAR xeq (void)
 					v = loadn (ptr, type) ;
 					s.i.t = *(short *)(esp + 4 + STRIDE) ;
 					s.i.n = *(long long *)(esp + 2 + STRIDE) ;
-#ifndef __builtin_saddll_overflow
+#if !(defined(__GNUC__) && (__GNUC__ >= 7) || defined(__clang__) && (__clang_major__ >= 4))
 					if ((v.i.t == 0) && (s.i.t == 0) && ((((tmpll = v.i.n + s.i.n) ^
 						             v.i.n) >= 0) || ((int)(v.s.l ^ s.s.l) < 0)))
 #else
@@ -3741,7 +3741,7 @@ VAR xeq (void)
 							unsigned int eax = *(int *)(esp + i) ;
 							ISTORE(edi, eax) ;
 							edi += 4 ;
-#ifndef __builtin_umul_overflow
+#if !(defined(__GNUC__) && (__GNUC__ >= 7) || defined(__clang__) && (__clang_major__ >= 4))
 							ebx *= eax ;
 #else
 							if (__builtin_umul_overflow (eax, ebx, &ebx))
