@@ -1,12 +1,12 @@
 /*****************************************************************\
 *       32-bit BBC BASIC Interpreter (Emscripten / Web Assembly)  *
-*       (c) 2018-2025  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (c) 2018-2026  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.41a, 28-Feb-2025                                *
+*       Version 1.44a, 05-Feb-2026                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -663,7 +663,7 @@ long long BBC_emscripten_run_script_string(st script, st i1, st i2, st i3, st i4
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) emscripten_run_script_string((const char*) script); }
 
-#define NSYS 140
+#define NSYS 141
 
 static const char *sysname[NSYS] = {
 	"B2D_GetProcAddress",
@@ -805,6 +805,7 @@ static const char *sysname[NSYS] = {
 	"stbi_image_free",
 	"stbi_load_gif_from_memory",
 	"stbi_set_flip_vertically_on_load",
+	"szNotice",
 	"time"} ;
 
 static void *sysfunc[NSYS] = {
@@ -947,6 +948,7 @@ static void *sysfunc[NSYS] = {
 	BBC_stbi_image_free,
 	BBC_stbi_load_gif_from_memory,
 	BBC_stbi_set_flip_vertically_on_load,
+	(void *) szNotice,
 	BBC_time } ;
 
 void *dlsym (void *handle, const char *symbol)

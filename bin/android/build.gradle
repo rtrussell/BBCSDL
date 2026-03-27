@@ -8,21 +8,21 @@ else {
 }
 
 android {
-    namespace 'com.rtrussell.bbcbasic'
-    compileSdkVersion 31
+    namespace = 'com.rtrussell.bbcbasic'
+    compileSdkVersion 35
     defaultConfig {
         if (buildAsApplication) {
             applicationId "com.rtrussell.bbcbasic"
         }
-        ndkVersion "16.1.4479499"
-        minSdkVersion 16
-        targetSdkVersion 31
-        versionCode 138
-        versionName "1.34c"
+        ndkVersion = "27.3.13750724"
+        minSdkVersion 21
+        targetSdkVersion 35
+        versionCode 149
+        versionName "1.44a"
         externalNativeBuild {
             ndkBuild {
                 arguments "APP_PLATFORM=android-16"
-                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
             }
             // cmake {
             //     arguments "-DANDROID_APP_PLATFORM=android-16", "-DANDROID_STL=c++_static"
@@ -54,12 +54,12 @@ android {
             //     path 'jni/CMakeLists.txt'
             // }
         }
-       
+
     }
     lintOptions {
-        abortOnError false
+        abortOnError = false
     }
-    
+
     if (buildAsLibrary) {
         libraryVariants.all { variant ->
             variant.outputs.each { output ->

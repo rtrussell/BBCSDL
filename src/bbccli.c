@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2025  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2026  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbccli.c: Command Line Interface (OS emulation)           *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.43a, 04-Sep-2025                                *
+*       Version 1.44a, 18-Mar-2026                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -553,6 +553,8 @@ void oscli (char *cmd)
 				while (reflag & 1)
 					SDL_Delay (1) ;
 			    }
+			else if (n == 20)
+				memset (usrchr, 0, 256) ;
 			else if (n == 21)
 			    {
 				if (b == 0)

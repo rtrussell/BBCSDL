@@ -10,6 +10,8 @@ To create a new program, first navigate to the @usr$ folder then long-press or r
 
 To edit a program, long-press or right-click on the program's name and select Edit from the context menu.  To exit the editor tap on the [<] button or press the Escape key. You cannot edit the supplied example programs.
 
+In the editor a long-press or right-click opens a menu of commands. A long press and drag selects a block of code; a horizontal drag selects part of a line, a vertical drag selects entire lines.  Tap on a selected region for options.
+
 In Android and iOS the contents of the @usr$ folder may be accessed from a desktop computer using a USB connection, or from the Files app in iOS.
 
 It is inevitable that from time to time BBC BASIC will crash (for example abort with an untrapped error), especially if you are testing and debugging your own programs. If this happens it will not damage your device or other apps, but it will be necessary to close BBC BASIC fully and open it again.

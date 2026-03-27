@@ -23,7 +23,7 @@ BY	A qualifier for the DRAW, FILL, MOVE and PLOT statements and the GET$ functio
 CALL	[1] A statement to call a machine-code function, optionally passing parameters	CALL <pointer>{,<n-var>|<s-var>|<array()>|<struct{}>}
 	[2] A statement to load a tokenised code module, run it, and then discard it	CALL <string>
 CASE	Introduces a switch clause, vectoring execution on a numeric or string value	CASE <numeric>|<string> OF
-CHAIN 	A statement to load and run a tokenised program, replacing the current program	CHAIN <string>
+CHAIN	A statement to load and run a tokenised program, replacing the current program	CHAIN <string>
 CHR$	A function returning a single-character string of its numeric argument (0-255)	<s-var>=CHR$(<numeric>)
 CIRCLE	A statement to draw a solid or outline circle, with centre x,y and radius r	CIRCLE [FILL] <numeric>,<numeric>,<numeric>
 CLEAR	A statement to remove all currently defined variables, arrays and structures	CLEAR
@@ -81,7 +81,7 @@ FN	[1] Calls a user-defined function by name, with optional parameters 		<n-var>
 	[2] Calls a user-defined function by pointer, with optional parameters		<n-var>|<s-var>=FN(<pointer>)[(<exp>{,<exp>})]
 FOR	A statement to introduce a FOR...NEXT loop (always executed at least once)	FOR <n-var>=<numeric> TO <numeric> [STEP <numeric>]
 GCOL	[1] GCOL [mode,]col     Sets the graphics foreground colour and optional mode	GCOL [<numeric>,]<numeric>
-	[2] GCOL [mode,]128+col Sets the graphics bkgnd colour and optional mode	GCOL [<numeric>,]<numeric>
+	[2] GCOL [mode,]128+col Sets the graphics background colour and optional mode	GCOL [<numeric>,]<numeric>
 GET	[1] A function returning a byte from the keyboard buffer, waiting if empty	<n-var>=GET
 	[2] A function returning the character at the specified text column and row	<n-var>=GET(<numeric>,<numeric>)
 GET$	[1] A function returning a byte from the keyboard buffer as a length-1 string	<s-var>=GET$
@@ -125,11 +125,11 @@ MOD=	A compound assignment calculating the integer remainder after a division	<n
 MODE	[1] A statement initialising a specified screen mode				MODE <numeric>
 	[2] A function returning the current screen mode number, or −1 if user-defined	<n-var>=MODE
 MOUSE	A statement to return the current position and button status of the 'mouse'	MOUSE <n-var>,<n-var>,<n-var>
-MOUSE ON	A statement to select a particular mouse pointer shape and enable it	MOUSE ON [<numeric>]
 MOUSE OFF	A statement to hide the mouse pointer					MOUSE OFF
-MOUSE TO	A statement to move the mouse pointer to the specified coordinates	MOUSE TO <n-var>,<n-var>
+MOUSE ON	A statement to select a particular mouse pointer shape and enable it	MOUSE ON [<numeric>]
 MOUSE RECTANGLE
 	A statement to confine the mouse pointer within a specified rectangle		MOUSE RECTANGLE OFF|<n-var>,<n-var>,<n-var>,<n-var>
+MOUSE TO	A statement to move the mouse pointer to the specified coordinates	MOUSE TO <n-var>,<n-var>
 MOVE	A statement to move the graphics cursor to absolute or relative coordinates	MOVE [BY] <numeric>,<numeric>
 NEXT	A statement to indicate the end of one or more FOR...NEXT loops			NEXT [<n-var>{,<n-var>}]
 NOT	A function returning the Boolean or bitwise inversion of its numeric argument	<n-var>=NOT<numeric>
@@ -201,7 +201,7 @@ RND	[1] A function returning a pseudo-random signed 32-bit integer			<n-var>=RND
 	[4] A function repeating the last returned random number, in RND(1) format	<n-var>=RND(0)
 	[5] A function seeding the random number generator, and returning that seed	<n-var>=RND(<negative>)
 RUN	[1] A statement to run the current program from the start			RUN
- 	[2] A statement synonymous with CHAIN						RUN <string>
+	[2] A statement synonymous with CHAIN						RUN <string>
 SGN	A function returning the sign, or signum, (−1, 0 or +1) of the argument		<n-var>=SGN(<numeric>)
 SIN	A function returning the sine of the radian angle supplied as its argument 	<n-var>=SIN(<numeric>)
 SOUND	A statement to make a sound, optionally using an envelope			SOUND <numeric>,<numeric>,<numeric>,<numeric>
@@ -237,6 +237,7 @@ TO	[1] A mandatory part of the FOR statement, specifying the final value		FOR <n
 	[2] An optional part of the MOUSE and RECTANGLE statements
 	[3] Specifies an optional terminator character in the GET$# function
 	[4] Delimits the range of indices in an array slice, first TO last		<array>({<numeric>,} <numeric> TO [<numeric>])
+	[5] An optional part of the SYS statement specifying where the result is stored	SYS <numeric>|<string>{,<numeric>|<string>} [TO <n-var>]
 TOP	A function returning a pointer to (address of) the first byte after the program	<n-var>=TOP
 TRACE	[1] A statement to control whether line numbers are printed when executed	TRACE ON|OFF
 	[2] A statement to print line numbers if less than the specified value		TRACE<l-num>|(<numeric>)

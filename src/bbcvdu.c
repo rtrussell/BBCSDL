@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2024  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2026  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcvdu.c  VDU emulator and graphics drivers               *
 *       This module runs in the context of the GUI thread         *
-*       Version 1.40a, 05-Mar-2024                                *
+*       Version 1.44a, 13-Mar-2026                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -1241,8 +1241,6 @@ static void rescol (void)
 // Change to a new screen mode:
 static void newmode (short wx, short wy, short cx, short cy, short nc, signed char bc) 
 {
-	SDL_Texture *tex ;
-
 	if (cx < 8) cx = 8 ;
         if (cy < 8) cy = 8 ;
 	sizex = wx ;
@@ -1254,8 +1252,6 @@ static void newmode (short wx, short wy, short cx, short cy, short nc, signed ch
 	cursb = cy ;
 	colmsk = nc - 1 ;
 
-	tex = SDL_GetRenderTarget (memhdc) ;
-	SDL_SetRenderTarget (memhdc, NULL) ;
 #if defined(__ANDROID__) || defined(__IPHONEOS__)
 	{
 		int w, h, wr, hr ;
@@ -1270,15 +1266,17 @@ static void newmode (short wx, short wy, short cx, short cy, short nc, signed ch
 #else
 	{
 		int x, y ;
+		SDL_Texture *tex = SDL_GetRenderTarget (memhdc) ;
+		SDL_SetRenderTarget (memhdc, NULL) ;
 		SDL_DisplayMode dm ;
 		SDL_SetWindowSize (hwndProg, wx, wy) ;
 		SDL_GetDesktopDisplayMode (0, &dm) ;
 		SDL_GetWindowPosition (hwndProg, &x, &y) ;
 		if ((x < 0) || (y < 0) || ((x + wx) > dm.w) || ((y + wy) > dm.h))
 		    SDL_SetWindowPosition (hwndProg, (dm.w - wx) >> 1, (dm.h - wy) >> 1) ;
+		SDL_SetRenderTarget (memhdc, tex) ;
 	}
 #endif
-	SDL_SetRenderTarget (memhdc, tex) ;
 
 	// Set font
 	if ((modeno == 7) || ((modeno == -1) && (cx >= 16) && (cy >= 20) && ((bc & 1) == 0)))
@@ -1924,13 +1922,18 @@ static void reswin (void)
 	if ((w != 0) && (h != 0))
 	    {
 		SDL_Texture *tex = SDL_GetRenderTarget (memhdc) ;
-		SDL_SetRenderTarget (memhdc, NULL) ;
-		SDL_SetWindowSize (hwndProg, w, h) ;
-		SDL_SetRenderTarget (memhdc, tex) ;
+		if (tex)
+		    {
+			SDL_SetRenderTarget (memhdc, NULL) ;
+			SDL_SetWindowSize (hwndProg, w, h) ;
+			SDL_SetRenderTarget (memhdc, tex) ;
+		    }
 	    }
 	sizex = w ;
 	sizey = h ;
 	zoom = 0x8000 ;
+	panx = 0 ;
+	pany = 0 ;
 	iniwin () ;
 }
 

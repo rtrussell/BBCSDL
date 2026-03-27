@@ -21,8 +21,8 @@ VDU 17,n	Set the text foreground (n < 128) or background (n >= 128) logical colo
 VDU 18,m,n	Set the graphics foreground or background logical colour and plotting action.	Equivalent to GCOL m,n
 VDU 19...	Set the colour palette, i.e. the mapping between logical and physical colours:
 VDU 19,n,p,0,0,0	    Set logical colour n to physical colour p in the standard palette.
-VDU 19,n,16,r,g,b	   Set logical colour n to the specified RGB colour (each 0-15).
-VDU 19,n,-1,R,G,B	   Set logical colour n to the specified RGB colour (each 0-255).	Equivalent to COLOUR n,R,G,B
+VDU 19,n,-1,r,g,b	   Set logical colour n to the specified RGB colour (each 0-63).
+VDU 19,n,16,R,G,B	   Set logical colour n to the specified RGB colour (each 0-255).	Equivalent to COLOUR n,R,G,B
 VDU 19,n+128,A,R,G,B	Set logical colour n to the specified ARGB colour (A = alpha, 0-255).
 VDU 20	Set the text and graphics colours, and the colour palette, to their defaults. 
 VDU 21 	Disable the VDU drivers until a VDU 6 is received, other output is discarded.

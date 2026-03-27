@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.43c, 09-Jan-2026                                *
+*       Version 1.44a, 14-Mar-2026                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -195,6 +195,7 @@ static EM_BOOL Emscripten_HandleFullscreenChange(int eventType,
 	static int oldw, oldh ;
 	int neww = oldw, newh = oldh ;
 	SDL_Window *window = userData ;
+	SDL_Event event ;
 	if (fullscreenChangeEvent->isFullscreen)
 	    {
 		SDL_GetWindowSize (window, &oldw, &oldh) ;
@@ -202,8 +203,13 @@ static EM_BOOL Emscripten_HandleFullscreenChange(int eventType,
 		newh = fullscreenChangeEvent->screenHeight ;
 	    }
 	SDL_SetWindowSize (window, neww, newh) ;
-	putevt (siztrp, WM_SIZE, SDL_GetWindowID(window), (newh << 16) | neww) ;
-	flags |= ALERT ;
+	event.type = SDL_WINDOWEVENT ;
+	event.window.windowID = SDL_GetWindowID(window) ;
+	event.window.event = SDL_WINDOWEVENT_RESIZED ;
+	event.window.data1 = neww ;
+	event.window.data2 = newh ;
+	while (SDL_PushEvent(&event) < 0)
+		SDL_Delay(1) ;
 	return 0;
 }
 #elif defined __WINDOWS__
@@ -439,7 +445,7 @@ static void SetDir (char *newpath)
 	if (p)
 	    {
 		*p = '\0' ;
-		realpath (temp, szLoadDir) ;
+		(void) realpath (temp, szLoadDir) ;
 	    }
 	else
 	    {
@@ -471,7 +477,7 @@ static void ShutDown (void)
 #ifdef MUTEX
 	SDL_DestroyMutex (Mutex) ; 
 #endif
-#ifndef _EMSCRIPTEN__
+#ifndef __EMSCRIPTEN__
 	SDL_RemoveTimer(PollTimerID) ;
 #endif
 	SDL_RemoveTimer(UserTimerID) ;
@@ -505,7 +511,7 @@ static int BBC_PeepEvents(SDL_Event* ev, int nev, SDL_eventaction action, Uint32
 
 static int myEventFilter(void* userdata, SDL_Event* pev)
 {
-#ifndef _EMSCRIPTEN_
+#ifndef __EMSCRIPTEN__
 	if (!SDL_SemValue(Idler))
 		SDL_SemPost (Idler) ;
 #endif
@@ -516,6 +522,17 @@ static int myEventFilter(void* userdata, SDL_Event* pev)
 		case SDL_APP_DIDENTERBACKGROUND:
 		bBackground = 1 ;
 		break ;
+
+#ifndef __EMSCRIPTEN__
+		case SDL_WINDOWEVENT:
+		switch (pev->window.event)
+		    {
+			case SDL_WINDOWEVENT_RESIZED:
+			case SDL_WINDOWEVENT_SIZE_CHANGED:
+			bBackground = -FGDLY ;
+		    }
+		break ;
+#endif
 	    }
 
 #if defined __EMSCRIPTEN__ && defined MUTEX
@@ -1076,6 +1093,7 @@ static int maintick (void)
 	static float oldx, oldy ;
 	static int oldtextx, oldtexty ;
 	static unsigned int lastpaint, lastusrev, lastpump ;
+	static SDL_Texture* target = NULL ;
 	unsigned int now = SDL_GetTicks () ;
 	float scale = (float)(zoom) / 32768.0 ; // must be float
 	float yscale = scale ;
@@ -1111,7 +1129,6 @@ static int maintick (void)
 	    {
 		SDL_Rect SrcRect ;
 		SDL_Texture *bitmap = SDL_GetRenderTarget (renderer) ;
-
 		SrcRect.x = offsetx ;
 		SrcRect.y = offsety ;
 		SrcRect.w = sizex ;
@@ -1126,35 +1143,37 @@ static int maintick (void)
 		caret.h = (cursb - cursa) * yscale ;
 		if (caret.h < 0) caret.h = 0 ; 
 
-		SDL_SetRenderTarget(renderer, NULL) ;
-		SDL_SetRenderDrawColor (renderer, 0, 0, 0, 255) ;
-#ifdef __IPHONEOS__
-		glDisableBBC (GL_SCISSOR_TEST) ;
-#endif
-		SDL_RenderClear (renderer) ;
-		if (glTexParameteriBBC)
+		if ((bitmap != NULL) && (bBackground == 0))	// Immediately before SetRenderTarget
 		    {
-			SDL_GL_BindTexture (bitmap, NULL, NULL) ;
-			glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR) ;
-			glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR) ;
-			SDL_GL_UnbindTexture (bitmap) ;
-		    }
-		SDL_RenderCopy(renderer, bitmap, &SrcRect, &DestRect) ;
+			SDL_SetRenderTarget(renderer, NULL) ;
+			SDL_SetRenderDrawColor (renderer, 0, 0, 0, 255) ;
 #ifdef __IPHONEOS__
-		if ((flags & ESCDIS) == 0)
-			SDL_RenderCopy (renderer, buttexture, NULL, &backbutton) ;
+			glDisableBBC (GL_SCISSOR_TEST) ;
 #endif
-		if (glTexParameteriBBC)
-		    {
-			SDL_GL_BindTexture (bitmap, NULL, NULL) ;
-			glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) ;
-			glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST) ;
-			SDL_GL_UnbindTexture (bitmap) ;
+			SDL_RenderClear (renderer) ;
+			if (glTexParameteriBBC)
+			    {
+				SDL_GL_BindTexture (bitmap, NULL, NULL) ;
+				glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR) ;
+				glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR) ;
+				SDL_GL_UnbindTexture (bitmap) ;
+			    }
+			SDL_RenderCopy(renderer, bitmap, &SrcRect, &DestRect) ;
+#ifdef __IPHONEOS__
+			if ((flags & ESCDIS) == 0)
+				SDL_RenderCopy (renderer, buttexture, NULL, &backbutton) ;
+#endif
+			if (glTexParameteriBBC)
+			    {
+				SDL_GL_BindTexture (bitmap, NULL, NULL) ;
+				glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST) ;
+				glTexParameteriBBC (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST) ;
+				SDL_GL_UnbindTexture (bitmap) ;
+			    }
+			if (careton) FlipCaret (renderer, &caret) ;
+			if (bBackground == 0) SDL_RenderPresent(renderer) ;
+			SDL_SetRenderTarget(renderer, bitmap);
 		    }
-		if (careton) FlipCaret (renderer, &caret) ;
-		SDL_RenderPresent(renderer) ;
-		SDL_SetRenderTarget(renderer, bitmap);
-
 		lastpaint = SDL_GetTicks() ; // wraps around after 50 days
 		now = lastpaint ;
 		bChanged = 0 ;
@@ -1670,6 +1689,8 @@ static int maintick (void)
 			break ;
 
 		case SDL_WINDOWEVENT:
+			ev.window.data1 *= winx / ptsx ;
+			ev.window.data2 *= winy / ptsy ;
 			if (clotrp && (ev.window.event == SDL_WINDOWEVENT_CLOSE))
 				{
 					putevt (clotrp, WM_CLOSE, 0, ev.window.windowID) ;
@@ -1678,8 +1699,6 @@ static int maintick (void)
 				}
 			if (siztrp)
 			{
-				ev.window.data1 *= winx / ptsx ;
-				ev.window.data2 *= winy / ptsy ;
 				switch (ev.window.event)
 				{
 					case SDL_WINDOWEVENT_MOVED :
@@ -1694,6 +1713,18 @@ static int maintick (void)
 				}
 				flags |= ALERT ;
 			}
+			else if (ev.window.event == SDL_WINDOWEVENT_RESIZED)
+			{
+				if ((ev.window.data1 * sizey) > (ev.window.data2 * sizex))
+					zoom = 0x8000LL * ev.window.data2 / sizey ;
+				else
+					zoom = 0x8000LL * ev.window.data1 / sizex ;
+				if (zoom < 0x8000) zoom = 0x8000 ;
+#if !defined(__ANDROID__) && !defined(__IPHONEOS__)
+				panx = (sizex - 0x8000LL * ev.window.data1 / zoom) / 2 ;
+				pany = (sizey - 0x8000LL * ev.window.data2 / zoom) / 2 ;
+#endif
+			}
 			break ;
 
 		case SDL_MOUSEWHEEL:
@@ -1703,7 +1734,14 @@ static int maintick (void)
 				putkey (0x8C) ;
 			break ;
 
+		case SDL_APP_WILLENTERBACKGROUND:
+			target = SDL_GetRenderTarget (renderer) ;
+			SDL_SetRenderTarget (renderer, NULL) ;
+			break ;
+
 		case SDL_APP_DIDENTERFOREGROUND:
+			if (target) SDL_SetRenderTarget (renderer, target) ;
+
 			bBackground = -FGDLY ;
 			bChanged = 1 ;
 			if (siztrp)

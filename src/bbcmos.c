@@ -1,13 +1,13 @@
 /*****************************************************************\
 *       32-bit or 64-bit BBC BASIC for SDL 2.0                    *
-*       (C) 2017-2025  R.T.Russell  http://www.rtrussell.co.uk/   *
+*       (C) 2017-2026  R.T.Russell  http://www.rtrussell.co.uk/   *
 *                                                                 *
 *       The name 'BBC BASIC' is the property of the British       *
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcmos.c  Machine Operating System emulation              *
 *       This module runs in the context of the interpreter thread *
-*       Version 1.41a, 13-Feb-2025                                *
+*       Version 1.44a, 18-Mar-2026                                *
 \*****************************************************************/
 
 #define _GNU_SOURCE
@@ -1269,6 +1269,7 @@ unsigned char osrdch (void)
 	while (!rdkey (&key))
 	{
 		SDL_Delay (5) ;
+		if (SDL_GetMouseState (NULL, NULL) & 1) oskon () ;
 		trap () ;
 	}
 	return key ;

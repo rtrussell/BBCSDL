@@ -4,16 +4,6 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := libbbc-prebuilt
 
-ifeq ($(TARGET_ARCH),x86)
-
-LOCAL_SRC_FILES := bbclibs.a
-
-include $(PREBUILT_STATIC_LIBRARY)
-
-include $(CLEAR_VARS)
-
-endif
-
 LOCAL_MODULE := main
 
 SDL_PATH := ../SDL
@@ -22,19 +12,14 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(SDL_PATH)/include
 
 LOCAL_LDLIBS := -lGLESv1_CM -lGLESv2 -lOpenSLES -llog -landroid
 
-ifeq ($(TARGET_ARCH),x86)
-
-LOCAL_SRC_FILES := bbcvdu.c bbcvtx.c flood.c bbcsdl.c SDL2_gfxPrimitives.c SDL2_rotozoom.c
-
-LOCAL_STATIC_LIBRARIES := libbbc-prebuilt
-LOCAL_LDLIBS += -Wl,--no-warn-shared-textrel
-
-endif
+LOCAL_LDFLAGS += -Wl,-z,max-page-size=16384
 
 ifeq ($(TARGET_ARCH),x86_64)
 
 LOCAL_SRC_FILES := bbdata_x86_64.asm bbmain.c bbexec.c bbeval.c bbcmos.c bbccli.c bbcvdu.c \
 	bbcvtx.c flood.c bbcsdl.c bbasmb_x86_64.c SDL2_gfxPrimitives.c SDL2_rotozoom.c
+
+LOCAL_CFLAGS := -fsigned-char
 
 endif
 
