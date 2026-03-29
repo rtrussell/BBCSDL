@@ -18,8 +18,11 @@
 #include "SDL2_gfxPrimitives.h"
 #include "SDL_ttf.h"
 #include "SDL_net.h"
-#if defined(__WINDOWS__) || defined(__MACOSX__) || defined(__LINUX__)
+#if defined(__WINDOWS__) || defined(__MACOSX__) || defined(__LINUX__) || defined(__FREEBSD__)
 #include "zlib.h"
+#endif
+#ifndef MAP_NORESERVE
+#define MAP_NORESERVE 0
 #endif
 
 #ifdef __WINDOWS__
@@ -40,6 +43,11 @@ BOOL WINAPI K32EnumProcessModules (HANDLE, HMODULE*, DWORD, LPDWORD) ;
 #include <sys/mman.h>
 #include <sys/stat.h>
 #define PLATFORM "Linux"
+#endif
+#ifdef __FREEBSD__
+#include <sys/mman.h>
+#include <sys/stat.h>
+#define PLATFORM "FreeBSD"
 #endif
 #ifdef __MACOSX__
 #include <sys/mman.h>
@@ -560,7 +568,7 @@ const SDL_version *TTFversion ;
 SDL_version SDLversion ;
 SDL_Event ev ;
 
-#if defined(__WINDOWS__) || defined(__MACOSX__) || defined(__LINUX__)
+#if defined(__WINDOWS__) || defined(__MACOSX__) || defined(__LINUX__) || defined(__FREEBSD__)
 	gzclose(gzopen("bbc256x.png", "rb"));
 #endif
 
@@ -596,6 +604,9 @@ if (platform < 0x2000200)
 	return 2;
 }
 
+#ifdef __FREEBSD__
+	platform |= 2 ;
+#endif
 #ifdef __LINUX__
 	platform |= 1 ;
 #endif
@@ -784,6 +795,14 @@ buttexture = MakeBackButton (renderer) ;
 						MAP_PRIVATE | MAP_ANON, -1, 0))))
 		MaximumRAM /= 2 ;
 
+#elif defined __FREEBSD__
+
+	while ((MaximumRAM > DEFAULT_RAM) &&
+			((void*)-1 == (userRAM = mmap ((void *)0, MaximumRAM,
+						PROT_EXEC | PROT_READ | PROT_WRITE,
+						MAP_PRIVATE | MAP_ANON, -1, 0))))
+		MaximumRAM /= 2 ;
+
 #elif defined __EMSCRIPTEN__
 
 	while ((MaximumRAM > DEFAULT_RAM) &&
@@ -848,6 +867,13 @@ glDisableBBC = SDL_GL_GetProcAddress("glDisable") ;
 	*(szTempDir + strlen(szTempDir) - 1) = 0 ;
 	mkdir (szTempDir, 0777) ;
 #endif
+
+#ifdef __FREEBSD__
+	strcpy (szTempDir, SDL_GetPrefPath("tmp", "")) ;
+	*(szTempDir + strlen(szTempDir) - 1) = 0 ;
+	mkdir (szTempDir, 0777) ;
+#endif
+
 
 #ifdef __MACOSX__
 	GetTempPath (MAX_PATH, szTempDir) ;
