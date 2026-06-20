@@ -18,6 +18,7 @@ Command	                             Description	Informal syntax
 *FONT	Select the required font file (TTF or OTF), size and, optionally, attribute(s).	OSCLI "FONT """ + font$ + """," + STR$(points%) [+ ",BIUQ"]
 *FX	Ignored except for *FX 15,n and *FX 21,n which flush the specified buffer.	OSCLI "FX " + STR$(number%) [+ "," + STR$(buffer%)]
 *FX19	Force a screen refresh, synonymous with *REFRESH (with no parameters).
+*FX20	Restore all User Defined Characters to their default appearance.
 *GSAVE	Save the output window, or a specified rectangle, to a BMP-format image file.	OSCLI "GSAVE """ + file$ + """ " [+ STR$(x%) + "," + STR$(y%) + "," + STR$(w%) + "," + STR$(h%)] 
 *HELP	Print the name and version number of BBC BASIC.					OSCLI "HELP"
 *HEX	Set hexadecimal conversion (& and ~) and shifts (<< and >>>) to 32 or 64 bits.	OSCLI "HEX 32|64"

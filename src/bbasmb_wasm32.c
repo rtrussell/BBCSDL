@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbasmb.c: API Wrappers to satisfy function signatures     *
-*       Version 1.44a, 05-Feb-2026                                *
+*       Version 1.44b, 31-Mar-2026                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -583,6 +583,18 @@ long long BBC_OpenURL(st url, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return SDL_OpenURL((const char *) url); }
 
+long long BBC_GetClipboardText(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ char *text; text = SDL_malloc(1); text[0] = '\0'; return (intptr_t) text; }
+
+long long BBC_SetClipboardText(st text, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return -1; }
+
+long long BBC_HasClipboardText(st i0, st i1, st i2, st i3, st i4, st i5, st i6, st i7,
+	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
+	{ return 0; }
+
 // Networking (web sockets)
 
 long long BBC_Net_AddSocket(st set, st sock, st i2, st i3, st i4, st i5, st i6, st i7,
@@ -663,7 +675,7 @@ long long BBC_emscripten_run_script_string(st script, st i1, st i2, st i3, st i4
 	  st i8, st i9, st i10, st i11, db f0, db f1, db f2, db f3, db f4, db f5, db f6, db f7)
 	{ return (intptr_t) emscripten_run_script_string((const char*) script); }
 
-#define NSYS 141
+#define NSYS 144
 
 static const char *sysname[NSYS] = {
 	"B2D_GetProcAddress",
@@ -721,6 +733,7 @@ static const char *sysname[NSYS] = {
 	"SDL_GL_SetAttribute",
 	"SDL_GL_SetSwapInterval",
 	"SDL_GL_SwapWindow",
+	"SDL_GetClipboardText",
 	"SDL_GetDisplayUsableBounds",
 	"SDL_GetError",
 	"SDL_GetPerformanceCounter",
@@ -730,6 +743,7 @@ static const char *sysname[NSYS] = {
 	"SDL_GetTicks",
 	"SDL_GetTicks64",
 	"SDL_GetWindowFlags",
+	"SDL_HasClipboardText",
 	"SDL_HasIntersection",
 	"SDL_IntersectRectAndLine",
 	"SDL_LoadBMP_RW",
@@ -762,6 +776,7 @@ static const char *sysname[NSYS] = {
 	"SDL_RenderGeometry",
 	"SDL_RenderReadPixels",
 	"SDL_RenderSetClipRect",
+	"SDL_SetClipboardText",
 	"SDL_SetColorKey",
 	"SDL_SetCursor",
 	"SDL_SetHint",
@@ -864,6 +879,7 @@ static void *sysfunc[NSYS] = {
 	BBC_GL_SetAttribute,
 	BBC_GL_SetSwapInterval,
 	BBC_GL_SwapWindow,
+	BBC_GetClipboardText,
 	BBC_GetDisplayUsableBounds,
 	BBC_GetError,
 	BBC_GetPerformanceCounter,
@@ -873,6 +889,7 @@ static void *sysfunc[NSYS] = {
 	BBC_GetTicks,
 	BBC_GetTicks64,
 	BBC_GetWindowFlags,
+	BBC_HasClipboardText,
 	BBC_HasIntersection,
 	BBC_IntersectRectAndLine,
 	BBC_LoadBMP_RW,
@@ -905,6 +922,7 @@ static void *sysfunc[NSYS] = {
 	BBC_RenderGeometry,
 	WASM_RenderReadPixels,
 	WASM_RenderSetClipRect,
+	BBC_SetClipboardText,
 	BBC_SetColorKey,
 	BBC_SetCursor,
 	BBC_SetHint,
