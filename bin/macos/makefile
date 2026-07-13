@@ -33,7 +33,7 @@ bbeval.o: bbeval.c BBC.h
 	$(CXX) -Wno-array-bounds -c -O2 -ffast-math -fmath-errno -fno-finite-math-only $< -o $@
 
 bbcmos.o: bbcmos.c bbcsdl.h
-	$(CXX) -Wno-unused-result -Wno-array-bounds -c -msse2 -O2 $< -o $@
+	$(CXX) -Wno-unused-result -Wno-array-bounds -c -O2 $< -o $@
 
 bbccli.o: bbccli.c bbcsdl.h
 	$(CXX) -Wno-unused-result -c -Os $< -o $@
