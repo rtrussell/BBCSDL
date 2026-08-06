@@ -1,0 +1,21 @@
+Installing SDL 2.0 on FreeBSD systems:
+
+64-bit FreeBSD:
+
+ sudo pkg install sdl2
+ sudo pkg install sdl2_ttf
+ sudo pkg install sdl2_net
+
+To compile use GNU make:
+
+  gmake
+
+To start BBC BASIC:
+
+ chmod +x bbcsdl
+ ./bbcsdl
+
+To create a desktop shortcut:
+
+ chmod +x mkicon.sh
+ ./mkicon.sh

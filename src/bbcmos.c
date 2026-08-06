@@ -24,7 +24,7 @@
 
 #if defined __WINDOWS__
 #include <windows.h>
-#elif defined(__LINUX__) || defined(__MACOSX__)
+#elif defined(__LINUX__) || defined(__MACOSX__) || defined(__FREEBSD__)
 #include <sys/ioctl.h>
 #endif
 
@@ -2382,7 +2382,7 @@ long long getext (void *chan)
 		COMSTAT cs = {0} ;
 		ClearCommError (file->hidden.windowsio.h, NULL, &cs) ;
 		return cs.cbInQue ;
-#elif defined(__LINUX__) || defined(__MACOSX__)
+#elif defined(__LINUX__) || defined(__MACOSX__) || defined(__FREEBSD__)
 		int waiting = 0 ;
 		ioctl (fileno (file->hidden.stdio.fp), FIONREAD, &waiting) ;
 		return waiting ;
