@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.44a, 14-Mar-2026                                *
+*       Version 1.45a, 27-Aug-2026                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -48,6 +48,7 @@ int GetTempPath(size_t, char *) ;
 #endif
 #ifdef __ANDROID__
 #include <sys/mman.h>
+#include "../SDL/src/video/android/SDL_androidvideo.h"
 unsigned int DIRoff = 19 ; // Used by Android x86-32 build
 #define PLATFORM "Android"
 #endif
@@ -1143,6 +1144,9 @@ static int maintick (void)
 		caret.h = (cursb - cursa) * yscale ;
 		if (caret.h < 0) caret.h = 0 ; 
 
+#ifdef __ANDROID__
+    		SDL_LockMutex(Android_ActivityMutex);
+#endif
 		if ((bitmap != NULL) && (bBackground == 0))	// Immediately before SetRenderTarget
 		    {
 			SDL_SetRenderTarget(renderer, NULL) ;
@@ -1174,6 +1178,9 @@ static int maintick (void)
 			if (bBackground == 0) SDL_RenderPresent(renderer) ;
 			SDL_SetRenderTarget(renderer, bitmap);
 		    }
+#ifdef __ANDROID__
+    		SDL_UnlockMutex(Android_ActivityMutex);
+#endif
 		lastpaint = SDL_GetTicks() ; // wraps around after 50 days
 		now = lastpaint ;
 		bChanged = 0 ;
@@ -1249,7 +1256,13 @@ static int maintick (void)
 			else switch (ev.user.code)
 			{
 				case EVT_VDU :
+#ifdef __ANDROID__
+		    		SDL_LockMutex(Android_ActivityMutex);
+#endif
 				vduchr_ (ev.user.data1) ;
+#ifdef __ANDROID__
+		    		SDL_UnlockMutex(Android_ActivityMutex);
+#endif
 				lastusrev = SDL_GetTicks() ;
 				break ;
 
@@ -1259,7 +1272,13 @@ static int maintick (void)
 				break ;
 
 				case EVT_TINT :
+#ifdef __ANDROID__
+		    		SDL_LockMutex(Android_ActivityMutex);
+#endif
 				iResult = vtint_ (ev.user.data1, ev.user.data2) ;
+#ifdef __ANDROID__
+		    		SDL_UnlockMutex(Android_ActivityMutex);
+#endif
 				SDL_SemPost (Sema4) ;
 				lastusrev = SDL_GetTicks() ;
 				break ;
@@ -1271,7 +1290,13 @@ static int maintick (void)
 				break ;
 
 				case EVT_PIXELS :
+#ifdef __ANDROID__
+		    		SDL_LockMutex(Android_ActivityMutex);
+#endif
 				getpix_ (ev.user.data1, ev.user.data2) ;
+#ifdef __ANDROID__
+		    		SDL_UnlockMutex(Android_ActivityMutex);
+#endif
 				SDL_SemPost (Sema4) ;
 				lastusrev = SDL_GetTicks() ;
 				break ;
@@ -1282,7 +1307,13 @@ static int maintick (void)
 				break ;
 
 				case EVT_FONT :
+#ifdef __ANDROID__
+		    		SDL_LockMutex(Android_ActivityMutex);
+#endif
 				iResult = openfont_ (ev.user.data1, ev.user.data2) ;
+#ifdef __ANDROID__
+ 		   		SDL_UnlockMutex(Android_ActivityMutex);
+#endif
 				SDL_SemPost (Sema4) ;
 				lastusrev = SDL_GetTicks() ;
 				break ;
@@ -1312,7 +1343,13 @@ static int maintick (void)
 				break ;
 
 				case EVT_SYSCALL :
+#ifdef __ANDROID__
+		    		SDL_LockMutex(Android_ActivityMutex);
+#endif
 				iResult = apicall_ (ev.user.data1, ev.user.data2) ;
+#ifdef __ANDROID__
+		    		SDL_UnlockMutex(Android_ActivityMutex);
+#endif
 				SDL_SemPost (Sema4) ;
 				lastusrev = SDL_GetTicks() ;
 				if (bYield)

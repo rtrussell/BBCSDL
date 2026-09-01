@@ -1,9 +1,9 @@
 /*****************************************************************\
 *       BBC BASIC Minimal Console Version                         *
-*       Copyright (C) R. T. Russell, 2025                         *
+*       Copyright (C) R. T. Russell, 2026                         *
 *                                                                 *
 *       bbccos.c: Command Line Interface, ANSI VDU drivers        *
-*       Version 0.50, 22-Sep-2025                                 *
+*       Version 0.51, 19-Aug-2026                                 *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -233,6 +233,7 @@ void xeqvdu (int code, int data1, int data2)
 	int vdu = code >> 8 ;
 	static int col = 0, row = 0 ;
 	static int rhs = 999 ;
+	static int top = 0, bot = 0 ;
 
 #ifdef _WIN32
 	if (!_isatty (_fileno (stdin)) || !_isatty (_fileno (stdout)))
@@ -326,7 +327,14 @@ void xeqvdu (int code, int data1, int data2)
 			break ;
 
 		case 12: // CLEAR SCREEN
-			printf ("\033[H\033[J") ;
+			if (top)
+			    {
+				int i = (bot - top + 1) * 2 ;
+				while (i--) printf ("\012") ; 
+				printf ("\033[H") ;
+			    }
+			else
+				printf ("\033[H\033[J") ;
 			col = 0 ;
 			row = 0 ;
 			break ;
@@ -362,10 +370,13 @@ void xeqvdu (int code, int data1, int data2)
 			break ;
 
 		case 22: // MODE CHANGE
+			printf ("\033[r\033[?6h") ;
 			modechg (code & 0x7F) ;
 			col = 0 ;
 			row = 0 ;
 			rhs = 999 ;
+			top = 0 ;
+			bot = 0 ;
 			break ;
 
 		case 23: // DEFINE CHARACTER ETC.
@@ -374,16 +385,22 @@ void xeqvdu (int code, int data1, int data2)
 				(data1 >> 16) & 0xFF, (data1 >> 24) & 0xFF, code & 0xFF) ;
 			if ((data2 & 0xFF) == 22)
 			    {
+				printf ("\033[r\033[?6h") ;
 				col = 0 ;
 				row = 0 ;
 				rhs = 999 ;
+				top = 0 ;
+				bot = 0 ;
 			    }
 			break ;
 
 		case 26: // RESET VIEWPORTS
+			printf ("\033[r\033[?6h") ;
 			col = 0 ;
 			row = 0 ;
 			rhs = 999 ;
+			bot = 0 ;
+			top = 0 ;
 			break ;
 
 		case 27: // SEND NEXT TO OUTC
@@ -403,6 +420,21 @@ void xeqvdu (int code, int data1, int data2)
 			else if (!(vflags & UTF8) || ((signed char)(code & 0xFF) >= -64))
 				col++ ;
 			break ;
+
+		case 28: // SET TEXT VIEWPORT (ignore left and right)
+			if (((data1 >> 16) & 0xFF) < (code & 0xFF)) break ;
+			if (top) row += (top - 1) ;
+			top = (code & 0xFF) + 1 ;
+			bot = ((data1 >> 16) & 0xFF) + 1 ;
+			row -= (top - 1) ;
+			printf ("\033[%i;%ir", top, bot) ;
+			printf ("\033[?6h") ;
+			if ((row >= 0) && (row <= (bot - top)))
+			    {
+				printf ("\033[%i;%iH", row + 1, col + 1) ;
+				break ;
+			    }
+			// Falls through...
 
 		case 30: // CURSOR HOME
 			printf ("\033[H") ;
