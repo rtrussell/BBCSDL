@@ -2,12 +2,13 @@
 
 VPATH  = ../BBCSDL/src ../BBCSDL/include
 
-CXX = emcc -s USE_PTHREADS=1 -s USE_SDL=2 -s USE_SDL_TTF=2 -s USE_SDL_NET=2 \
-      -I . -I ../BBCSDL/include -pthread -Wall -Wno-pthreads-mem-growth
+CXX = emcc -I . -I ../BBCSDL/include -s USE_SDL=2 -s USE_SDL_TTF=2 -s USE_SDL_NET=2 \
+      -s USE_PTHREADS=1 -pthread -Wall -Wno-pthreads-mem-growth
 
-LXX = emcc -s USE_PTHREADS=1 -s USE_SDL=2 -s USE_SDL_TTF=2 -s USE_SDL_NET=2 -s MAXIMUM_MEMORY=1gb \
+LXX = emcc -I . -I ../BBCSDL/include -s USE_SDL=2 -s USE_SDL_TTF=2 -s USE_SDL_NET=2 -s MAXIMUM_MEMORY=1gb \
       -s PTHREAD_POOL_SIZE=2 -s ALLOW_MEMORY_GROWTH=1 -s WASM=1 -s ASSERTIONS=0 -s STACK_SIZE=5MB \
-      -I . -I ../BBCSDL/include -pthread -Wall -Wno-pthreads-mem-growth
+      -s EXPORTED_RUNTIME_METHODS=requestFullscreen \
+      -s USE_PTHREADS=1 -pthread -Wall -Wno-pthreads-mem-growth
 
 OBJ = bbmain.o bbexec.o bbeval.o bbcmos.o bbccli.o \
       bbcvdu.o bbcvtx.o flood.o sort.o bbdata.o bbcsdl.o \
@@ -58,9 +59,9 @@ bbdata.o: bbdata_wasm32.c
 	$(CXX) -c $< -o $@
 
 bbcsdl.html: $(OBJ) Box2D231.o bbcsdl_shell.html
-	$(LXX) -O3 --emrun --no-heap-copy --shell-file bbcsdl_shell.html $(OBJ) Box2D231.o \
+	$(LXX) -O3 --emrun --shell-file bbcsdl_shell.html $(OBJ) Box2D231.o \
 	-lidbfs.js -o bbcsdl.html --preload-file examples/ --preload-file lib/
 
 index.html: $(OBJ) Box2D231.o bbcsdl_shell.html
-	$(LXX) -O3 --emrun --no-heap-copy --shell-file bbcsdl_shell.html $(OBJ) Box2D231.o \
+	$(LXX) -O3 --emrun --shell-file bbcsdl_shell.html $(OBJ) Box2D231.o \
 	-lidbfs.js -o index.html
