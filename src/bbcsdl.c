@@ -6,7 +6,7 @@
 *       Broadcasting Corporation and used with their permission   *
 *                                                                 *
 *       bbcsdl.c Main program: Initialisation, Polling Loop       *
-*       Version 1.45a, 27-Aug-2026                                *
+*       Version 1.45a, 16-Oct-2026                                *
 \*****************************************************************/
 
 #include <stdlib.h>
@@ -26,6 +26,7 @@
 #include <windows.h>
 #include <wchar.h>
 #include <shellapi.h>
+#include <locale.h>
 #if defined __x86_64__
 #define PLATFORM "Win64"
 #else
@@ -566,6 +567,7 @@ SDL_Event ev ;
 #endif
 
 #ifdef __WINDOWS__
+	setlocale(LC_ALL, ".UTF8");
 	SDL_setenv ("SDL_AUDIODRIVER", "directsound", 1) ;
 	LPWSTR* argw = CommandLineToArgvW(GetCommandLineW(), &argc);
 	for (i = 0; i < argc; i++)
