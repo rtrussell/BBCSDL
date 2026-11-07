@@ -42,3 +42,9 @@ Q3 (inline assembler) was a/b/c: read as phase 1 = none (a), decision later (D3)
   - bbccon.c uses pthreads, termios, timer_create, mmap, dlopen → rosco glue needed.
   - Data module exists in C (`bbdata_wasm32.c`) → model for m68k.
 - Spec v0.2, Plan v0.2, Tests T1–T13 written.
+
+## Paused
+Asked D1 (byte order: a native BE / b LE like bbc-basic-68k / c BE with LE
+files) and D2 (unaligned access: a source helpers / b fault handler);
+recommended D1a + D2a. User: "we will continue later when upstream has a
+preference." → Work paused at P2, waiting for upstream (R.T. Russell) input on D1/D2.

@@ -6,7 +6,7 @@ Status: DRAFT v0.2 (2026-11-07).
 |----|------|------|--------|
 | P0 | Planning docs (architecture/, Changes.md) | S9 | done |
 | P1 | Clarify scope | S1–S8 | done (except D1–D3) |
-| P2 | Decide byte order (D1) and alignment strategy (D2) | S2.4, S2.5 | open |
+| P2 | Decide byte order (D1) and alignment strategy (D2) | S2.4, S2.5 | waiting for upstream preference |
 | P3 | Host-side check: build the console edition on Linux, run the test programs → reference outputs | S6.3 | todo |
 | P4 | Build skeleton: makefile in docker, `bbdata_m68k`, stub assembler, OS glue (`bbccon` replacement for rosco) → links | S3, S5 | todo |
 | P5 | Boot to `>` prompt on r68k; PRINT, loops, strings | S5.1, S5.2 | todo |
