@@ -21,3 +21,24 @@ References given by the user:
 - emulators: `../r68k` (fast, inaccurate timing), `../rosco-emulator` (MAME, rosco-only build)
 
 Open questions sent to the user — see the next entry once answered.
+
+## Answers (user)
+"yes to all, console only, 68010 bare metal, gcc first" — corrections accepted;
+edition: console only; CPU 68010, bare metal (no Minix); gcc-13 first, ACK later;
+compare gcc vs ACK; comparison criteria as proposed; code under this branch; CI yes.
+Q3 (inline assembler) was a/b/c: read as phase 1 = none (a), decision later (D3).
+
+## Investigation
+- Board refs at `../rosco_m68k`; gcc image `roscopeco/rosco_m68k` = m68k-elf-rosco-gcc
+  13.3.1 + newlib; digest `sha256:91fd8f0c…ad205` (2024-11-03).
+- bbc-basic-68k bare build uses ACK (tools/mkbare.py), not gcc; benchmarks
+  (BM1-BM8, sieve, EhBASIC) are being prepared there (Handover-benchmark-2026-11-07).
+- BBCSDL portability findings:
+  - Assumes little-endian throughout; no byte-order handling anywhere → D1.
+  - ~110 raw pointer casts (`*(int*)…`), 95 in bbexec.c; on the 68010 an odd
+    address faults → D2.
+  - `VAR` uses `long double` except on ARM/wasm → use `double` on m68k.
+  - Register globals per CPU (esi/esp); the `__llvm__` path uses plain globals → use that.
+  - bbccon.c uses pthreads, termios, timer_create, mmap, dlopen → rosco glue needed.
+  - Data module exists in C (`bbdata_wasm32.c`) → model for m68k.
+- Spec v0.2, Plan v0.2, Tests T1–T13 written.
